@@ -7,5 +7,6 @@
   "/diary/new/page": "/diary/new",
   "/diary/page": "/diary",
   "/page": "/",
+  "/search/page": "/search",
   "/timeline/page": "/timeline"
 }

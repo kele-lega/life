@@ -220,6 +220,15 @@ export async function listActiveMomentAppendsByMomentIds(
   return grouped;
 }
 
+export async function listActiveMomentAppendsForSearch(): Promise<MomentAppend[]> {
+  const appends = await db.momentAppends.toArray();
+  return appends
+    .filter((append) => append.deletedAt === null)
+    .sort((left, right) =>
+      left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
+    );
+}
+
 export async function updateMomentMetadata(
   id: string,
   input: UpdateMomentMetadataInput,

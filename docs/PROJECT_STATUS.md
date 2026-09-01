@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 10 - Calendar browsing is complete.
+Phase 11 - Plain Search is complete.
 
 ## Completed
 
@@ -18,19 +18,20 @@ Phase 10 - Calendar browsing is complete.
 - Diary creation, list, view, and editing experience
 - Unified Timeline with local date grouping and load-more pagination
 - Calendar month browsing and local-day details
+- Local plain-text Search across Moment, Append, and Diary content
 
 ## Scope boundary
 
-Calendar is a read-only, client-side view over independent Moment and Diary repositories. It derives recorded dates from active roots in one local-month UTC range per repository and reuses Timeline's batch child hydration only for a selected local day. Append and Attachment timestamps never mark dates, and Diary edits remain assigned to `createdAt`. The homepage still prioritizes quick recording and recent Moments. Search, tags, favorites, recycle bin UI, AI, Diary images, and Diary location UI remain later phases. Moment behavior is unchanged.
+Search is a read-only, client-side view over independent Moment and Diary repositories. It matches active Moment originals, active Append text, Diary titles, and Diary bodies using local substring matching, then returns one stable root result per entity. Append hits remain nested under their parent Moment, and current-page Moment children are batch-hydrated through the existing Timeline boundary. The homepage still prioritizes quick recording and recent Moments. Tags, favorites, recycle bin UI, AI, Diary images, and Diary location UI remain later phases. Moment behavior is unchanged.
 
 ## Verification
 
 - `npm run typecheck` passed
 - `npm run lint` passed
-- `npm test` passed: 16 files, 123 tests
-- `npm run test:e2e` passed: 15 tests
+- `npm test` passed: 18 files, 141 tests
+- `npm run test:e2e` passed: 18 tests
 - `npm run build` passed
 
 ## Known follow-up
 
-Calendar month-state queries are bounded to the displayed month, but selected-day details currently load every root from that one day; a pathological bulk import with extremely many same-day records may later need day-level pagination. Local date boundaries follow the device timezone at query time; changing the operating-system timezone while the page remains open requires a reload or another Calendar interaction. Diary image attachments and all later browsing features remain intentionally deferred.
+Plain Search currently performs an application-layer scan because IndexedDB cannot index arbitrary substrings. It is appropriate for a personal V1, but very large histories need profiling and may later require a rebuildable local full-text index. Each load-more request repeats the scan before slicing the next stable page. Manual Tags and AI metadata must be connected to the existing Search query after their own phases implement real data sources. Diary image attachments and all later features remain intentionally deferred.

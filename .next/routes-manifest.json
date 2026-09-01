@@ -75,6 +75,12 @@
       "namedRegex": "^/diary/new(?:/)?$"
     },
     {
+      "page": "/search",
+      "regex": "^/search(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/search(?:/)?$"
+    },
+    {
       "page": "/timeline",
       "regex": "^/timeline(?:/)?$",
       "routeKeys": {},

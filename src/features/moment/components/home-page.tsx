@@ -16,6 +16,7 @@ export function HomePage() {
         <Link href="/timeline">时间线</Link>
         <Link href="/calendar">日历</Link>
         <Link href="/diary">日记</Link>
+        <Link href="/search">搜索</Link>
       </nav>
       <RecentMoments refreshKey={recentRevision} />
     </main>

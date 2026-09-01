@@ -141,6 +141,14 @@ function HomePage() {
                         fileName: "[project]/src/features/moment/components/home-page.tsx",
                         lineNumber: 18,
                         columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
+                        href: "/search",
+                        children: "搜索"
+                    }, void 0, false, {
+                        fileName: "[project]/src/features/moment/components/home-page.tsx",
+                        lineNumber: 19,
+                        columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
@@ -152,7 +160,7 @@ function HomePage() {
                 refreshKey: recentRevision
             }, void 0, false, {
                 fileName: "[project]/src/features/moment/components/home-page.tsx",
-                lineNumber: 20,
+                lineNumber: 21,
                 columnNumber: 7
             }, this)
         ]
@@ -1115,6 +1123,8 @@ __turbopack_context__.s([
     ()=>getMoment,
     "listActiveMomentAppendsByMomentIds",
     ()=>listActiveMomentAppendsByMomentIds,
+    "listActiveMomentAppendsForSearch",
+    ()=>listActiveMomentAppendsForSearch,
     "listActiveMomentsByCreatedAtRange",
     ()=>listActiveMomentsByCreatedAtRange,
     "listActiveMomentsPage",
@@ -1293,6 +1303,10 @@ async function listActiveMomentAppendsByMomentIds(momentIds) {
         values.sort((left, right)=>left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
     }
     return grouped;
+}
+async function listActiveMomentAppendsForSearch() {
+    const appends = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"].momentAppends.toArray();
+    return appends.filter((append)=>append.deletedAt === null).sort((left, right)=>left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
 }
 async function updateMomentMetadata(id, input) {
     const moment = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"].moments.get(id);

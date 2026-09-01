@@ -106,7 +106,11 @@ Implement the single “write something” flow, text input, save, and error sta
 
 ## Phase 11 - Plain search
 
-Search Moment original text, append text, Diary title, and body locally.
+- [x] Add a quiet `/search` route and low-priority homepage entry without changing quick recording.
+- [x] Search active Moment original text, active Append text, Diary title, and Diary body with trimmed case-insensitive substring matching.
+- [x] Return one root per Moment, keep matching Appends nested, and preserve independent Moment/Diary entities and creation-time ordering.
+- [x] Paginate 20 roots at a time and batch-hydrate only current-page Moment Appends and Attachments through the shared Timeline boundary.
+- [x] Cover soft deletion, stable ordering, owner isolation, keyword reset, load-more behavior, persistence, edits, and real-browser flows.
 
 **Done when:** offline keyword search finds content and excludes the recycle bin.
 
