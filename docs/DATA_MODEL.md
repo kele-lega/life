@@ -19,7 +19,7 @@ Dexie database version `4` adds the `diaries` table:
 
 - `diaries`: primary key `id`; indexes `createdAt`, `updatedAt`, `deletedAt`, `isFavorite`
 
-Diary records are independent of Moments and currently have no UI, attachments, tags, or favorite operations. Diary title and body are required to contain non-whitespace content at creation; their edit behavior belongs to the next Diary phase.
+Diary records are independent of Moments and currently have no attachments, tags, or favorite operations. Diary `body` must contain non-whitespace content at creation and update; `title` is optional and is stored exactly as entered, including an empty string when omitted. The application never auto-generates a title. Diary content editing belongs to the current Diary phase.
 
 
 ## Phase 1 physical schema

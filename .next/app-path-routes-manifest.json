@@ -2,5 +2,8 @@
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
   "/api/location/reverse/route": "/api/location/reverse",
+  "/diary/[id]/page": "/diary/[id]",
+  "/diary/new/page": "/diary/new",
+  "/diary/page": "/diary",
   "/page": "/"
 }

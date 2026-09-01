@@ -21,7 +21,16 @@
     "afterFiles": [],
     "fallback": []
   },
-  "dynamicRoutes": [],
+  "dynamicRoutes": [
+    {
+      "page": "/diary/[id]",
+      "regex": "^/diary/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/diary/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
   "staticRoutes": [
     {
       "page": "/",
@@ -46,6 +55,18 @@
       "regex": "^/api/location/reverse(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/location/reverse(?:/)?$"
+    },
+    {
+      "page": "/diary",
+      "regex": "^/diary(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/diary(?:/)?$"
+    },
+    {
+      "page": "/diary/new",
+      "regex": "^/diary/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/diary/new(?:/)?$"
     }
   ],
   "dataRoutes": [],

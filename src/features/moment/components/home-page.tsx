@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { QuickMomentRecord } from "./quick-moment-record";
@@ -11,6 +12,7 @@ export function HomePage() {
   return (
     <main className="home-page">
       <QuickMomentRecord onSaved={() => setRecentRevision((current) => current + 1)} />
+      <nav className="home-secondary-nav" aria-label="更多功能"><Link href="/diary">日记</Link></nav>
       <RecentMoments refreshKey={recentRevision} />
     </main>
   );

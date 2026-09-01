@@ -12,7 +12,7 @@ export interface Diary {
 }
 
 export interface CreateDiaryInput {
-  title: string;
+  title?: string;
   body: string;
   id?: EntityId;
   createdAt?: Timestamp;

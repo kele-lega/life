@@ -6,6 +6,11 @@ import type { Timestamp } from "@/features/moment/model/types";
 
 import type { CreateDiaryInput, Diary } from "../model/types";
 
+export interface UpdateDiaryContentInput {
+  title?: string;
+  body: string;
+}
+
 function requireNonEmpty(value: string, field: string): void {
   if (value.trim().length === 0) {
     throw new Error(`${field} must not be empty.`);
@@ -19,13 +24,12 @@ function validateTimestamp(value: Timestamp): void {
 }
 
 export async function createDiary(input: CreateDiaryInput): Promise<Diary> {
-  requireNonEmpty(input.title, "title");
   requireNonEmpty(input.body, "body");
   const createdAt = input.createdAt ?? nowTimestamp();
   validateTimestamp(createdAt);
   const diary: Diary = {
     id: input.id ?? createEntityId(),
-    title: input.title,
+    title: input.title ?? "",
     body: input.body,
     isFavorite: false,
     location: input.location ?? null,
@@ -39,6 +43,26 @@ export async function createDiary(input: CreateDiaryInput): Promise<Diary> {
 
 export async function getDiary(id: string): Promise<Diary | undefined> {
   return db.diaries.get(id);
+}
+
+export async function updateDiaryContent(
+  id: string,
+  input: UpdateDiaryContentInput,
+): Promise<Diary> {
+  requireNonEmpty(input.body, "body");
+  const diary = await db.diaries.get(id);
+  if (!diary || diary.deletedAt !== null) {
+    throw new Error(`Cannot update missing or deleted Diary: ${id}`);
+  }
+  const updatedAt = nowTimestamp();
+  const updated: Diary = {
+    ...diary,
+    title: input.title ?? "",
+    body: input.body,
+    updatedAt,
+  };
+  await db.diaries.put(updated);
+  return updated;
 }
 
 export async function listDiaries(options: { includeDeleted?: boolean } = {}): Promise<Diary[]> {

@@ -300,6 +300,131 @@ button:disabled, textarea:disabled {
   font-size: .85rem;
 }
 
+.home-secondary-nav {
+  text-align: right;
+  padding: 18px 0 0;
+  font-size: .9rem;
+}
+
+.home-secondary-nav a, .diary-nav a, .diary-nav button {
+  color: #555;
+}
+
+.diary-page {
+  width: min(100%, 680px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+.diary-nav {
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 48px;
+  display: flex;
+}
+
+.diary-nav button {
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.diary-header h1, .diary-editor h1, .diary-view h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 500;
+}
+
+.diary-header p {
+  color: #686868;
+  margin: 8px 0 32px;
+}
+
+.diary-list {
+  display: grid;
+}
+
+.diary-entry {
+  color: inherit;
+  border-top: 1px solid #eee;
+  padding: 20px 0;
+  text-decoration: none;
+  display: block;
+}
+
+.diary-entry time, .diary-view time {
+  color: #777;
+  font-size: .85rem;
+}
+
+.diary-entry h2 {
+  margin: 8px 0 4px;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.diary-entry p {
+  color: #4e4e4e;
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+
+.diary-empty {
+  color: #686868;
+}
+
+.diary-editor {
+  gap: 16px;
+  display: grid;
+}
+
+.diary-editor input, .diary-editor textarea {
+  color: #171717;
+  border: 1px solid #b5b5b5;
+  border-radius: 4px;
+  width: 100%;
+  padding: 12px;
+}
+
+.diary-editor textarea {
+  resize: vertical;
+  min-height: 420px;
+  line-height: 1.7;
+}
+
+.diary-editor p[role="alert"] {
+  color: #8a3333;
+  margin: 0;
+}
+
+.diary-actions {
+  justify-content: flex-end;
+  gap: 12px;
+  display: flex;
+}
+
+.diary-actions button {
+  background: #fff;
+  border: 1px solid #b5b5b5;
+  border-radius: 4px;
+  padding: 8px 16px;
+}
+
+.diary-actions button:last-child {
+  color: #fff;
+  background: #171717;
+  border-color: #171717;
+}
+
+.diary-view p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 28px 0 0;
+  line-height: 1.8;
+}
+
 @media (max-width: 520px) {
   .home-page {
     padding: 40px 20px 64px;

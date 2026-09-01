@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { LifeDatabase, db } from "@/lib/db/client";
 
-import { createDiary, getDiary, listDiaries } from "./diary-repository";
+import { createDiary, getDiary, listDiaries, updateDiaryContent } from "./diary-repository";
 
 const firstTime = "2026-08-31T10:00:00.000Z";
 const secondTime = "2026-08-31T11:00:00.000Z";
@@ -36,6 +36,56 @@ describe("Diary repository", () => {
       deletedAt: null,
     });
     await expect(getDiary(created.id)).resolves.toEqual(created);
+  });
+
+  it("allows a Diary without a title and preserves exact body input", async () => {
+    const created = await createDiary({ id: "untitled", body: "  Body only\n  " });
+
+    expect(created.title).toBe("");
+    expect(created.body).toBe("  Body only\n  ");
+  });
+
+  it("rejects only blank body content", async () => {
+    await expect(createDiary({ title: "Optional", body: "   " })).rejects.toThrow("body");
+  });
+
+  it("updates only content while preserving identity and creation metadata", async () => {
+    const created = await createDiary({
+      id: "diary-edit",
+      title: "Original title",
+      body: "Original body",
+      createdAt: firstTime,
+    });
+    const updated = await updateDiaryContent("diary-edit", {
+      title: "  New title  ",
+      body: "  New body\n  ",
+    });
+
+    expect(updated).toMatchObject({
+      id: created.id,
+      title: "  New title  ",
+      body: "  New body\n  ",
+      createdAt: firstTime,
+      deletedAt: null,
+      location: null,
+    });
+    expect(updated.updatedAt).not.toBe(created.updatedAt);
+  });
+
+  it("allows clearing an existing title without changing the body rule", async () => {
+    await createDiary({ id: "diary-title", title: "Title", body: "Body" });
+
+    const updated = await updateDiaryContent("diary-title", { body: "Body remains" });
+
+    expect(updated.title).toBe("");
+  });
+
+  it("does not update missing or deleted Diaries", async () => {
+    await expect(updateDiaryContent("missing", { body: "Body" })).rejects.toThrow("missing or deleted");
+    const diary = await createDiary({ id: "deleted", body: "Body" });
+    const deletedAt = "2026-08-31T12:00:00.000Z";
+    await db.diaries.put({ ...diary, deletedAt, updatedAt: deletedAt });
+    await expect(updateDiaryContent("deleted", { body: "New body" })).rejects.toThrow("missing or deleted");
   });
 
   it("allows zero, one, or many Diaries on the same day", async () => {
@@ -82,11 +132,8 @@ describe("Diary repository", () => {
     ]);
   });
 
-  it.each([
-    ["title", "   ", "Body"],
-    ["body", "Title", "  "],
-  ])("rejects an empty Diary %s", async (_field, title, body) => {
-    await expect(createDiary({ title, body })).rejects.toThrow(_field);
+  it("rejects blank Diary body", async () => {
+    await expect(createDiary({ body: "   " })).rejects.toThrow("body");
   });
 
   it("does not depend on Moments", async () => {

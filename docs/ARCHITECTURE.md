@@ -20,7 +20,7 @@ Future AI only:
 Browser -> Next.js server route -> cloud model provider
 ```
 
-Original content is created and read locally without a network dependency. Diary persistence is introduced in its own Dexie migration and repository; Diary UI and editing behavior remain later phases. Future AI calls will go through a server-side Route Handler so secrets never enter the client bundle. AI failure must never block or roll back local saving.
+Original content is created and read locally without a network dependency. Diary persistence is introduced in its own Dexie migration and repository; Diary UI reads and writes only through the client-side repository, while content editing preserves the record identity and creation timestamp. Future AI calls will go through a server-side Route Handler so secrets never enter the client bundle. AI failure must never block or roll back local saving.
 
 ## Technology choices
 

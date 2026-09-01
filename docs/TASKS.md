@@ -79,7 +79,10 @@ Implement the single “write something” flow, text input, save, and error sta
 
 ## Phase 8 - Diary editing experience
 
-Implement Diary create, view, and edit behavior with unsaved-change and error handling.
+- [x] Correct the product-aligned Diary title rule: body is required, title is optional and never auto-generated.
+- [x] Add Diary list, create, view, and edit routes without changing the quick-record path.
+- [x] Add constrained content updates with ID/createdAt preservation, duplicate-save protection, retryable errors, and unsaved-change protection.
+- [x] Add focused unit/component coverage and real-browser coverage for Diary persistence and editing.
 
 **Done when:** a long diary can be created and edited without changing the quick-record path.
 

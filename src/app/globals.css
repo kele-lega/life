@@ -283,6 +283,137 @@ button:focus-visible {
   font-size: 0.85rem;
 }
 
+.home-secondary-nav {
+  padding: 18px 0 0;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.home-secondary-nav a,
+.diary-nav a,
+.diary-nav button {
+  color: #555555;
+}
+
+.diary-page {
+  width: min(100%, 680px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+.diary-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 48px;
+}
+
+.diary-nav button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.diary-header h1,
+.diary-editor h1,
+.diary-view h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 500;
+}
+
+.diary-header p {
+  margin: 8px 0 32px;
+  color: #686868;
+}
+
+.diary-list {
+  display: grid;
+}
+
+.diary-entry {
+  display: block;
+  border-top: 1px solid #eeeeee;
+  padding: 20px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.diary-entry time,
+.diary-view time {
+  color: #777777;
+  font-size: 0.85rem;
+}
+
+.diary-entry h2 {
+  margin: 8px 0 4px;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.diary-entry p {
+  margin: 8px 0 0;
+  color: #4e4e4e;
+  line-height: 1.6;
+}
+
+.diary-empty {
+  color: #686868;
+}
+
+.diary-editor {
+  display: grid;
+  gap: 16px;
+}
+
+.diary-editor input,
+.diary-editor textarea {
+  width: 100%;
+  border: 1px solid #b5b5b5;
+  border-radius: 4px;
+  padding: 12px;
+  color: #171717;
+}
+
+.diary-editor textarea {
+  min-height: 420px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.diary-editor p[role="alert"] {
+  margin: 0;
+  color: #8a3333;
+}
+
+.diary-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.diary-actions button {
+  border: 1px solid #b5b5b5;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 8px 16px;
+}
+
+.diary-actions button:last-child {
+  border-color: #171717;
+  background: #171717;
+  color: #ffffff;
+}
+
+.diary-view p {
+  margin: 28px 0 0;
+  white-space: pre-wrap;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 520px) {
   .home-page {
     padding: 40px 20px 64px;
