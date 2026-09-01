@@ -1,0 +1,299 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: #ffffff; color: #171717; font-family: system-ui, sans-serif; }
+button, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled, textarea:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.home-page {
+  width: min(100%, 680px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 72px 24px 96px;
+}
+
+.quick-record {
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  border-bottom: 1px solid #e7e7e7;
+  padding-bottom: 40px;
+}
+
+.write-button {
+  border: 1px solid #171717;
+  border-radius: 4px;
+  background: #171717;
+  color: #ffffff;
+  padding: 12px 24px;
+}
+
+.record-panel {
+  display: grid;
+  width: min(100%, 640px);
+  gap: 16px;
+}
+
+.record-panel textarea {
+  min-height: 180px;
+  resize: vertical;
+  border: 1px solid #b5b5b5;
+  border-radius: 4px;
+  padding: 16px;
+  color: #171717;
+  line-height: 1.6;
+}
+
+.record-panel textarea:focus,
+button:focus-visible {
+  outline: 2px solid #171717;
+  outline-offset: 3px;
+}
+
+.record-panel p {
+  margin: 0;
+  color: #9b1c1c;
+  font-size: 0.9rem;
+}
+
+.record-panel > button {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #555555;
+  text-decoration: underline;
+}
+
+.location-field {
+  display: grid;
+  gap: 8px;
+  color: #686868;
+  font-size: 0.85rem;
+}
+
+.location-field label {
+  display: grid;
+  gap: 5px;
+}
+
+.location-field input {
+  width: 100%;
+  border: 1px solid #c9c9c9;
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: #171717;
+}
+
+.location-field button {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #666666;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.image-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.image-preview {
+  position: relative;
+  display: grid;
+  gap: 4px;
+}
+
+.image-preview img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.image-preview button {
+  border: 0;
+  background: transparent;
+  color: #555555;
+  font-size: 0.85rem;
+}
+
+.record-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.record-actions button {
+  border: 1px solid #b5b5b5;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 8px 16px;
+}
+
+.record-actions button:last-child {
+  border-color: #171717;
+  background: #171717;
+  color: #ffffff;
+}
+
+.recent-moments {
+  min-height: 72px;
+  padding-top: 36px;
+}
+
+.recent-error,
+.attachment-error {
+  margin: 0;
+  color: #8a3333;
+  font-size: 0.9rem;
+}
+
+.moment-group + .moment-group {
+  margin-top: 40px;
+}
+
+.moment-group h2 {
+  margin: 0 0 12px;
+  color: #686868;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.moment-list {
+  display: grid;
+  gap: 0;
+}
+
+.moment-entry {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 6px 16px;
+  padding: 18px 0;
+}
+
+.moment-entry + .moment-entry {
+  border-top: 1px solid #eeeeee;
+}
+
+.moment-entry time {
+  color: #777777;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.moment-entry > p {
+  margin: 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.moment-images,
+.moment-entry .attachment-error,
+.moment-appends {
+  grid-column: 2;
+}
+
+.moment-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.moment-images img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.moment-appends {
+  margin-top: 8px;
+}
+
+.append-list {
+  display: grid;
+  gap: 14px;
+  margin: 4px 0 12px;
+  border-left: 1px solid #dddddd;
+  padding-left: 14px;
+}
+
+.append-entry {
+  display: grid;
+  gap: 4px;
+}
+
+.append-entry time {
+  font-size: 0.78rem;
+}
+
+.append-entry p {
+  margin: 0;
+  color: #4e4e4e;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.append-trigger,
+.append-actions button {
+  border: 0;
+  background: transparent;
+  color: #666666;
+  padding: 0;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.append-editor {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.append-editor textarea {
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid #c9c9c9;
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: #171717;
+  line-height: 1.6;
+}
+
+.append-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.append-actions button:last-child {
+  color: #171717;
+}
+
+.moment-appends .append-error {
+  margin: 0;
+  color: #8a3333;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 520px) {
+  .home-page {
+    padding: 40px 20px 64px;
+  }
+
+  .moment-entry {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 6px 12px;
+  }
+
+  .moment-images {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,92 @@
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { Moment } from "@/features/moment/model/types";
+
+import { HomePage } from "./home-page";
+
+const mocks = vi.hoisted(() => ({
+  createMomentWithAttachments: vi.fn(),
+  listRecentMoments: vi.fn(),
+  listMomentAttachments: vi.fn(),
+  listMomentAppends: vi.fn(),
+  createMomentAppend: vi.fn(),
+}));
+
+vi.mock("@/features/moment/repository/moment-repository", () => ({
+  createMomentWithAttachments: mocks.createMomentWithAttachments,
+  listRecentMoments: mocks.listRecentMoments,
+  listMomentAppends: mocks.listMomentAppends,
+  createMomentAppend: mocks.createMomentAppend,
+}));
+
+vi.mock("@/features/attachment/repository/attachment-repository", () => ({
+  listMomentAttachments: mocks.listMomentAttachments,
+}));
+
+function savedMoment(): Moment {
+  const createdAt = "2026-09-01T12:00:00.000Z";
+  return {
+    id: "new-moment",
+    originalText: "无需刷新立即出现",
+    isFavorite: false,
+    location: null,
+    createdAt,
+    updatedAt: createdAt,
+    deletedAt: null,
+  };
+}
+
+beforeEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  mocks.createMomentWithAttachments.mockReset();
+  mocks.listRecentMoments.mockReset();
+  mocks.listMomentAttachments.mockReset();
+  mocks.listMomentAppends.mockReset();
+  mocks.createMomentAppend.mockReset();
+  mocks.listMomentAttachments.mockResolvedValue([]);
+  mocks.listMomentAppends.mockResolvedValue([]);
+});
+
+describe("HomePage", () => {
+  it("keeps quick recording usable when recent records fail to load", async () => {
+    const user = userEvent.setup();
+    mocks.listRecentMoments.mockRejectedValue(new Error("read failed"));
+    render(<HomePage />);
+
+    expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("最近记录暂时无法读取。");
+
+    await user.click(screen.getByRole("button", { name: "写点什么" }));
+    expect(screen.getByRole("textbox", { name: "记录内容" })).toBeInTheDocument();
+  });
+
+  it("shows a saved Moment at the top without remounting", async () => {
+    const user = userEvent.setup();
+    const existing: Moment = {
+      ...savedMoment(),
+      id: "existing",
+      originalText: "较早记录",
+      createdAt: "2026-09-01T11:00:00.000Z",
+      updatedAt: "2026-09-01T11:00:00.000Z",
+    };
+    const created = savedMoment();
+    mocks.listRecentMoments
+      .mockResolvedValueOnce([existing])
+      .mockResolvedValueOnce([created, existing]);
+    mocks.createMomentWithAttachments.mockResolvedValue(created);
+    render(<HomePage />);
+    await screen.findByText("较早记录");
+
+    await user.click(screen.getByRole("button", { name: "写点什么" }));
+    await user.type(screen.getByRole("textbox", { name: "记录内容" }), created.originalText);
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
+    expect(screen.getAllByRole("article")[0]).toHaveTextContent(created.originalText);
+    expect(mocks.listRecentMoments).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
+  });
+});
