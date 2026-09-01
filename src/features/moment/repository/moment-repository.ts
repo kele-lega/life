@@ -8,6 +8,7 @@ import type {
   CreateMomentAppendInput,
   CreateMomentInput,
   CreateMomentWithAttachmentsInput,
+  EntityId,
   Moment,
   MomentAppend,
   Timestamp,
@@ -118,6 +119,85 @@ export async function listRecentMoments(limit: number): Promise<Moment[]> {
   });
 
   return recent;
+}
+
+export interface TimelineSourceCursor {
+  createdAt: Timestamp;
+  id: EntityId;
+}
+
+export interface MomentPageOptions {
+  limit: number;
+  cursor?: TimelineSourceCursor | null;
+}
+
+export interface MomentPage {
+  items: Moment[];
+  nextCursor: TimelineSourceCursor | null;
+  hasMore: boolean;
+}
+
+export async function listActiveMomentsPage({ limit, cursor = null }: MomentPageOptions): Promise<MomentPage> {
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error("limit must be a positive integer.");
+  }
+
+  const items: Moment[] = [];
+  let hasMore = false;
+  let boundaryTimestamp: Timestamp | null = null;
+  await db.moments.orderBy("createdAt").reverse().each((moment) => {
+    if (cursor && (moment.createdAt > cursor.createdAt ||
+      (moment.createdAt === cursor.createdAt && moment.id >= cursor.id))) {
+      return;
+    }
+    if (moment.deletedAt !== null) return;
+    if (items.length < limit) {
+      items.push(moment);
+      boundaryTimestamp = moment.createdAt;
+      return;
+    }
+    if (moment.createdAt === boundaryTimestamp) {
+      items.push(moment);
+      return;
+    }
+    hasMore = true;
+    return false;
+  });
+
+  items.sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id),
+  );
+  if (items.length > limit) {
+    hasMore = true;
+    items.length = limit;
+  }
+
+  const last = items.at(-1);
+  return {
+    items,
+    nextCursor: last ? { createdAt: last.createdAt, id: last.id } : null,
+    hasMore,
+  };
+}
+
+export async function listActiveMomentAppendsByMomentIds(
+  momentIds: readonly string[],
+): Promise<Map<string, MomentAppend[]>> {
+  if (momentIds.length === 0) return new Map();
+  const appends = await db.momentAppends.where("momentId").anyOf([...momentIds]).toArray();
+  const grouped = new Map<string, MomentAppend[]>();
+  for (const append of appends) {
+    if (append.deletedAt !== null) continue;
+    const existing = grouped.get(append.momentId) ?? [];
+    existing.push(append);
+    grouped.set(append.momentId, existing);
+  }
+  for (const values of grouped.values()) {
+    values.sort((left, right) =>
+      left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
+    );
+  }
+  return grouped;
 }
 
 export async function updateMomentMetadata(

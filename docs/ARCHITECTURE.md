@@ -2,7 +2,7 @@
 
 ## Scope
 
-This project is a single-user, web-first, local-first private life record system. The core path is open, record, save, leave. This foundation phase intentionally contains no product UI, fake dashboard, Timeline, Calendar, AI, auth, sync, map, or health feature.
+This project is a single-user, web-first, local-first private life record system. The core path is open, record, save, leave. The initial foundation phase intentionally contained no product UI, fake dashboard, Timeline, Calendar, AI, auth, sync, map, or health feature; later phases add only the explicitly scheduled product surfaces.
 
 ## Overview
 
@@ -61,7 +61,7 @@ Local-first data operations do not require a network. Application-shell offline 
 4. Successful local persistence ends the recording flow immediately.
 5. Future AI work is queued only after local persistence and may remain pending offline.
 
-Timeline, Calendar, Search, and Favorites are query views over normalized local entities, not copied records. AI metadata and daily summaries are rebuildable derived data linked to source IDs and source revisions.
+Timeline, Calendar, Search, and Favorites are query views over normalized local entities, not copied records. The Timeline query combines independent paginated Moment and Diary repository reads, then batch-loads only the current page's Moment children. It does not create a Dexie table or persistent cache; the homepage's bounded per-owner queries remain unchanged. AI metadata and daily summaries are rebuildable derived data linked to source IDs and source revisions.
 
 Deletion writes `deletedAt` as a UTC timestamp. Normal queries exclude soft-deleted entities; the recycle bin queries them explicitly. Permanent cleanup is a later, user-visible action governed by the 30-day retention rule.
 

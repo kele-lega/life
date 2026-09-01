@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { LifeDatabase, db } from "@/lib/db/client";
 
-import { createDiary, getDiary, listDiaries, updateDiaryContent } from "./diary-repository";
+import { createDiary, getDiary, listDiaries, listActiveDiariesPage, updateDiaryContent } from "./diary-repository";
 
 const firstTime = "2026-08-31T10:00:00.000Z";
 const secondTime = "2026-08-31T11:00:00.000Z";
@@ -135,6 +135,30 @@ describe("Diary repository", () => {
   it("rejects blank Diary body", async () => {
     await expect(createDiary({ body: "   " })).rejects.toThrow("body");
   });
+
+  it("paginates active Diaries with stable equal-time cursors", async () => {
+    await createDiary({ id: "diary-a", body: "A", createdAt: secondTime });
+    await createDiary({ id: "diary-c", body: "C", createdAt: secondTime });
+    await createDiary({ id: "diary-b", body: "B", createdAt: secondTime });
+    await createDiary({ id: "diary-deleted", body: "Deleted", createdAt: secondTime });
+    const deleted = await getDiary("diary-deleted");
+    if (!deleted) throw new Error("test setup failed");
+    await db.diaries.put({ ...deleted, deletedAt: "2026-08-31T12:00:00.000Z", updatedAt: "2026-08-31T12:00:00.000Z" });
+    await createDiary({ id: "diary-old", body: "Old", createdAt: firstTime });
+
+    const first = await listActiveDiariesPage({ limit: 2 });
+    const second = await listActiveDiariesPage({ limit: 2, cursor: first.nextCursor });
+
+    expect(first.items.map((item) => item.id)).toEqual(["diary-c", "diary-b"]);
+    expect(second.items.map((item) => item.id)).toEqual(["diary-a", "diary-old"]);
+    expect(first.hasMore).toBe(true);
+    expect(second.hasMore).toBe(false);
+  });
+
+  it.each([0, -1, 1.5])("rejects invalid Timeline Diary page limit %s", async (limit) => {
+    await expect(listActiveDiariesPage({ limit })).rejects.toThrow("positive integer");
+  });
+
 
   it("does not depend on Moments", async () => {
     await createDiary({ id: "diary-1", title: "Independent", body: "No Moment needed" });

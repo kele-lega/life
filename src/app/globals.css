@@ -414,6 +414,147 @@ button:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.timeline-page {
+  width: min(100%, 760px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+.timeline-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 48px;
+}
+
+.timeline-nav a,
+.timeline-page button {
+  color: #555555;
+}
+
+.timeline-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 500;
+}
+
+.timeline-header p {
+  margin: 8px 0 32px;
+  color: #686868;
+}
+
+.timeline-group + .timeline-group {
+  margin-top: 40px;
+}
+
+.timeline-group h2 {
+  margin: 0 0 12px;
+  color: #686868;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.timeline-list {
+  display: grid;
+}
+
+.timeline-entry {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 6px 16px;
+  padding: 18px 0;
+  border-top: 1px solid #eeeeee;
+}
+
+.timeline-entry time {
+  color: #777777;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.timeline-content {
+  min-width: 0;
+}
+
+.timeline-kind,
+.timeline-location,
+.timeline-append-label {
+  color: #686868;
+  font-size: 0.82rem;
+}
+
+.timeline-location {
+  margin-top: 4px;
+}
+
+.timeline-content > p,
+.timeline-diary-link p,
+.timeline-append p {
+  margin: 8px 0 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.timeline-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.timeline-images img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.timeline-appends {
+  margin-top: 16px;
+  border-left: 1px solid #dddddd;
+  padding-left: 14px;
+}
+
+.timeline-append + .timeline-append {
+  margin-top: 12px;
+}
+
+.timeline-append p {
+  color: #4e4e4e;
+}
+
+.timeline-diary-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.timeline-diary-link h3 {
+  margin: 8px 0 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.timeline-child-error,
+.timeline-page > [role="alert"] {
+  color: #8a3333;
+  font-size: 0.9rem;
+}
+
+.timeline-page > button {
+  margin-top: 24px;
+  border: 1px solid #b5b5b5;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 8px 16px;
+}
+
+.timeline-empty,
+.timeline-end {
+  color: #686868;
+}
+
 @media (max-width: 520px) {
   .home-page {
     padding: 40px 20px 64px;

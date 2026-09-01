@@ -57,7 +57,8 @@ describe("HomePage", () => {
     render(<HomePage />);
 
     expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
-    expect(await screen.findByRole("alert")).toHaveTextContent("最近记录暂时无法读取。");
+    expect(screen.getByRole("link", { name: "时间线" })).toHaveAttribute("href", "/timeline");
+    expect(screen.getByRole("link", { name: "日记" })).toHaveAttribute("href", "/diary");
 
     await user.click(screen.getByRole("button", { name: "写点什么" }));
     expect(screen.getByRole("textbox", { name: "记录内容" })).toBeInTheDocument();

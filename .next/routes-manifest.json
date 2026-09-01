@@ -67,6 +67,12 @@
       "regex": "^/diary/new(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/diary/new(?:/)?$"
+    },
+    {
+      "page": "/timeline",
+      "regex": "^/timeline(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/timeline(?:/)?$"
     }
   ],
   "dataRoutes": [],

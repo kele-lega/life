@@ -5,6 +5,8 @@
 __turbopack_context__.s([
     "createAttachment",
     ()=>createAttachment,
+    "listActiveMomentAttachmentsByMomentIds",
+    ()=>listActiveMomentAttachmentsByMomentIds,
     "listMomentAttachments",
     ()=>listMomentAttachments,
     "softDeleteAttachment",
@@ -45,6 +47,23 @@ async function listMomentAttachments(momentId, options = {}) {
         momentId
     ]).sortBy("createdAt");
     return options.includeDeleted ? attachments : attachments.filter((attachment)=>attachment.deletedAt === null);
+}
+async function listActiveMomentAttachmentsByMomentIds(momentIds) {
+    if (momentIds.length === 0) return new Map();
+    const attachments = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"].attachments.where("ownerId").anyOf([
+        ...momentIds
+    ]).toArray();
+    const grouped = new Map();
+    for (const attachment of attachments){
+        if (attachment.ownerType !== "moment" || attachment.deletedAt !== null) continue;
+        const existing = grouped.get(attachment.ownerId) ?? [];
+        existing.push(attachment);
+        grouped.set(attachment.ownerId, existing);
+    }
+    for (const values of grouped.values()){
+        values.sort((left, right)=>left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+    }
+    return grouped;
 }
 async function softDeleteAttachment(id, deletedAt = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$time$2f$timestamps$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["nowTimestamp"])()) {
     const attachment = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"].attachments.get(id);
@@ -98,15 +117,25 @@ function HomePage() {
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("nav", {
                 className: "home-secondary-nav",
                 "aria-label": "更多功能",
-                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
-                    href: "/diary",
-                    children: "日记"
-                }, void 0, false, {
-                    fileName: "[project]/src/features/moment/components/home-page.tsx",
-                    lineNumber: 15,
-                    columnNumber: 61
-                }, this)
-            }, void 0, false, {
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
+                        href: "/timeline",
+                        children: "时间线"
+                    }, void 0, false, {
+                        fileName: "[project]/src/features/moment/components/home-page.tsx",
+                        lineNumber: 16,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
+                        href: "/diary",
+                        children: "日记"
+                    }, void 0, false, {
+                        fileName: "[project]/src/features/moment/components/home-page.tsx",
+                        lineNumber: 17,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
                 fileName: "[project]/src/features/moment/components/home-page.tsx",
                 lineNumber: 15,
                 columnNumber: 7
@@ -115,7 +144,7 @@ function HomePage() {
                 refreshKey: recentRevision
             }, void 0, false, {
                 fileName: "[project]/src/features/moment/components/home-page.tsx",
-                lineNumber: 16,
+                lineNumber: 19,
                 columnNumber: 7
             }, this)
         ]
@@ -1076,6 +1105,10 @@ __turbopack_context__.s([
     ()=>createMomentWithAttachments,
     "getMoment",
     ()=>getMoment,
+    "listActiveMomentAppendsByMomentIds",
+    ()=>listActiveMomentAppendsByMomentIds,
+    "listActiveMomentsPage",
+    ()=>listActiveMomentsPage,
     "listMomentAppends",
     ()=>listMomentAppends,
     "listMoments",
@@ -1185,6 +1218,62 @@ async function listRecentMoments(limit) {
         }
     });
     return recent;
+}
+async function listActiveMomentsPage({ limit, cursor = null }) {
+    if (!Number.isInteger(limit) || limit <= 0) {
+        throw new Error("limit must be a positive integer.");
+    }
+    const items = [];
+    let hasMore = false;
+    let boundaryTimestamp = null;
+    await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"].moments.orderBy("createdAt").reverse().each((moment)=>{
+        if (cursor && (moment.createdAt > cursor.createdAt || moment.createdAt === cursor.createdAt && moment.id >= cursor.id)) {
+            return;
+        }
+        if (moment.deletedAt !== null) return;
+        if (items.length < limit) {
+            items.push(moment);
+            boundaryTimestamp = moment.createdAt;
+            return;
+        }
+        if (moment.createdAt === boundaryTimestamp) {
+            items.push(moment);
+            return;
+        }
+        hasMore = true;
+        return false;
+    });
+    items.sort((left, right)=>right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id));
+    if (items.length > limit) {
+        hasMore = true;
+        items.length = limit;
+    }
+    const last = items.at(-1);
+    return {
+        items,
+        nextCursor: last ? {
+            createdAt: last.createdAt,
+            id: last.id
+        } : null,
+        hasMore
+    };
+}
+async function listActiveMomentAppendsByMomentIds(momentIds) {
+    if (momentIds.length === 0) return new Map();
+    const appends = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"].momentAppends.where("momentId").anyOf([
+        ...momentIds
+    ]).toArray();
+    const grouped = new Map();
+    for (const append of appends){
+        if (append.deletedAt !== null) continue;
+        const existing = grouped.get(append.momentId) ?? [];
+        existing.push(append);
+        grouped.set(append.momentId, existing);
+    }
+    for (const values of grouped.values()){
+        values.sort((left, right)=>left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+    }
+    return grouped;
 }
 async function updateMomentMetadata(id, input) {
     const moment = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2f$client$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"].moments.get(id);

@@ -42,6 +42,29 @@ export async function listMomentAttachments(
     : attachments.filter((attachment) => attachment.deletedAt === null);
 }
 
+export async function listActiveMomentAttachmentsByMomentIds(
+  momentIds: readonly string[],
+): Promise<Map<string, Attachment[]>> {
+  if (momentIds.length === 0) return new Map();
+  const attachments = await db.attachments
+    .where("ownerId")
+    .anyOf([...momentIds])
+    .toArray();
+  const grouped = new Map<string, Attachment[]>();
+  for (const attachment of attachments) {
+    if (attachment.ownerType !== "moment" || attachment.deletedAt !== null) continue;
+    const existing = grouped.get(attachment.ownerId) ?? [];
+    existing.push(attachment);
+    grouped.set(attachment.ownerId, existing);
+  }
+  for (const values of grouped.values()) {
+    values.sort((left, right) =>
+      left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
+    );
+  }
+  return grouped;
+}
+
 export async function softDeleteAttachment(id: string, deletedAt = nowTimestamp()): Promise<Attachment> {
   const attachment = await db.attachments.get(id);
   if (!attachment) {

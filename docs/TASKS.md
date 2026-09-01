@@ -88,7 +88,10 @@ Implement the single “write something” flow, text input, save, and error sta
 
 ## Phase 9 - Unified Timeline
 
-Merge active Moments and Diaries, sort by real `createdAt`, group by date, and paginate.
+- [x] Merge active Moments and Diaries through a read-only Timeline query, without creating a unified database entity.
+- [x] Sort the merged stream by real `createdAt` with a stable ID tie-breaker and group it by the user's local date.
+- [x] Batch-load current-page Moment attachments and Appends, keep Appends nested under their Moment, and isolate child read failures.
+- [x] Add a bounded initial page with explicit “load more” pagination and real-browser coverage.
 
 **Done when:** ordering is stable and appends are not incorrectly shown as root records.
 

@@ -12,7 +12,10 @@ export function HomePage() {
   return (
     <main className="home-page">
       <QuickMomentRecord onSaved={() => setRecentRevision((current) => current + 1)} />
-      <nav className="home-secondary-nav" aria-label="更多功能"><Link href="/diary">日记</Link></nav>
+      <nav className="home-secondary-nav" aria-label="更多功能">
+        <Link href="/timeline">时间线</Link>
+        <Link href="/diary">日记</Link>
+      </nav>
       <RecentMoments refreshKey={recentRevision} />
     </main>
   );

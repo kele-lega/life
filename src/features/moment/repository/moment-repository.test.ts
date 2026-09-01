@@ -12,6 +12,8 @@ import {
   listMomentAppends,
   listMoments,
   listRecentMoments,
+  listActiveMomentsPage,
+  listActiveMomentAppendsByMomentIds,
   restoreMoment,
   softDeleteMoment,
   softDeleteMomentAppend,
@@ -91,6 +93,42 @@ describe("Moment repository", () => {
   it.each([0, -1, 1.5])("rejects invalid recent Moment limit %s", async (limit) => {
     await expect(listRecentMoments(limit)).rejects.toThrow("positive integer");
   });
+
+  it("paginates active Moments with stable equal-time cursors", async () => {
+    await createMoment({ id: "moment-a", originalText: "A", createdAt: secondTime });
+    await createMoment({ id: "moment-c", originalText: "C", createdAt: secondTime });
+    await createMoment({ id: "moment-b", originalText: "B", createdAt: secondTime });
+    await createMoment({ id: "moment-deleted", originalText: "Deleted", createdAt: secondTime });
+    await softDeleteMoment("moment-deleted", "2026-08-31T12:00:00.000Z");
+    await createMoment({ id: "moment-old", originalText: "Old", createdAt: firstTime });
+
+    const first = await listActiveMomentsPage({ limit: 2 });
+    const second = await listActiveMomentsPage({ limit: 2, cursor: first.nextCursor });
+
+    expect(first.items.map((item) => item.id)).toEqual(["moment-c", "moment-b"]);
+    expect(second.items.map((item) => item.id)).toEqual(["moment-a", "moment-old"]);
+    expect(first.hasMore).toBe(true);
+    expect(second.hasMore).toBe(false);
+  });
+
+  it.each([0, -1, 1.5])("rejects invalid Timeline Moment page limit %s", async (limit) => {
+    await expect(listActiveMomentsPage({ limit })).rejects.toThrow("positive integer");
+  });
+
+  it("batch-loads active Appends only for requested Moment IDs", async () => {
+    await createMoment({ id: "moment-1", originalText: "First" });
+    await createMoment({ id: "moment-2", originalText: "Second" });
+    await createMomentAppend("moment-1", { id: "append-late", text: "Late", createdAt: secondTime });
+    await createMomentAppend("moment-1", { id: "append-early", text: "Early", createdAt: firstTime });
+    await createMomentAppend("moment-2", { id: "append-other", text: "Other" });
+    await softDeleteMomentAppend("append-late", "2026-08-31T12:00:00.000Z");
+
+    const grouped = await listActiveMomentAppendsByMomentIds(["moment-1"]);
+
+    expect(grouped.get("moment-1")?.map((item) => item.id)).toEqual(["append-early"]);
+    expect(grouped.has("moment-2")).toBe(false);
+  });
+
 
   it("does not expose an originalText update API", () => {
     expect(Object.keys(repository)).not.toContain("updateMoment");

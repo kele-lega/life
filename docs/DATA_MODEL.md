@@ -21,6 +21,10 @@ Dexie database version `4` adds the `diaries` table:
 
 Diary records are independent of Moments and currently have no attachments, tags, or favorite operations. Diary `body` must contain non-whitespace content at creation and update; `title` is optional and is stored exactly as entered, including an empty string when omitted. The application never auto-generates a title. Diary content editing belongs to the current Diary phase.
 
+## Timeline read model
+
+`TimelineItem` is a non-persistent discriminated view model assembled from the independent Moment and Diary tables. There is no `timelineItems` Dexie table or schema migration. Timeline roots exclude records with a non-null `deletedAt`, and active Moment Appends and Moment-owned Attachments are displayed beneath their owning Moment rather than as root items. The current Attachment owner implementation remains `ownerType: "moment"`; Diary images are not implemented.
+
 
 ## Phase 1 physical schema
 
@@ -80,7 +84,7 @@ PRODUCT.md only makes Moment text immutable, so Diary editing remains allowed un
 An independent binary original, currently an image:
 
 - `id: EntityId`
-- `ownerType: 'moment' | 'momentAppend' | 'diary'`
+- `ownerType: 'moment'`
 - `ownerId: EntityId`
 - `kind: 'image'`
 - `blob: Blob`

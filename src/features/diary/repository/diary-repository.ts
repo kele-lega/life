@@ -74,3 +74,57 @@ export async function listDiaries(options: { includeDeleted?: boolean } = {}): P
     ? diaries
     : diaries.filter((diary) => diary.deletedAt === null);
 }
+
+export interface DiaryPageOptions {
+  limit: number;
+  cursor?: { createdAt: Timestamp; id: string } | null;
+}
+
+export interface DiaryPage {
+  items: Diary[];
+  nextCursor: { createdAt: Timestamp; id: string } | null;
+  hasMore: boolean;
+}
+
+export async function listActiveDiariesPage({ limit, cursor = null }: DiaryPageOptions): Promise<DiaryPage> {
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error("limit must be a positive integer.");
+  }
+
+  const items: Diary[] = [];
+  let hasMore = false;
+  let boundaryTimestamp: Timestamp | null = null;
+  await db.diaries.orderBy("createdAt").reverse().each((diary) => {
+    if (cursor && (diary.createdAt > cursor.createdAt ||
+      (diary.createdAt === cursor.createdAt && diary.id >= cursor.id))) {
+      return;
+    }
+    if (diary.deletedAt !== null) return;
+    if (items.length < limit) {
+      items.push(diary);
+      boundaryTimestamp = diary.createdAt;
+      return;
+    }
+    if (diary.createdAt === boundaryTimestamp) {
+      items.push(diary);
+      return;
+    }
+    hasMore = true;
+    return false;
+  });
+
+  items.sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id),
+  );
+  if (items.length > limit) {
+    hasMore = true;
+    items.length = limit;
+  }
+
+  const last = items.at(-1);
+  return {
+    items,
+    nextCursor: last ? { createdAt: last.createdAt, id: last.id } : null,
+    hasMore,
+  };
+}

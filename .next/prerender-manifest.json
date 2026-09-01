@@ -5,7 +5,7 @@
       "routeType": "page",
       "response": "complete",
       "compute": "static",
-      "htmlSize": 5907,
+      "htmlSize": 5940,
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -133,6 +133,34 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/diary/new",
       "dataRoute": "/diary/new.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/timeline": {
+      "routeType": "page",
+      "response": "complete",
+      "compute": "static",
+      "htmlSize": 6392,
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/timeline",
+      "dataRoute": "/timeline.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
