@@ -121,6 +121,26 @@ export async function listRecentMoments(limit: number): Promise<Moment[]> {
   return recent;
 }
 
+export async function listActiveMomentsByCreatedAtRange(
+  startInclusive: Timestamp,
+  endExclusive: Timestamp,
+): Promise<Moment[]> {
+  validateTimestamp(startInclusive);
+  validateTimestamp(endExclusive);
+  if (startInclusive >= endExclusive) {
+    throw new Error("createdAt range must be increasing.");
+  }
+  const moments = await db.moments
+    .where("createdAt")
+    .between(startInclusive, endExclusive, true, false)
+    .toArray();
+  return moments
+    .filter((moment) => moment.deletedAt === null)
+    .sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id),
+    );
+}
+
 export interface TimelineSourceCursor {
   createdAt: Timestamp;
   id: EntityId;

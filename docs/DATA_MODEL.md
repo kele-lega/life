@@ -25,6 +25,10 @@ Diary records are independent of Moments and currently have no attachments, tags
 
 `TimelineItem` is a non-persistent discriminated view model assembled from the independent Moment and Diary tables. There is no `timelineItems` Dexie table or schema migration. Timeline roots exclude records with a non-null `deletedAt`, and active Moment Appends and Moment-owned Attachments are displayed beneath their owning Moment rather than as root items. The current Attachment owner implementation remains `ownerType: "moment"`; Diary images are not implemented.
 
+## Calendar read model
+
+Calendar is also non-persistent and adds no table or schema migration. A local month or local date is converted with the device timezone into a UTC `[startInclusive, endExclusive)` range, then active Moment and Diary roots are read through their existing `createdAt` indexes. Month state is the set of local date keys containing at least one active root. MomentAppend and Attachment timestamps never create Calendar root dates. Selected-day details use the same `TimelineItem` hydration boundary, so active Moment children remain nested while Diary identity and `createdAt` remain unchanged.
+
 
 ## Phase 1 physical schema
 

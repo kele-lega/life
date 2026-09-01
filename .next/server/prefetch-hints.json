@@ -22,6 +22,20 @@
       }
     }
   },
+  "/calendar": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
   "/diary/new": {
     "hints": 64,
     "slots": {

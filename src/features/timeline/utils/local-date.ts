@@ -1,23 +1,13 @@
 import type { TimelineItem } from "../model/types";
 
+import { localDateKey } from "@/lib/time/local-calendar";
+
+export { localDateKey } from "@/lib/time/local-calendar";
+
 export interface TimelineDateGroup {
   key: string;
   label: string;
   items: TimelineItem[];
-}
-
-function parts(timestamp: string): Record<string, string> {
-  const values = new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(timestamp));
-  return Object.fromEntries(values.map(({ type, value }) => [type, value]));
-}
-
-export function localDateKey(timestamp: string): string {
-  const value = parts(timestamp);
-  return `${value.year}-${value.month}-${value.day}`;
 }
 
 function startOfLocalDay(date: Date): number {

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 9 - Unified Timeline is complete.
+Phase 10 - Calendar browsing is complete.
 
 ## Completed
 
@@ -17,19 +17,20 @@ Phase 9 - Unified Timeline is complete.
 - Diary local data layer
 - Diary creation, list, view, and editing experience
 - Unified Timeline with local date grouping and load-more pagination
+- Calendar month browsing and local-day details
 
 ## Scope boundary
 
-Timeline is a read-only, client-side view over independent Moment and Diary repositories. Active roots are merged by `createdAt` descending with an ID tie-breaker; Moment Appends and Moment-owned images are batch-loaded for the current page and remain nested under their Moment. The homepage still shows only recent Moments as its primary history surface. Diary images, Diary location UI, Calendar, Search, tags, favorites, recycle bin UI, and AI remain later phases. Moment behavior is unchanged.
+Calendar is a read-only, client-side view over independent Moment and Diary repositories. It derives recorded dates from active roots in one local-month UTC range per repository and reuses Timeline's batch child hydration only for a selected local day. Append and Attachment timestamps never mark dates, and Diary edits remain assigned to `createdAt`. The homepage still prioritizes quick recording and recent Moments. Search, tags, favorites, recycle bin UI, AI, Diary images, and Diary location UI remain later phases. Moment behavior is unchanged.
 
 ## Verification
 
 - `npm run typecheck` passed
 - `npm run lint` passed
-- `npm test` passed: 12 files, 108 tests
-- `npm run test:e2e` passed: 12 tests
+- `npm test` passed: 16 files, 123 tests
+- `npm run test:e2e` passed: 15 tests
 - `npm run build` passed
 
 ## Known follow-up
 
-The Timeline uses a simple two-source cursor and a fixed 20-root page size. Interleaved source boundaries, equal timestamps, owner isolation, and UI duplicate protection are covered, but a pathological import containing a very large number of roots with the exact same millisecond timestamp can still require reading that equal-time block before applying the ID tie-breaker. Diary image attachments and all later browsing features remain intentionally deferred.
+Calendar month-state queries are bounded to the displayed month, but selected-day details currently load every root from that one day; a pathological bulk import with extremely many same-day records may later need day-level pagination. Local date boundaries follow the device timezone at query time; changing the operating-system timezone while the page remains open requires a reload or another Calendar interaction. Diary image attachments and all later browsing features remain intentionally deferred.

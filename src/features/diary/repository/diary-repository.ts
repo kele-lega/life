@@ -75,6 +75,26 @@ export async function listDiaries(options: { includeDeleted?: boolean } = {}): P
     : diaries.filter((diary) => diary.deletedAt === null);
 }
 
+export async function listActiveDiariesByCreatedAtRange(
+  startInclusive: Timestamp,
+  endExclusive: Timestamp,
+): Promise<Diary[]> {
+  validateTimestamp(startInclusive);
+  validateTimestamp(endExclusive);
+  if (startInclusive >= endExclusive) {
+    throw new Error("createdAt range must be increasing.");
+  }
+  const diaries = await db.diaries
+    .where("createdAt")
+    .between(startInclusive, endExclusive, true, false)
+    .toArray();
+  return diaries
+    .filter((diary) => diary.deletedAt === null)
+    .sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id),
+    );
+}
+
 export interface DiaryPageOptions {
   limit: number;
   cursor?: { createdAt: Timestamp; id: string } | null;

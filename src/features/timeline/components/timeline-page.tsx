@@ -5,20 +5,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { queryTimelinePage, TIMELINE_PAGE_SIZE } from "../query/timeline-query";
 import type { TimelineCursor, TimelineItem } from "../model/types";
-import { formatTimelineTime, groupTimelineItems } from "../utils/local-date";
-
-function diaryPreview(body: string): string {
-  const compact = body.replace(/\s+/g, " ").trim();
-  return compact.length > 180 ? `${compact.slice(0, 180)}…` : compact;
-}
-
-function locationLabel(item: Extract<TimelineItem, { type: "moment" }>): string | null {
-  if (!item.moment.location) return null;
-  const values = [item.moment.location.city, item.moment.location.placeName].filter(
-    (value): value is string => Boolean(value),
-  );
-  return values.length > 0 ? values.join(" · ") : null;
-}
+import { groupTimelineItems } from "../utils/local-date";
+import { addTimelineObjectUrls, revokeObjectUrls } from "../utils/object-urls";
+import { TimelineItemView } from "./timeline-item-view";
 
 export function TimelinePage() {
   const [items, setItems] = useState<TimelineItem[]>([]);
@@ -32,23 +21,14 @@ export function TimelinePage() {
 
   useEffect(() => {
     let current = true;
-    const urls: string[] = [];
     loadingRef.current = true;
 
     void queryTimelinePage(null, TIMELINE_PAGE_SIZE).then((page) => {
       if (!current) return;
-      const nextItems = page.items.map((item) => {
-        if (item.type !== "moment") return item;
-        const attachments = item.attachments.map((attachment) => {
-          const url = URL.createObjectURL(attachment.blob);
-          urls.push(url);
-          return { ...attachment, url };
-        });
-        return { ...item, attachments };
-      });
-      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-      objectUrlsRef.current = urls;
-      setItems(nextItems);
+      const hydrated = addTimelineObjectUrls(page.items);
+      revokeObjectUrls(objectUrlsRef.current);
+      objectUrlsRef.current = hydrated.urls;
+      setItems(hydrated.items);
       setCursor(page.nextCursor);
       setHasMore(page.hasMore);
     }).catch(() => {
@@ -74,22 +54,13 @@ export function TimelinePage() {
     setLoadingMore(true);
     try {
       const page = await queryTimelinePage(cursor, TIMELINE_PAGE_SIZE);
-      const nextUrls: string[] = [];
-      const nextItems = page.items.map((item) => {
-        if (item.type !== "moment") return item;
-        const attachments = item.attachments.map((attachment) => {
-          const url = URL.createObjectURL(attachment.blob);
-          nextUrls.push(url);
-          return { ...attachment, url };
-        });
-        return { ...item, attachments };
-      });
-      objectUrlsRef.current.push(...nextUrls);
+      const hydrated = addTimelineObjectUrls(page.items);
+      objectUrlsRef.current.push(...hydrated.urls);
       setItems((current) => {
         const existing = new Set(current.map((item) => `${item.type}:${item.id}`));
         return [
           ...current,
-          ...nextItems.filter((item) => !existing.has(`${item.type}:${item.id}`)),
+          ...hydrated.items.filter((item) => !existing.has(`${item.type}:${item.id}`)),
         ];
       });
       setCursor(page.nextCursor);
@@ -104,7 +75,7 @@ export function TimelinePage() {
   }
 
   useEffect(() => () => {
-    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    revokeObjectUrls(objectUrlsRef.current);
   }, []);
 
   const groups = groupTimelineItems(items);
@@ -122,44 +93,7 @@ export function TimelinePage() {
             <h2>{group.label}</h2>
             <div className="timeline-list">
               {group.items.map((item) => (
-                <article className={`timeline-entry timeline-${item.type}`} key={`${item.type}-${item.id}`}>
-                  <time dateTime={item.createdAt}>{formatTimelineTime(item.createdAt)}</time>
-                  {item.type === "moment" ? (
-                    <div className="timeline-content">
-                      <div className="timeline-kind">Moment</div>
-                      {locationLabel(item) ? <div className="timeline-location">{locationLabel(item)}</div> : null}
-                      <p>{item.moment.originalText}</p>
-                      {item.attachments.length > 0 ? (
-                        <div className="timeline-images" aria-label={`${item.moment.originalText}的图片`}>
-                          {item.attachments.map((attachment) => (
-                            // Timeline object URLs are local-only previews.
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img alt={attachment.fileName} key={attachment.id} src={attachment.url} />
-                          ))}
-                        </div>
-                      ) : null}
-                      {item.errors.attachments ? <p className="timeline-child-error">图片暂时无法读取。</p> : null}
-                      {item.appends.length > 0 ? (
-                        <div className="timeline-appends">
-                          <div className="timeline-append-label">追加</div>
-                          {item.appends.map((append) => (
-                            <div className="timeline-append" key={append.id}>
-                              <time dateTime={append.createdAt}>{formatTimelineTime(append.createdAt)}</time>
-                              <p>{append.text}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                      {item.errors.appends ? <p className="timeline-child-error">追加内容暂时无法读取。</p> : null}
-                    </div>
-                  ) : (
-                    <Link className="timeline-content timeline-diary-link" href={`/diary/${item.diary.id}`}>
-                      <div className="timeline-kind">Diary</div>
-                      {item.diary.title ? <h3>{item.diary.title}</h3> : null}
-                      <p>{diaryPreview(item.diary.body)}</p>
-                    </Link>
-                  )}
-                </article>
+                <TimelineItemView item={item} key={`${item.type}-${item.id}`} />
               ))}
             </div>
           </section>

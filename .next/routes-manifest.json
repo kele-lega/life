@@ -57,6 +57,12 @@
       "namedRegex": "^/api/location/reverse(?:/)?$"
     },
     {
+      "page": "/calendar",
+      "regex": "^/calendar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/calendar(?:/)?$"
+    },
+    {
       "page": "/diary",
       "regex": "^/diary(?:/)?$",
       "routeKeys": {},

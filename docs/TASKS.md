@@ -97,7 +97,10 @@ Implement the single “write something” flow, text input, save, and error sta
 
 ## Phase 10 - Calendar browsing
 
-Implement a collapsible month view, record/no-record dates, date details, and All/Moment/Diary filters.
+- [x] Add a quiet `/calendar` month view with previous, next, and current-month navigation.
+- [x] Derive recorded local dates from active Moment and Diary roots through two UTC-range queries per month; Appends and Attachments do not affect month state.
+- [x] Load one selected local day, reuse Timeline's batch Moment hydration, and provide All/Moment/Diary display filters.
+- [x] Cover local timezone boundaries, leap and year transitions, soft deletion, child semantics, persistence, and responsive browser behavior.
 
 **Done when:** local timezone date boundaries are correct and no streak, completion, or missed-day metrics exist.
 

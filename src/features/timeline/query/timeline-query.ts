@@ -4,15 +4,15 @@ import {
 import type { Attachment } from "@/features/attachment/model/types";
 import {
   listActiveDiariesPage,
-  type DiaryPage,
 } from "@/features/diary/repository/diary-repository";
+import type { Diary } from "@/features/diary/model/types";
 import {
   listActiveMomentAppendsByMomentIds,
   listActiveMomentsPage,
-  type MomentPage,
   type TimelineSourceCursor as RepositoryCursor,
 } from "@/features/moment/repository/moment-repository";
 import type { MomentAppend } from "@/features/moment/model/types";
+import type { Moment } from "@/features/moment/model/types";
 
 import type {
   TimelineCursor,
@@ -23,8 +23,8 @@ import type {
 export const TIMELINE_PAGE_SIZE = 20;
 
 type RootCandidate =
-  | { source: "moment"; value: MomentPage["items"][number] }
-  | { source: "diary"; value: DiaryPage["items"][number] };
+  | { source: "moment"; value: Moment }
+  | { source: "diary"; value: Diary };
 
 function compareCandidates(left: RootCandidate, right: RootCandidate): number {
   return compareValues(left.value, right.value);
@@ -56,6 +56,51 @@ function cursorAfterSelected(
     : fallback;
 }
 
+export async function hydrateTimelineItems(
+  moments: readonly Moment[],
+  diaries: readonly Diary[],
+): Promise<TimelineItem[]> {
+  const candidates: RootCandidate[] = [
+    ...moments.map((value) => ({ source: "moment" as const, value })),
+    ...diaries.map((value) => ({ source: "diary" as const, value })),
+  ];
+  candidates.sort(compareCandidates);
+  const momentIds = moments.map((moment) => moment.id);
+  const [appendsResult, attachmentsResult] = await Promise.allSettled([
+    listActiveMomentAppendsByMomentIds(momentIds),
+    listActiveMomentAttachmentsByMomentIds(momentIds),
+  ]);
+  const appends = appendsResult.status === "fulfilled"
+    ? appendsResult.value
+    : new Map<string, MomentAppend[]>();
+  const attachments = attachmentsResult.status === "fulfilled"
+    ? attachmentsResult.value
+    : new Map<string, Attachment[]>();
+
+  return candidates.map((candidate) => {
+    if (candidate.source === "diary") {
+      return {
+        type: "diary" as const,
+        id: candidate.value.id,
+        createdAt: candidate.value.createdAt,
+        diary: candidate.value,
+      };
+    }
+    return {
+      type: "moment" as const,
+      id: candidate.value.id,
+      createdAt: candidate.value.createdAt,
+      moment: candidate.value,
+      appends: appends.get(candidate.value.id) ?? [],
+      attachments: attachments.get(candidate.value.id) ?? [],
+      errors: {
+        appends: appendsResult.status === "rejected",
+        attachments: attachmentsResult.status === "rejected",
+      },
+    };
+  });
+}
+
 export async function queryTimelinePage(
   cursor: TimelineCursor | null = null,
   pageSize = TIMELINE_PAGE_SIZE,
@@ -81,38 +126,12 @@ export async function queryTimelinePage(
   ];
   candidates.sort(compareCandidates);
   const selected = candidates.slice(0, pageSize);
-  const selectedMoments = selected.filter((candidate) => candidate.source === "moment");
-  const momentIds = selectedMoments.map((candidate) => candidate.value.id);
-
-  const [appendsResult, attachmentsResult] = await Promise.allSettled([
-    listActiveMomentAppendsByMomentIds(momentIds),
-    listActiveMomentAttachmentsByMomentIds(momentIds),
-  ]);
-  const appends = appendsResult.status === "fulfilled" ? appendsResult.value : new Map<string, MomentAppend[]>();
-  const attachments = attachmentsResult.status === "fulfilled" ? attachmentsResult.value : new Map<string, Attachment[]>();
-
-  const items: TimelineItem[] = selected.map((candidate) => {
-    if (candidate.source === "diary") {
-      return {
-        type: "diary",
-        id: candidate.value.id,
-        createdAt: candidate.value.createdAt,
-        diary: candidate.value,
-      };
-    }
-    return {
-      type: "moment",
-      id: candidate.value.id,
-      createdAt: candidate.value.createdAt,
-      moment: candidate.value,
-      appends: appends.get(candidate.value.id) ?? [],
-      attachments: attachments.get(candidate.value.id) ?? [],
-      errors: {
-        appends: appendsResult.status === "rejected",
-        attachments: attachmentsResult.status === "rejected",
-      },
-    };
-  });
+  const items = await hydrateTimelineItems(
+    selected.filter((candidate): candidate is Extract<RootCandidate, { source: "moment" }> =>
+      candidate.source === "moment").map((candidate) => candidate.value),
+    selected.filter((candidate): candidate is Extract<RootCandidate, { source: "diary" }> =>
+      candidate.source === "diary").map((candidate) => candidate.value),
+  );
 
   const boundary = selected.at(-1);
   const nextCursor: TimelineCursor | null = boundary === undefined ? null : {

@@ -58,6 +58,7 @@ describe("HomePage", () => {
 
     expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "时间线" })).toHaveAttribute("href", "/timeline");
+    expect(screen.getByRole("link", { name: "日历" })).toHaveAttribute("href", "/calendar");
     expect(screen.getByRole("link", { name: "日记" })).toHaveAttribute("href", "/diary");
 
     await user.click(screen.getByRole("button", { name: "写点什么" }));
