@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 
 import type { Attachment } from "@/features/attachment/model/types";
 import { listMomentAttachments } from "@/features/attachment/repository/attachment-repository";
@@ -8,6 +9,9 @@ import type { Moment } from "@/features/moment/model/types";
 import { listRecentMoments } from "@/features/moment/repository/moment-repository";
 
 import { MomentAppends } from "./moment-appends";
+import { RecordImage } from "@/components/ui/record-image";
+import { MotionEntry } from "@/components/ui/motion-entry";
+import { contentTransition, motionStagger } from "@/components/ui/motion";
 
 export const RECENT_MOMENT_LIMIT = 20;
 
@@ -17,6 +21,7 @@ interface RecentMomentsProps {
 
 interface PreviewImage {
   attachmentId: string;
+  updatedAt: string;
   fileName: string;
   url: string;
 }
@@ -25,6 +30,7 @@ interface RecentMomentView {
   moment: Moment;
   images: PreviewImage[];
   attachmentError: boolean;
+  enterDelay: number;
 }
 
 interface MomentGroup {
@@ -93,11 +99,14 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
   const [views, setViews] = useState<RecentMomentView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const objectUrlsRef = useRef<string[]>([]);
+  const [retryRevision, setRetryRevision] = useState(0);
+  const reducedMotion = useReducedMotion();
+  const imageCacheRef = useRef(new Map<string, PreviewImage>());
+  const retiredUrlsRef = useRef<string[]>([]);
+  const firstLoadRef = useRef(true);
 
   useEffect(() => {
     let isCurrent = true;
-    let urlsCommitted = false;
     const createdUrls: string[] = [];
 
     function revoke(urls: readonly string[]): void {
@@ -113,39 +122,47 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
         const attachmentResults = await Promise.allSettled(
           moments.map((moment) => loadImages(moment.id)),
         );
+        if (!isCurrent) return;
+        const nextCache = new Map<string, PreviewImage>();
         const nextViews = moments.map((moment, index): RecentMomentView => {
+          const enterDelay = firstLoadRef.current
+            ? 2 * motionStagger.home + Math.min(index, motionStagger.maxIndex) * motionStagger.list
+            : 0;
           const result = attachmentResults[index];
           if (result.status === "rejected") {
-            return { moment, images: [], attachmentError: true };
+            return { moment, images: [], attachmentError: true, enterDelay };
           }
 
           const images = result.value.map((attachment) => {
+            const cached = imageCacheRef.current.get(attachment.id);
+            if (cached?.updatedAt === attachment.updatedAt) {
+              nextCache.set(attachment.id, cached);
+              return cached;
+            }
             const url = URL.createObjectURL(attachment.blob);
             createdUrls.push(url);
-            return {
+            const image = {
               attachmentId: attachment.id,
+              updatedAt: attachment.updatedAt,
               fileName: attachment.fileName,
               url,
             };
+            nextCache.set(attachment.id, image);
+            return image;
           });
-          return { moment, images, attachmentError: false };
+          return { moment, images, attachmentError: false, enterDelay };
         });
 
-        if (!isCurrent) {
-          revoke(createdUrls);
-          createdUrls.length = 0;
-          return;
+        for (const [id, image] of imageCacheRef.current) {
+          if (nextCache.get(id)?.url !== image.url) retiredUrlsRef.current.push(image.url);
         }
-
-        revoke(objectUrlsRef.current);
-        objectUrlsRef.current = createdUrls;
-        urlsCommitted = true;
+        imageCacheRef.current = nextCache;
+        firstLoadRef.current = false;
         setViews(nextViews);
       } catch {
+        revoke(createdUrls);
         if (!isCurrent) return;
-        revoke(objectUrlsRef.current);
-        objectUrlsRef.current = [];
-        setViews([]);
+        // Keep the last successful view while a refresh fails; retry does not remount it.
         setError("最近记录暂时无法读取。");
       } finally {
         if (isCurrent) setIsLoading(false);
@@ -156,19 +173,21 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
 
     return () => {
       isCurrent = false;
-      if (urlsCommitted) {
-        revoke(createdUrls);
-        objectUrlsRef.current = objectUrlsRef.current.filter(
-          (url) => !createdUrls.includes(url),
-        );
-      }
     };
-  }, [refreshKey]);
+  }, [refreshKey, retryRevision]);
+
+  useEffect(() => {
+    // Release replaced URLs after the new view has committed, not at refresh start.
+    retiredUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    retiredUrlsRef.current = [];
+  }, [views]);
 
   useEffect(
     () => () => {
-      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-      objectUrlsRef.current = [];
+      imageCacheRef.current.forEach(({ url }) => URL.revokeObjectURL(url));
+      imageCacheRef.current.clear();
+      retiredUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      retiredUrlsRef.current = [];
     },
     [],
   );
@@ -180,13 +199,15 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
       <h2 className="recent-heading">最近记录</h2>
       {isLoading && groups.length === 0 ? <p className="recent-status" role="status">正在读取…</p> : null}
       {!isLoading && !error && groups.length === 0 ? <p className="recent-status recent-empty">还没有留下片段。</p> : null}
-      {error ? <p className="recent-error" role="alert">{error}</p> : null}
+      {error ? <div className="recent-error"><p role="alert">{error}</p><button type="button" onClick={() => setRetryRevision((current) => current + 1)}>重新读取</button></div> : null}
+      <LayoutGroup>
       {groups.map((group) => (
         <section className="moment-group" key={group.key} aria-labelledby={`date-${group.key}`}>
-          <h3 id={`date-${group.key}`}>{group.label}</h3>
+          <motion.h3 layout={reducedMotion ? false : "position"} transition={reducedMotion ? { duration: 0 } : { layout: contentTransition }} id={`date-${group.key}`}>{group.label}</motion.h3>
           <div className="moment-list">
-            {group.moments.map(({ moment, images, attachmentError }) => (
-              <article className="moment-entry" key={moment.id}>
+            <AnimatePresence>
+            {group.moments.map(({ moment, images, attachmentError, enterDelay }) => (
+              <MotionEntry className="moment-entry" key={moment.id} delay={enterDelay}>
                 <time dateTime={moment.createdAt}>
                   {new Intl.DateTimeFormat("zh-CN", {
                     hour: "2-digit",
@@ -201,19 +222,19 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
                 {images.length > 0 ? (
                   <div className="moment-images" data-single={images.length === 1 || undefined} aria-label={`${moment.originalText}的图片`}>
                     {images.map((image) => (
-                      // Object URLs are local-only previews and do not use remote optimization.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img alt={image.fileName} key={image.attachmentId} src={image.url} />
+                      <RecordImage alt={image.fileName} key={image.attachmentId} src={image.url} />
                     ))}
                   </div>
                 ) : null}
                 {attachmentError ? <p className="attachment-error">图片暂时无法读取。</p> : null}
                 <MomentAppends momentId={moment.id} />
-              </article>
+              </MotionEntry>
             ))}
+            </AnimatePresence>
           </div>
         </section>
       ))}
+      </LayoutGroup>
     </section>
   );
 }

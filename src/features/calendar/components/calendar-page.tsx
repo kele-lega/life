@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { NavLink } from "@/components/ui/nav-link";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { TimelineItemView } from "@/features/timeline/components/timeline-item-view";
 import type { TimelineItem } from "@/features/timeline/model/types";
@@ -16,6 +16,8 @@ import {
 import type { CalendarFilter } from "../model/types";
 import { queryCalendarDay, queryCalendarMonth } from "../query/calendar-query";
 import { calendarMonthCells } from "../utils/calendar-grid";
+import { BackLink, PageNav } from "@/components/ui/page-nav";
+import styles from "./calendar-page.module.css";
 
 const WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
 const FILTERS: Array<{ value: CalendarFilter; label: string }> = [
@@ -57,6 +59,9 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
   const [dayError, setDayError] = useState<string | null>(null);
   const [filter, setFilter] = useState<CalendarFilter>("all");
   const objectUrlsRef = useRef<string[]>([]);
+  const [monthRetry, setMonthRetry] = useState(0);
+  const [dayRetry, setDayRetry] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let current = true;
@@ -75,7 +80,7 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
         if (current) setMonthLoading(false);
       });
     return () => { current = false; };
-  }, [visibleMonth]);
+  }, [visibleMonth, monthRetry]);
 
   useEffect(() => {
     if (!selectedDateKey) return;
@@ -100,7 +105,7 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
         if (current) setDayLoading(false);
       });
     return () => { current = false; };
-  }, [selectedDateKey]);
+  }, [selectedDateKey, dayRetry]);
 
   useEffect(() => () => revokeObjectUrls(objectUrlsRef.current), []);
 
@@ -138,18 +143,27 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
   const cells = calendarMonthCells(visibleMonth.year, visibleMonth.month);
   const filteredItems = dayItems.filter((item) => filter === "all" || item.type === filter);
 
+  function moveDateFocus(event: KeyboardEvent<HTMLButtonElement>, dateKey: string): void {
+    const distance = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key];
+    if (distance === undefined) return;
+    const buttons = Array.from(gridRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
+    const index = buttons.findIndex((button) => button.dataset.date === dateKey);
+    const next = buttons[index + distance];
+    if (next) { event.preventDefault(); next.focus(); }
+  }
+
   return (
-    <main className="calendar-page">
-      <nav className="calendar-nav" aria-label="历史浏览">
-        <Link href="/">返回首页</Link>
-        <Link href="/timeline">时间线</Link>
-        <Link href="/diary">日记</Link>
-      </nav>
+    <main className={`calendar-page ui-page ${styles.page}`}>
+      <PageNav label="历史浏览">
+        <BackLink href="/">返回首页</BackLink>
+        <NavLink href="/timeline">时间线</NavLink>
+        <NavLink href="/diary">日记</NavLink>
+      </PageNav>
       <header className="calendar-header">
         <h1>日历</h1>
         <p>按日期找到过去留下的内容。</p>
       </header>
-
+      <div className="calendar-layout">
       <section className="calendar-month" aria-label={monthTitle(visibleMonth)}>
         <div className="calendar-month-nav">
           <button type="button" aria-label="上一个月" title="上一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, -1))}><span aria-hidden="true">‹</span></button>
@@ -167,23 +181,28 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
           本月
         </button>
         {monthError ? <p role="alert">{monthError}</p> : null}
+        {monthError ? <button className="ui-quiet-button" type="button" onClick={() => { setMonthLoading(true); setMonthError(null); setMonthRetry((value) => value + 1); }}>重新读取本月</button> : null}
+        <p className="calendar-month-status" role="status">{monthLoading ? "正在读取记录日期…" : monthError ? "" : "有记录的日期下方有圆点。"}</p>
         <div className="calendar-weekdays" aria-hidden="true">
           {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
         </div>
-        <div className="calendar-grid" aria-busy={monthLoading}>
+        <div ref={gridRef} className="calendar-grid" aria-busy={monthLoading} key={`${visibleMonth.year}-${visibleMonth.month}`}>
           {cells.map((cell, index) => cell ? (
             <button
               aria-label={dateButtonLabel(cell.dateKey, recorded.has(cell.dateKey), cell.dateKey === todayKey)}
               aria-pressed={selectedDateKey === cell.dateKey}
+              aria-current={cell.dateKey === todayKey ? "date" : undefined}
               className={[
                 "calendar-day",
                 recorded.has(cell.dateKey) ? "calendar-day-recorded" : "",
                 cell.dateKey === todayKey ? "calendar-day-today" : "",
               ].filter(Boolean).join(" ")}
               data-has-records={recorded.has(cell.dateKey) ? "true" : "false"}
+              data-date={cell.dateKey}
               key={cell.dateKey}
               type="button"
               onClick={() => selectDate(cell.dateKey)}
+              onKeyDown={(event) => moveDateFocus(event, cell.dateKey)}
             >
               <span>{cell.day}</span>
               {recorded.has(cell.dateKey) ? <i aria-hidden="true" /> : null}
@@ -193,10 +212,10 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
       </section>
 
       {selectedDateKey ? (
-        <section className="calendar-day-detail" aria-label={`${dayTitle(selectedDateKey)}的记录`}>
+        <section className="calendar-day-detail" aria-label={`${dayTitle(selectedDateKey)}的记录`} aria-busy={dayLoading}>
           <div className="calendar-detail-header">
             <h2>{dayTitle(selectedDateKey)}</h2>
-            <div className="calendar-filters" aria-label="记录类型">
+            <div className="calendar-filters" role="group" aria-label="记录类型">
               {FILTERS.map((option) => (
                 <button
                   aria-pressed={filter === option.value}
@@ -209,18 +228,20 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
               ))}
             </div>
           </div>
-          {dayLoading ? <p>正在读取这一天的记录……</p> : null}
+          {dayLoading ? <p className="ui-status" role="status">正在读取这一天的记录……</p> : <p className="visually-hidden" role="status">{`${dayTitle(selectedDateKey)}，已显示 ${filteredItems.length} 条记录。`}</p>}
           {dayError ? <p role="alert">{dayError}</p> : null}
+          {dayError ? <button className="ui-quiet-button" type="button" onClick={() => { setDayLoading(true); setDayError(null); setDayRetry((value) => value + 1); }}>重新读取当天</button> : null}
           {!dayLoading && !dayError && filteredItems.length === 0 ? (
             <p className="calendar-day-empty">这一天没有此类记录。</p>
           ) : null}
-          <div className="calendar-day-list">
+          <div className="calendar-day-list ui-content-enter" key={`${selectedDateKey}-${filter}-${dayLoading}`}>
             {filteredItems.map((item) => (
               <TimelineItemView item={item} key={`${item.type}-${item.id}`} />
             ))}
           </div>
         </section>
-      ) : null}
+      ) : <p className="calendar-prompt">选择一个日期查看内容。</p>}
+      </div>
     </main>
   );
 }

@@ -1,0 +1,13 @@
+.git
+.agents
+.claude
+.codex
+.env*
+design
+design-audit
+test-results
+playwright-report
+e2e
+tests
+docs
+*.tsbuildinfo

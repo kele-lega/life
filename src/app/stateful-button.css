@@ -1,5 +1,5 @@
-/* Only this component uses Tailwind. No Preflight/reset or automatic source scan.
-   Prefixed, important utilities insulate it from legacy page-level button rules. */
+/* Only the button's animated contents use Tailwind. No Preflight/reset or
+   automatic source scan. Outer appearance uses the shared design tokens. */
 @layer theme, utilities;
 @import "tailwindcss/theme.css" layer(theme) prefix(sb);
 @import "tailwindcss/utilities.css" layer(utilities) prefix(sb) source(none) important;

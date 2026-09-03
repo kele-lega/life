@@ -15,8 +15,8 @@ async function saveText(page: import("@playwright/test").Page, text: string): Pr
 }
 
 test.describe("real browser local-first baseline", () => {
-  test.beforeEach(async ({ context }) => {
-    await context.grantPermissions([], { origin: "http://127.0.0.1:3100" });
+  test.beforeEach(async ({ context, baseURL }) => {
+    await context.grantPermissions([], { origin: new URL(baseURL!).origin });
   });
 
   test("persists multiline text through refresh and IndexedDB", async ({ page }) => {
@@ -62,15 +62,15 @@ test.describe("real browser local-first baseline", () => {
     await article.getByRole("textbox", { name: "追加文字" }).fill("后来补充");
     await article.getByRole("button", { name: "保存追加" }).click();
     await expect(article.getByText("原始 Moment", { exact: true })).toBeVisible();
-    await expect(article.getByText("后来补充", { exact: true })).toBeVisible();
+    await expect(article.locator(".append-entry p")).toHaveText("后来补充");
     await page.reload();
     const restored = page.getByRole("article").filter({ hasText: "原始 Moment" });
     await expect(restored.getByText("原始 Moment", { exact: true })).toBeVisible();
     await expect(restored.getByText("后来补充", { exact: true })).toBeVisible();
   });
 
-  test("stores mocked geolocation city and keeps coordinates hidden", async ({ page, context }) => {
-    await context.grantPermissions(["geolocation"], { origin: "http://127.0.0.1:3100" });
+  test("stores mocked geolocation city and keeps coordinates hidden", async ({ page, context, baseURL }) => {
+    await context.grantPermissions(["geolocation"], { origin: new URL(baseURL!).origin });
     await context.setGeolocation({ latitude: 31.2304, longitude: 121.4737 });
     await page.route("**/api/location/reverse**", async (route) => {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ city: "上海" }) });

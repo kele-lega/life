@@ -28,12 +28,12 @@ describe("StatefulButton", () => {
 
     await act(async () => { resolve(finish); });
     expect(button).toHaveAttribute("data-phase", "done");
-    expect(button).toHaveAccessibleName("保存追加");
+    expect(button).toHaveAccessibleName("已保存");
     expect(screen.getByRole("status")).toHaveTextContent("已保存");
     expect(button.querySelector("path")).toHaveAttribute("d", "M 3 8.5 L 6.5 12 L 13 4.5");
     fireEvent.click(button);
     expect(onAction).toHaveBeenCalledTimes(1);
-    await act(() => vi.advanceTimersByTimeAsync(1499));
+    await act(() => vi.advanceTimersByTimeAsync(1099));
     expect(finish).not.toHaveBeenCalled();
     await act(() => vi.advanceTimersByTimeAsync(1));
     expect(finish).toHaveBeenCalledTimes(1);
@@ -52,6 +52,7 @@ describe("StatefulButton", () => {
     expect(button).toHaveAttribute("data-phase", "idle");
     expect(button).toBeEnabled();
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    if (failure === "rejection") expect(screen.getByRole("alert")).toHaveTextContent("保存失败，请重试。");
     await act(async () => { fireEvent.click(button); });
     expect(button).toHaveAttribute("data-phase", "done");
     expect(onAction).toHaveBeenCalledTimes(2);
@@ -67,6 +68,29 @@ describe("StatefulButton", () => {
     await act(() => vi.advanceTimersByTimeAsync(2000));
     expect(finish).not.toHaveBeenCalled();
     clear.mockRestore();
+  });
+
+  it("never lets a completed save reset the next pending operation", async () => {
+    let resolve!: (value: StatefulButtonResult) => void;
+    const firstFinish = vi.fn();
+    const secondFinish = vi.fn();
+    const onAction = vi.fn<() => Promise<StatefulButtonResult>>()
+      .mockResolvedValueOnce(firstFinish)
+      .mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    render(<StatefulButton label="保存" onAction={onAction} />);
+    const button = screen.getByRole("button");
+    await act(async () => { fireEvent.click(button); });
+    await act(() => vi.advanceTimersByTimeAsync(1100));
+    fireEvent.click(button);
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    expect(firstFinish).toHaveBeenCalledTimes(1);
+    expect(button).toHaveAccessibleName("保存中…");
+    expect(button).toBeDisabled();
+    expect(secondFinish).not.toHaveBeenCalled();
+    await act(async () => { resolve(secondFinish); });
+    await act(() => vi.advanceTimersByTimeAsync(1100));
+    expect(secondFinish).toHaveBeenCalledTimes(1);
+    expect(button).toHaveAccessibleName("保存");
   });
 
   it("does not start a timer when a pending operation settles after unmount", async () => {

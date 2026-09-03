@@ -132,7 +132,7 @@ Implement the single “write something” flow, text input, save, and error sta
 - [x] Check desktop empty/populated/writing states and 390px mobile, with additional 320/430/768px checks in both themes; save browser screenshots.
 - [x] Pass typecheck, lint, 152 Vitest tests, and 24 Playwright tests (latest save-button verification).
 - [x] Pass the standard production build; reverified after the user's environment repair.
-- [ ] Obtain user approval of UI-1 before starting UI-2.
+- [x] Earlier phase gate superseded by the 2026-09-03 user instruction to execute the audited UI improvement plan in sequence.
 
 **Done when:** all five validation commands pass and the user has reviewed the homepage. No data-layer changes, new product features, or early redesign of Timeline, Calendar, Diary, or Search.
 
@@ -143,7 +143,38 @@ Implement the single “write something” flow, text input, save, and error sta
 - [x] Scope Tailwind to the new button without a global reset; check desktop/mobile and both color schemes.
 - [x] Retain persistence/retry regression coverage and add button lifecycle, Diary feedback, and real-browser checks. No new product phase or data capability.
 
-## Phase 12 - Manual tags
+## 2026-09-03 UI quality refresh and deployment
+
+The user approved the product audit with “开始操作”. This work implements the current UI/deployment brief in sequence, without adding the later V1 product features below.
+
+- [x] UI-1: shared design tokens, Home composition, measured spring expansion, growing input, image states, focus return, and shorter real save feedback.
+- [x] UI-2: Timeline date anchors, reusable reading presentation, natural photos, full Append dates, and read retry.
+- [x] UI-3: Diary list/read/write presentation, loading state, long-form input, return-link draft guard, and edit focus restoration.
+- [x] UI-4: Calendar's quiet month/day layout, 44px dates at 320px, keyboard/date feedback; Search input, exact-text highlights and matching excerpts, stale-error isolation.
+- [x] UI-5: global CSS cleanup, shared entry/press/photo motion, reduced motion, both themes, every requested width, and 200% type reflow.
+- [x] Save before/after screenshots for every UI phase and a comparison gallery under `design/ui-refresh/`.
+- [x] Final typecheck, lint, 154 unit/integration tests, 28 Chromium E2E tests, and production build.
+- [x] Deployment configuration, environment review, README, and production test support.
+- [x] Production deployment: switched to Netlify at the user's request, deployed successfully to `https://life-kelelega.netlify.app`.
+- [ ] Live-site verification: Netlify's default account login protection blocks independent browser tests. Awaiting the user's preferred production access setting. See `docs/DEPLOYMENT.md`.
+
+No schema, repository API, entity structure, or Timeline/Calendar/Search query file was modified. Actual Safari/iOS/VoiceOver acceptance remains outside the available Chromium evidence.
+
+## 2026-09-03 Unified motion system (explicit follow-up)
+
+- [x] Read the existing presentation and product constraints; capture the current Home/writing states before implementation.
+- [x] Share typed motion constants and SSR CSS variables; keep the root layout server-rendered and routes unkeyed.
+- [x] Add layered Home entry, restrained invitation/navigation/photo feedback, measured reversible editor reveals, and full reduced-motion behavior.
+- [x] Preserve stable row/image identity and pending append drafts through asynchronous refresh; guard stale queries and release object URLs.
+- [x] Refine the existing save button with fixed intrinsic size, accessible states, 1100ms success feedback, operation-generation guards and cleanup.
+- [x] Verify rapid toggles, actual pending/failure/retry, old-row opacity during insertion, native navigation, five viewports and both themes/motion preferences.
+- [x] Pass typecheck, lint, 159 unit/integration tests, 38 Chromium E2E tests and production build; 12 production-focused tests also pass after distinguishing documented preload advisories.
+- [x] Preserve before/after screenshots, 72 matrix screenshots, production interaction videos and a comparison gallery in `design/motion-system/`.
+- [x] Publish the motion update to the existing Netlify project: deploy `6a9935dc08d1754a8e879de8` is ready at `https://life-kelelega.netlify.app` (2026-09-03 08:55:32 UTC). Existing account login protection remains active; unauthenticated HEAD returns 401, so live application verification is still pending.
+
+Existing repository row-limit enforcement, cross-route Search state restoration and native iOS/Safari/VoiceOver acceptance are documented in the motion review; no data-layer or framework-cache change is included.
+
+## Phase 12 - Manual tags (future product work)
 
 Implement Tag and ContentTag, normalization, optional assignment, filtering, and search inclusion.
 

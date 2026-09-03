@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life · 动效验收</title>
+<style>
+  :root { color-scheme: light dark; font: 15px/1.7 system-ui, sans-serif; }
+  body { max-width: 1280px; margin: auto; padding: 32px 24px 80px; }
+  h1 { font-size: 26px; font-weight: 550; margin-bottom: 8px; }
+  p { max-width: 75ch; opacity: .8; }
+  a { color: inherit; text-underline-offset: 4px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; margin: 28px 0; }
+  label { display: grid; gap: 6px; }
+  select { min-width: 120px; min-height: 44px; font: inherit; padding: 4px 12px; }
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { margin-bottom: 12px; }
+  img { width: 100%; height: auto; border: 1px solid #8885; vertical-align: top; }
+  .videos { display: flex; flex-wrap: wrap; gap: 28px; margin: 32px 0; }
+  video { width: min(100%, 390px); display: block; border: 1px solid #8885; }
+  summary { cursor: pointer; padding: 12px 0; }
+  :focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+  @media (max-width: 680px) { .comparison { grid-template-columns: 1fr; } }
+</style>
+<h1>Life · 动效与状态连续性</h1>
+<p>本次保持原有版式、字体与色彩，统一进入、展开、保存、列表、图片和导航反馈。下方是相同测试内容的真实浏览器截图，以及生产构建的交互录像。</p>
+<p><a href="README.md">实现与验证记录</a> · <a href="../../docs/DEPLOYMENT.md">生产部署状态</a></p>
+<div class="controls">
+  <label>画面<select id="scene"><option value="home">首页</option><option value="writing">展开写作</option></select></label>
+  <label>宽度<select id="width"><option>390</option><option>320</option><option>430</option><option>768</option><option>1440</option></select></label>
+  <label>主题<select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+</div>
+<div class="comparison">
+  <figure><figcaption>修改前</figcaption><img id="before" src="before/home-390-light.png" alt="修改前的首页，390px 浅色"></figure>
+  <figure><figcaption>修改后</figcaption><img id="after" src="after/home-390-light.png" alt="修改后的首页，390px 浅色"></figure>
+</div>
+<p>对比图使用相同日期、示例和尺寸；开发环境角落的 Next.js 指示器不属于产品。保存按钮预留最长状态文字空间，反馈过程中尺寸保持不变。截图固定在动效完成状态，动画过程见录像。</p>
+<details open>
+  <summary>生产构建 · 390 × 844 实际操作录像</summary>
+  <div class="videos">
+    <figure><figcaption>浅色 · 记录、追加、连续保存与路由进入</figcaption><video controls muted playsinline preload="metadata" src="production/interaction-390-light.webm"></video></figure>
+    <figure><figcaption>深色 · 相同操作</figcaption><video controls muted playsinline preload="metadata" src="production/interaction-390-dark.webm"></video></figure>
+  </div>
+</details>
+<details>
+  <summary>完整尺寸与 reduced motion 矩阵</summary>
+  <p>自动测试涵盖 1440×900、768×1024、430×932、390×844、320×700，浅色/深色，以及正常/减少动画；包括首页、写作、Timeline、Calendar、Diary、Search。共保留 72 张矩阵截图。</p>
+  <p><a id="matrix-home" href="matrix/motion-home-390-light-no-preference.png">正常动画 · 首页</a> · <a id="matrix-writing" href="matrix/motion-writing-390-light-reduce.png">减少动画 · 写作</a></p>
+</details>
+<script>
+  const scene = document.getElementById("scene");
+  const width = document.getElementById("width");
+  const theme = document.getElementById("theme");
+  function update() {
+    for (const stage of ["before", "after"]) {
+      const image = document.getElementById(stage);
+      image.src = `${stage}/${scene.value}-${width.value}-${theme.value}.png`;
+      image.alt = `${stage === "before" ? "修改前" : "修改后"}，${scene.value === "home" ? "首页" : "展开写作"}，${width.value}px，${theme.value === "light" ? "浅色" : "深色"}`;
+    }
+    document.getElementById("matrix-home").href = `matrix/motion-home-${width.value}-${theme.value}-no-preference.png`;
+    document.getElementById("matrix-writing").href = `matrix/motion-writing-${width.value}-${theme.value}-reduce.png`;
+  }
+  for (const control of [scene, width, theme]) control.addEventListener("change", update);
+</script>
+</html>

@@ -1,0 +1,44 @@
+/* Animation only. Appearance, spacing and typography remain in their existing sheets. */
+.ui-nav-label { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+.ui-nav-label::after {
+  content: ""; position: absolute; inset: auto 0 -3px; height: 1px;
+  background: currentColor; transform: scaleX(0); transform-origin: left;
+}
+.ui-nav-link[aria-current="page"] .ui-nav-label::after,
+.ui-nav-link:focus-visible .ui-nav-label::after { transform: scaleX(1); }
+.ui-photo[data-loaded="false"] { opacity: 0; }
+.ui-photo[data-loaded="true"] { opacity: 1; }
+.stateful-button-spinner { animation: life-saving 0.8s linear infinite; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-page { animation: life-page-enter var(--motion-enter) var(--ease-soft) backwards; }
+  .motion-home :is(.home-date, .quick-record, .recent-heading, .home-secondary-nav) {
+    animation: life-page-enter var(--motion-enter) var(--ease-soft) backwards;
+  }
+  .motion-home .quick-record { animation-delay: var(--motion-home-step); }
+  .motion-home .recent-heading { animation-delay: calc(2 * var(--motion-home-step)); }
+  .motion-home .home-secondary-nav { animation-delay: calc(3 * var(--motion-home-step)); }
+  .ui-content-enter { animation: life-page-enter var(--motion-normal) var(--ease-soft) backwards; }
+  .ui-photo { transition: opacity var(--motion-normal) var(--ease-soft), transform var(--motion-normal) var(--ease-soft); }
+  :where(button, a) {
+    transition: color var(--motion-fast) var(--ease-soft), background-color var(--motion-fast) var(--ease-soft), border-color var(--motion-fast) var(--ease-soft);
+  }
+  :where(button:not(.stateful-button)) { transition: color var(--motion-fast) var(--ease-soft), background-color var(--motion-fast) var(--ease-soft), transform var(--motion-instant) var(--ease-soft); }
+  :where(button:not(:disabled, .stateful-button)):active { transform: scale(0.98); }
+  .ui-nav-label::after { transition: transform var(--motion-fast) var(--ease-soft); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .ui-nav-link:hover .ui-nav-label::after { transform: scaleX(1); }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .ui-photo[data-loaded="true"]:hover { transform: scale(1.02); }
+}
+@keyframes life-page-enter {
+  from { opacity: 0; transform: translateY(var(--motion-page-y)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes life-saving { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .stateful-button-spinner { animation: none; }
+  html { scroll-behavior: auto; }
+}

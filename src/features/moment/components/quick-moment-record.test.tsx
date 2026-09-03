@@ -53,7 +53,9 @@ describe("QuickMomentRecord", () => {
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(createMomentMock).toHaveBeenCalledWith({ originalText: text, location: { city: null, placeName: null, latitude: null, longitude: null }, attachments: [] }));
-    expect(screen.getByRole("button", { name: "保存" })).toHaveAttribute("data-phase", "done");
+    expect(screen.getByRole("button", { name: "已保存" })).toHaveAttribute("data-phase", "done");
+    expect(screen.getByRole("textbox", { name: "记录内容" })).toHaveValue(text);
+    expect(screen.getByRole("textbox", { name: "记录内容" })).toBeDisabled();
     await waitFor(() => expect(screen.queryByRole("textbox")).not.toBeInTheDocument(), { timeout: 2500 });
     expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
   });
@@ -182,6 +184,9 @@ describe("QuickMomentRecord", () => {
     expect(savedInput.originalText).toBe("带图片的记录");
     expect(savedInput.attachments).toHaveLength(1);
     expect(savedInput.attachments[0].fileName).toBe("second.webp");
+    expect(screen.getByRole("img", { name: "second.webp" })).toBeInTheDocument();
+    expect(revokeObjectURL).not.toHaveBeenCalledWith("blob:second.webp");
+    await waitFor(() => expect(screen.queryByRole("textbox", { name: "记录内容" })).not.toBeInTheDocument(), { timeout: 2500 });
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:second.webp");
   });
 

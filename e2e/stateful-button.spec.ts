@@ -16,7 +16,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.goto("/");
     await page.getByRole("button", { name: "写点什么", exact: true }).click();
     await page.getByRole("textbox", { name: "记录内容" }).fill("保存按钮的真实记录\n原文保持不变。");
-    const save = page.getByRole("button", { name: "保存", exact: true });
+    const save = page.locator(".record-actions .stateful-button");
     await expect(save).toHaveCSS("height", "44px");
     await expect(save).toHaveCSS("min-width", "104px");
     await expect(save).toHaveCSS("border-radius", "8px");
@@ -28,11 +28,12 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.keyboard.press("Enter");
     await expect(save).toHaveAttribute("data-phase", "done");
     await expect(save).toBeDisabled();
-    await expect(save).toHaveAccessibleName("保存");
+    await expect(save).toHaveAccessibleName("已保存");
     await expect(save.locator("path")).toHaveAttribute("d", "M 3 8.5 L 6.5 12 L 13 4.5");
     await expect(save.locator("path")).toHaveAttribute("stroke-dasharray", "1 1");
     await expect(page.getByRole("article")).toContainText("原文保持不变。");
-    await expect.poll(async () => (await save.boundingBox())!.width).toBeGreaterThan(idleWidth);
+    // Success feedback stays inside the same target, without horizontal movement.
+    expect((await save.boundingBox())!.width).toBeCloseTo(idleWidth, 0);
     await page.screenshot({ path: testInfo.outputPath(`save-done-${colorScheme}.png`), animations: "disabled", fullPage: true });
     await expect(page.getByRole("button", { name: "写点什么", exact: true })).toBeVisible();
     await expect(page.getByRole("article")).toHaveCount(1);
@@ -40,10 +41,10 @@ for (const colorScheme of ["light", "dark"] as const) {
     const article = page.getByRole("article");
     await article.getByRole("button", { name: "追加", exact: true }).click();
     await page.getByRole("textbox", { name: "追加文字" }).fill("后来补充的内容。");
-    const append = page.getByRole("button", { name: "保存追加", exact: true });
+    const append = page.locator(".append-actions .stateful-button");
     await append.click();
     await expect(append).toHaveAttribute("data-phase", "done");
-    await expect(append).toHaveAccessibleName("保存追加");
+    await expect(append).toHaveAccessibleName("已保存");
     await expect(append).toBeDisabled();
     await expect(article.locator(".append-entry")).toHaveCount(1);
     await expect(page.getByRole("textbox", { name: "追加文字" })).toHaveCount(0);
@@ -53,10 +54,10 @@ for (const colorScheme of ["light", "dark"] as const) {
 
     await page.goto("/diary/new");
     await page.getByRole("textbox", { name: "日记正文" }).fill("可选标题的日记，也使用原来的保存文字。");
-    const diary = page.getByRole("button", { name: "保存日记", exact: true });
+    const diary = page.locator(".stateful-button");
     await diary.click();
     await expect(diary).toHaveAttribute("data-phase", "done");
-    await expect(diary).toHaveAccessibleName("保存日记");
+    await expect(diary).toHaveAccessibleName("已保存");
     await expect(diary).toBeDisabled();
     await expect(page).toHaveURL(/\/diary\/(?!new)[^/]+$/);
     await page.reload();

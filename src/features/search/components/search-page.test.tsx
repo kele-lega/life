@@ -117,7 +117,7 @@ describe("SearchPage", () => {
 
     await user.type(screen.getByRole("searchbox", { name: "关键词" }), "Moment");
     await user.click(screen.getByRole("button", { name: "搜索" }));
-    expect(await screen.findByText("Moment 搜索结果")).toBeInTheDocument();
+    expect(await screen.findByRole("article")).toHaveTextContent("Moment 搜索结果");
     expect(screen.getByText("图片暂时无法读取。")).toBeInTheDocument();
   });
 

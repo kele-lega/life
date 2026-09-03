@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { ImageIcon, Pencil2Icon, PlusIcon } from "@radix-ui/react-icons";
 import { StatefulButton, type StatefulButtonResult } from "@/components/ui/stateful-button";
+import { Reveal } from "@/components/ui/reveal";
+import { WritingTextarea } from "@/components/ui/writing-textarea";
+import { RecordImage } from "@/components/ui/record-image";
 
 import type { LocationMetadata, Moment } from "@/features/moment/model/types";
 import { createMomentWithAttachments } from "@/features/moment/repository/moment-repository";
@@ -36,6 +40,17 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
   const pendingImagesRef = useRef<PendingImage[]>([]);
   const locationAttemptedRef = useRef(false);
   const locationRequestRef = useRef(0);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const restoreFocusRef = useRef(false);
+
+  useEffect(() => {
+    if (isRecording) textareaRef.current?.focus({ preventScroll: true });
+    if (!isRecording && restoreFocusRef.current) {
+      triggerRef.current?.focus({ preventScroll: true });
+      restoreFocusRef.current = false;
+    }
+  }, [isRecording]);
 
   useEffect(() => {
     pendingImagesRef.current = pendingImages;
@@ -75,6 +90,7 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
     setLocation({ city: null, placeName: null, latitude: null, longitude: null });
     setIsEditingPlace(false);
     setError(null);
+    restoreFocusRef.current = true;
     setIsRecording(false);
     locationAttemptedRef.current = false;
     locationRequestRef.current += 1;
@@ -122,14 +138,15 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
           size: file.size,
         })),
       });
-      clearPendingImages();
-      setText("");
       locationRequestRef.current += 1;
       setIsLocating(false);
       onSaved?.(moment);
       return () => {
+        clearPendingImages();
+        setText("");
         setLocation({ city: null, placeName: null, latitude: null, longitude: null });
         setIsEditingPlace(false);
+        restoreFocusRef.current = true;
         setIsRecording(false);
         locationAttemptedRef.current = false;
         setIsSaving(false);
@@ -141,15 +158,18 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
     }
   }
 
-  if (!isRecording) {
-    return <section className="quick-record"><button className="write-button" type="button" onClick={beginRecording}>写点什么</button></section>;
-  }
-
   return (
-    <section className="quick-record">
+    <section className="quick-record" data-recording={isRecording}>
+      {isRecording ? (
+        <h2 className="record-heading"><label htmlFor={inputId}>写点什么</label><Pencil2Icon className="invite-icon" aria-hidden="true" /></h2>
+      ) : (
+        <button ref={triggerRef} className="write-button" type="button" onClick={beginRecording} aria-expanded={false}>
+          <span className="write-label">写点什么</span><PlusIcon className="invite-icon" aria-hidden="true" />
+        </button>
+      )}
+      <Reveal open={isRecording}>
       <div className="record-panel" aria-label="快速记录" aria-busy={isSaving}>
-        <h2 className="record-heading"><label htmlFor={inputId}>写点什么</label></h2>
-        <textarea id={inputId} aria-label="记录内容" aria-invalid={!!error} aria-describedby={error ? `${inputId}-error` : undefined} autoFocus disabled={isSaving} onChange={(event) => setText(event.target.value)} placeholder="今天突然想到……" value={text} />
+        <WritingTextarea ref={textareaRef} id={inputId} aria-label="记录内容" aria-invalid={!!error} aria-describedby={error ? `${inputId}-error` : undefined} autoFocus disabled={isSaving} onChange={(event) => setText(event.target.value)} placeholder="今天突然想到……" value={text} />
         <div className="record-tools">
           <div className="location-field">
           <span aria-live="polite">{isLocating ? "正在获取位置" : location.city ?? ""}</span>
@@ -163,15 +183,13 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
           )}
           </div>
           <input ref={fileInputRef} accept="image/*" aria-label="选择图片" hidden multiple type="file" onChange={handleImagesSelected} />
-          <button disabled={isSaving} type="button" onClick={chooseImages}>添加图片</button>
+          <button className="image-trigger" disabled={isSaving} type="button" onClick={chooseImages}><ImageIcon className="ui-icon" aria-hidden="true" />添加图片</button>
         </div>
         {pendingImages.length > 0 ? (
           <div className="image-previews" aria-label="待保存图片">
             {pendingImages.map(({ file, previewUrl }) => (
               <div className="image-preview" key={previewUrl}>
-                {/* Object URLs are local-only previews and do not use remote image optimization. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt={file.name} src={previewUrl} />
+                <RecordImage alt={file.name} src={previewUrl} width={96} height={96} />
                 <button aria-label={`移除 ${file.name}`} disabled={isSaving} type="button" onClick={() => removeImage(previewUrl)}>移除</button>
               </div>
             ))}
@@ -183,6 +201,7 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
           <StatefulButton disabled={isSaving} label="保存" onAction={saveRecording} />
         </div>
       </div>
+      </Reveal>
     </section>
   );
 }

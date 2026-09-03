@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { motionCssVariables } from "@/components/ui/motion";
 import "./globals.css";
 import "./stateful-button.css";
+import "./design-system.css";
+import "./motion.css";
 
 export const metadata: Metadata = {
   title: "Life",
@@ -9,8 +12,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN">
-      <body>{children}</body>
+    <html lang="zh-CN" style={motionCssVariables}>
+      <body>
+        <a className="skip-link" href="#main-content">跳到正文</a>
+        <div id="main-content" tabIndex={-1}>{children}</div>
+      </body>
     </html>
   );
 }

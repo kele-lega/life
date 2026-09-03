@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+# Netlify auto-detects Next.js and installs its maintained OpenNext adapter.
+# Keep the server runtime for /api/location/reverse and dynamic Diary routes.

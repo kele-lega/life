@@ -1,5 +1,6 @@
 import { DiaryList } from "@/features/diary/components/diary-list";
+import { PageEntrance } from "@/components/ui/page-entrance";
 
 export default function DiaryPage() {
-  return <DiaryList />;
+  return <PageEntrance><DiaryList /></PageEntrance>;
 }

@@ -94,7 +94,7 @@ describe("HomePage", () => {
     await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
     expect(screen.getAllByRole("article")[0]).toHaveTextContent(created.originalText);
     expect(mocks.listRecentMoments).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole("button", { name: "保存" })).toHaveAttribute("data-phase", "done");
+    expect(screen.getByRole("button", { name: "已保存" })).toHaveAttribute("data-phase", "done");
     await waitFor(() => expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument(), { timeout: 2500 });
   });
 });

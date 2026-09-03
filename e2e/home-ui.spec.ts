@@ -4,6 +4,43 @@ async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
+test("writing grows with content, restores keyboard focus, and keeps the last lines visible without CSS field-sizing", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 660 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  // Exercise the JS path used by engines without content-sized form controls.
+  await page.addInitScript(() => {
+    const supports = CSS.supports.bind(CSS);
+    CSS.supports = (...args: [string, string?]) => {
+      if (args[0] === "field-sizing") return false;
+      return args.length === 2 ? supports(args[0], args[1]!) : supports(args[0]);
+    };
+  });
+  await page.goto("/");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "跳到正文" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+  const invitation = page.getByRole("button", { name: "写点什么", exact: true });
+  await expect(invitation).toBeFocused();
+  await page.keyboard.press("Enter");
+  const input = page.getByRole("textbox", { name: "记录内容" });
+  await expect(input).toBeFocused();
+  await input.evaluate((element) => { element.style.setProperty("field-sizing", "fixed"); });
+  const text = "风从窗边吹进来。\n".repeat(18) + "最后一句也要完整保留。";
+  await input.fill(text);
+  await expect.poll(() => input.evaluate((element) => element.clientHeight >= element.scrollHeight - 2)).toBe(true);
+  await noOverflow(page);
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(invitation).toBeFocused();
+  await expect(page.getByRole("article").locator(":scope > p")).toHaveText(text);
+  await expect(page.getByRole("textbox", { name: "记录内容" })).toHaveCount(0);
+  const append = page.getByRole("button", { name: "追加", exact: true });
+  await append.click();
+  await expect(page.getByRole("textbox", { name: "追加文字" })).toBeFocused();
+  await page.getByRole("button", { name: "取消", exact: true }).click();
+  await expect(append).toBeFocused();
+});
+
 async function targetsFit(page: Page) {
   const targets = await page.locator("main button:visible, main a:visible").evaluateAll((elements) =>
     elements.map((element) => {
@@ -26,10 +63,10 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.goto("/");
     await expect(page.getByText("还没有留下片段。", { exact: true })).toBeVisible();
     await expect(page.getByRole("textbox")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "写点什么", exact: true })).toHaveCSS("font-weight", "700");
     const invitation = await page.getByRole("button", { name: "写点什么", exact: true }).boundingBox();
     const recording = await page.locator(".quick-record").boundingBox();
-    expect(invitation!.x + invitation!.width / 2).toBeCloseTo(recording!.x + recording!.width / 2, 0);
+    // The whole invitation row is a touch target, not only its lettering.
+    expect(invitation!.width).toBeCloseTo(recording!.width, 0);
     await expect(page.getByRole("link", { name: "时间线", exact: true })).toHaveCSS("font-weight", "400");
     await expect(page.locator("main")).toHaveCSS("background-color", colorScheme === "light" ? "rgb(250, 249, 246)" : "rgb(28, 29, 28)");
     await page.screenshot({ path: testInfo.outputPath(`desktop-empty-${colorScheme}.png`), fullPage: true });
@@ -38,11 +75,11 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: "写点什么", exact: true }).click();
     const input = page.getByRole("textbox", { name: "记录内容" });
     await expect(input).toBeFocused();
-    await expect(page.getByRole("heading", { name: "写点什么", exact: true })).toHaveCSS("text-align", "center");
+    await expect(page.getByRole("heading", { name: "写点什么", exact: true })).toBeVisible();
     await expect(input).toHaveCSS("border-radius", "12px");
     await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCSS("font-weight", "700");
     await expect(page.getByRole("button", { name: "取消", exact: true })).toHaveCSS("font-weight", "400");
-    await expect(page.getByRole("button", { name: "添加图片", exact: true })).toHaveCSS("font-weight", "600");
+    await expect(page.getByRole("button", { name: "添加图片", exact: true })).toBeEnabled();
     await input.fill(original);
     await page.getByRole("button", { name: "添加具体地点" }).click();
     await page.getByRole("textbox", { name: "具体地点" }).fill("湖边的小路");
@@ -68,6 +105,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "取消", exact: true }).click();
     await expect(input).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "写点什么", exact: true })).toBeFocused();
 
     for (const width of [390, 430, 320, 768]) {
       await page.setViewportSize({ width, height: 844 });

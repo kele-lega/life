@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { TimelineItemView } from "@/features/timeline/components/timeline-item-view";
@@ -12,6 +12,9 @@ import {
 
 import type { SearchResult } from "../model/types";
 import { querySearchPage, SEARCH_PAGE_SIZE } from "../query/search-query";
+import { BackLink, PageNav } from "@/components/ui/page-nav";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import styles from "./search-page.module.css";
 
 function matchLabel(result: SearchResult): string {
   if (result.type === "moment") {
@@ -74,6 +77,7 @@ export function SearchPage() {
     clearResults();
     setActiveInput(keyword);
     setSubmitted(keyword.length > 0);
+    setLoadingMore(false);
     if (keyword.length === 0) return;
 
     loadingRef.current = true;
@@ -127,7 +131,7 @@ export function SearchPage() {
       setHasMore(page.hasMore);
       setError(null);
     } catch {
-      setError("更多搜索结果暂时无法读取。");
+      if (request === requestRef.current) setError("更多搜索结果暂时无法读取。");
     } finally {
       if (request === requestRef.current) {
         loadingRef.current = false;
@@ -142,11 +146,11 @@ export function SearchPage() {
   }, []);
 
   return (
-    <main className="search-page">
-      <nav className="search-nav" aria-label="搜索导航">
-        <Link href="/">返回首页</Link>
-        <Link href="/timeline">时间线</Link>
-      </nav>
+    <main className={`search-page ui-page ${styles.page}`}>
+      <PageNav label="搜索导航">
+        <BackLink href="/">返回首页</BackLink>
+        <NavLink href="/timeline">时间线</NavLink>
+      </PageNav>
       <header className="search-header">
         <h1>搜索</h1>
         <p>在过去留下的文字中查找。</p>
@@ -154,6 +158,7 @@ export function SearchPage() {
       <form className="search-form" onSubmit={(event) => void runSearch(event)}>
         <label htmlFor="search-keyword">关键词</label>
         <div>
+          <div className="search-field"><MagnifyingGlassIcon className="ui-icon" aria-hidden="true" />
           <input
             id="search-keyword"
             name="keyword"
@@ -162,29 +167,31 @@ export function SearchPage() {
             type="search"
             value={input}
           />
+          </div>
           <button disabled={loading} type="submit">{loading ? "搜索中…" : "搜索"}</button>
         </div>
       </form>
+      <p className="visually-hidden" role="status" aria-live="polite">{loading ? "搜索中…" : submitted && !error ? `已显示 ${results.length} 条记录。` : ""}</p>
       {error ? <p role="alert">{error}</p> : null}
       {!submitted && !loading ? <p className="search-initial">输入关键词后查看结果。</p> : null}
       {submitted && !loading && !error && results.length === 0
         ? <p className="search-empty">没有找到相关记录。</p>
         : null}
       {results.length > 0 ? (
-        <section className="search-results" aria-label="搜索结果">
+        <section className="search-results ui-content-enter" aria-label="搜索结果" aria-busy={loadingMore}>
           {results.map((result) => (
             <div className="search-result" key={`${result.type}:${result.id}`}>
               <div className="search-result-meta">
                 <span>{formatTimelineDate(result.createdAt)}</span>
                 <span>{matchLabel(result)}</span>
               </div>
-              <TimelineItemView item={result.item} />
+              <TimelineItemView item={result.item} highlight={activeInput} matchedAppendIds={result.type === "moment" ? result.match.appendIds : undefined} />
             </div>
           ))}
         </section>
       ) : null}
       {!loading && hasMore ? (
-        <button className="search-load-more" disabled={loadingMore} onClick={() => void loadMore()} type="button">
+        <button className="search-load-more ui-quiet-button" disabled={loadingMore} onClick={() => void loadMore()} type="button">
           {loadingMore ? "读取中…" : "加载更多"}
         </button>
       ) : null}

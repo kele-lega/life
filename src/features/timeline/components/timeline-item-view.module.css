@@ -1,0 +1,27 @@
+.entry.entry { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px 20px; padding: 0; border: 0; }
+.entry.entry + .entry.entry { margin-top: 32px; }
+.entry > time { padding-top: 2px; color: var(--app-secondary); font: 400 0.8125rem/1.8 var(--font-ui); font-variant-numeric: tabular-nums; }
+.entry :global(.timeline-content) { min-width: 0; }
+.entry :global(.timeline-kind), .entry :global(.timeline-location), .entry :global(.timeline-append-label) { color: var(--app-secondary); font: 400 0.8125rem/1.6 var(--font-ui); }
+.entry :global(.timeline-kind) { margin-bottom: 8px; }
+.entry :global(.timeline-location) { margin-top: 10px; }
+.entry :global(.timeline-content) > p, .entry :global(.timeline-append) p { max-width: 34em; margin: 0; font: 400 1.125rem/1.9 var(--font-reading); white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry :global(.timeline-images) { display: grid; grid-template-columns: repeat(3, minmax(0, 152px)); gap: 10px; margin-top: 16px; }
+.entry :global(.timeline-images) img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-photo); }
+.entry :global(.timeline-images)[data-single] { grid-template-columns: minmax(0, 320px); }
+.entry :global(.timeline-images)[data-single] img { height: 220px; object-fit: contain; background: transparent; }
+.entry :global(.timeline-appends) { margin-top: 20px; padding-left: 16px; border-left: 1px solid var(--app-line); }
+.entry :global(.timeline-append) { margin-top: 12px; }
+.entry :global(.timeline-append) time { display: block; margin-bottom: 6px; font: 400 0.8125rem/1.6 var(--font-ui); }
+.entry :global(.timeline-append) p { font-size: 1rem; }
+.entry :global(.timeline-diary-link) { display: block; padding: 4px 0; min-width: 44px; min-height: 44px; color: var(--app-ink); text-decoration: none; }
+.entry :global(.timeline-diary-link) h3 { margin: 0 0 12px; font: 400 1.5rem/1.5 var(--font-reading); overflow-wrap: anywhere; }
+.entry :global(.timeline-diary-link):hover h3 { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.entry :global(.timeline-diary-link):hover { color: var(--app-action); }
+.entry :global(.timeline-child-error) { margin-top: 12px; color: var(--app-error); font: 400 0.8125rem/1.6 var(--font-ui); }
+@media (max-width: 767px) {
+  .entry.entry { display: block; }
+  .entry > time { display: block; margin-bottom: 12px; }
+  .entry :global(.timeline-content) > p { font-size: 1.0625rem; }
+  .entry :global(.timeline-images) { grid-template-columns: repeat(2, minmax(0, 152px)); }
+}

@@ -33,10 +33,10 @@ export function HomeDate() {
           {date ? <>
             <span className="date-number">{date.getMonth() + 1}</span><span className="date-unit">月</span>
             <span className="date-number">{date.getDate()}</span><span className="date-unit">日</span>
-          </> : null}
+          </> : <span className="date-placeholder">今天</span>}
         </time>
       </h1>
-      <p>{date?.toLocaleDateString("zh-CN", { weekday: "long" })}</p>
+      <p>{date?.toLocaleDateString("zh-CN", { weekday: "long" }) ?? "\u00a0"}</p>
     </header>
   );
 }

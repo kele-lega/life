@@ -1,0 +1,20 @@
+.page :global(.search-header) h1 { font: 400 2.5rem/1.4 var(--font-reading); }
+.page :global(.search-header) p { margin: 12px 0 32px; font-size: 0.875rem; }
+.page :global(.search-form) { max-width: 760px; }
+.page :global(.search-form) label { display: block; color: var(--app-secondary); font-size: 0.8125rem; margin-bottom: 12px; }
+.page :global(.search-form) > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+.page :global(.search-field) { display: flex; align-items: center; gap: 12px; padding: 0 16px; border: 1px solid var(--app-boundary); border-radius: var(--radius-paper); background: var(--app-paper); color: var(--app-secondary); }
+.page :global(.search-field):focus-within { outline: 2px solid var(--app-focus); outline-offset: 4px; }
+.page :global(.search-field) input { width: 100%; min-width: 0; min-height: 48px; padding: 10px 0; border: 0; border-radius: 0; background: transparent; color: var(--app-ink); font-size: 1rem; outline: none; }
+.page :global(.search-form) button { min-width: 80px; min-height: 48px; padding: 10px 16px; border: 1px solid transparent; border-radius: var(--radius-control); background: var(--app-action); color: var(--app-action-text); font-size: 0.875rem; }
+.page :global(.search-results) { display: grid; max-width: 760px; margin-top: 48px; gap: 36px; }
+.page :global(.search-result-meta) { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--app-line); color: var(--app-secondary); font-size: 0.8125rem; }
+.page mark { padding: 1px 0; background: var(--app-highlight); color: var(--app-ink); border-radius: 2px; }
+.page :global(.timeline-append)[data-matched] { padding-left: 12px; border-left: 2px solid var(--app-focus); }
+.page :global(.search-initial), .page :global(.search-empty), .page :global(.search-end) { margin-top: 32px; color: var(--app-secondary); font-size: 0.875rem; line-height: 1.8; }
+.page :global(.search-load-more) { margin-top: 28px; }
+@media (max-width: 767px) {
+  .page :global(.search-header) h1 { font-size: 2rem; }
+  .page :global(.search-field) { padding-inline: 12px; gap: 8px; }
+  .page :global(.search-results) { margin-top: 36px; }
+}

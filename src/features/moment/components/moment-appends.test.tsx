@@ -57,8 +57,10 @@ describe("MomentAppends", () => {
 
     await waitFor(() => expect(mocks.createMomentAppend).toHaveBeenCalledWith("moment-1", { text: exactText }));
     await waitFor(() => expect(mocks.listMomentAppends).toHaveBeenCalledTimes(2));
-    expect(screen.getByText((_, element) => element?.textContent === exactText)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "保存追加" })).toHaveAttribute("data-phase", "done");
+    expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === exactText)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "追加文字" })).toHaveValue(exactText);
+    expect(screen.getByRole("textbox", { name: "追加文字" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "已保存" })).toHaveAttribute("data-phase", "done");
     await waitFor(() => expect(screen.queryByRole("textbox", { name: "追加文字" })).not.toBeInTheDocument(), { timeout: 2500 });
   });
 
@@ -153,7 +155,7 @@ describe("MomentAppends", () => {
     expect(screen.getByRole("button", { name: "保存追加" })).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "保存追加" }));
-    await screen.findByText("不能丢");
+    await screen.findByText("不能丢", { selector: ".append-entry p" });
     expect(mocks.createMomentAppend).toHaveBeenCalledTimes(2);
   });
 

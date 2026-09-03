@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Life UI 改造对比</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px; color: #252621; background: #eeefeb; font: 15px/1.7 system-ui, sans-serif; }
+  header { max-width: 1280px; margin: 0 auto 24px; }
+  h1 { margin: 0; font-size: 24px; font-weight: 600; }
+  p { color: #60635b; margin: 6px 0 16px; }
+  form { display: flex; flex-wrap: wrap; gap: 16px; }
+  label { display: flex; align-items: center; gap: 8px; }
+  select { min-height: 44px; padding: 8px; border: 1px solid #85897f; border-radius: 6px; background: #faf9f6; font: inherit; }
+  select:focus-visible, a:focus-visible { outline: 2px solid #a72f26; outline-offset: 4px; }
+  main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 1280px; margin: auto; align-items: start; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { margin-bottom: 12px; font-weight: 600; }
+  img { display: block; width: 100%; max-width: var(--image-width, 390px); height: auto; border: 1px solid #dadcd5; }
+  a { color: inherit; }
+  @media (max-width: 620px) { body { padding: 20px; } main { grid-template-columns: 1fr; } }
+</style>
+<header>
+  <h1>Life UI 改造对比</h1>
+  <p>同一组测试记录、同一日期。修改后截图来自生产构建。测试数据仅存在于独立浏览器。</p>
+  <form>
+    <label>宽度 <select id="width"><option>320</option><option selected>390</option><option>430</option><option>768</option><option>1440</option></select></label>
+    <label>主题 <select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+    <label>页面 <select id="state"><option value="home">首页记录</option><option value="writing" selected>首页写作</option><option value="timeline">时间线</option><option value="diary">日记列表</option><option value="diary-new">日记写作</option><option value="calendar">日历</option><option value="search">搜索</option></select></label>
+  </form>
+</header>
+<main>
+  <figure><figcaption>修改前</figcaption><a id="before-link"><img id="before" alt="修改前的首页截图"></a></figure>
+  <figure><figcaption>修改后</figcaption><a id="after-link"><img id="after" alt="修改后的首页截图"></a></figure>
+</main>
+<script>
+  const width = document.getElementById('width');
+  const theme = document.getElementById('theme');
+  const state = document.getElementById('state');
+  function update() {
+    document.documentElement.style.setProperty('--image-width', `${width.value}px`);
+    for (const stage of ['before', 'after']) {
+      const before = { home: 'before', writing: 'before', timeline: 'before-ui-2', diary: 'before-ui-3', 'diary-new': 'before-ui-3', calendar: 'before-ui-4', search: 'before-ui-4' };
+      const folder = stage === 'before' ? before[state.value] : 'production';
+      const path = `${folder}/${state.value}-${width.value}-${theme.value}.png`;
+      document.getElementById(stage).src = path;
+      document.getElementById(`${stage}-link`).href = path;
+    }
+  }
+  document.querySelector('form').addEventListener('change', update);
+  update();
+</script>
+</html>

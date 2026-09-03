@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { RecordImage } from "@/components/ui/record-image";
+import styles from "./timeline-item-view.module.css";
+import { HighlightedText, searchExcerpt } from "@/components/ui/highlighted-text";
 
 import type { TimelineItem } from "../model/types";
 import { formatTimelineTime } from "../utils/local-date";
@@ -16,22 +19,20 @@ function locationLabel(item: Extract<TimelineItem, { type: "moment" }>): string 
   return values.length > 0 ? values.join(" · ") : null;
 }
 
-export function TimelineItemView({ item }: { item: TimelineItem }) {
+export function TimelineItemView({ item, highlight = "", matchedAppendIds = [] }: { item: TimelineItem; highlight?: string; matchedAppendIds?: readonly string[] }) {
   const location = item.type === "moment" ? locationLabel(item) : null;
   return (
-    <article className={`timeline-entry timeline-${item.type}`}>
+    <article className={`timeline-entry timeline-${item.type} ${styles.entry}`}>
       <time dateTime={item.createdAt}>{formatTimelineTime(item.createdAt)}</time>
       {item.type === "moment" ? (
         <div className="timeline-content">
           <div className="timeline-kind">随笔</div>
+          <p><HighlightedText text={item.moment.originalText} keyword={highlight} /></p>
           {location ? <div className="timeline-location">{location}</div> : null}
-          <p>{item.moment.originalText}</p>
           {item.attachments.length > 0 ? (
-            <div className="timeline-images" aria-label={`${item.moment.originalText}的图片`}>
+            <div className="timeline-images" data-single={item.attachments.length === 1 || undefined} aria-label={`${item.moment.originalText}的图片`}>
               {item.attachments.map((attachment) => (
-                // Object URLs are local-only previews.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img alt={attachment.fileName} key={attachment.id} src={attachment.url} />
+                <RecordImage alt={attachment.fileName} key={attachment.url} src={attachment.url} />
               ))}
             </div>
           ) : null}
@@ -40,9 +41,9 @@ export function TimelineItemView({ item }: { item: TimelineItem }) {
             <div className="timeline-appends">
               <div className="timeline-append-label">追加</div>
               {item.appends.map((append) => (
-                <div className="timeline-append" key={append.id}>
-                  <time dateTime={append.createdAt}>{formatTimelineTime(append.createdAt)}</time>
-                  <p>{append.text}</p>
+                <div className="timeline-append" key={append.id} data-matched={matchedAppendIds.includes(append.id) || undefined}>
+                  <time dateTime={append.createdAt}>{new Date(append.createdAt).toLocaleString("zh-CN", { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</time>
+                  <p><HighlightedText text={append.text} keyword={highlight} /></p>
                 </div>
               ))}
             </div>
@@ -52,8 +53,8 @@ export function TimelineItemView({ item }: { item: TimelineItem }) {
       ) : (
         <Link className="timeline-content timeline-diary-link" href={`/diary/${item.diary.id}`}>
           <div className="timeline-kind">日记</div>
-          {item.diary.title ? <h3>{item.diary.title}</h3> : null}
-          <p>{diaryPreview(item.diary.body)}</p>
+          {item.diary.title ? <h3><HighlightedText text={item.diary.title} keyword={highlight} /></h3> : null}
+          <p><HighlightedText text={highlight ? searchExcerpt(item.diary.body, highlight) : diaryPreview(item.diary.body)} keyword={highlight} /></p>
         </Link>
       )}
     </article>

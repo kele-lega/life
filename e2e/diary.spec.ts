@@ -1,5 +1,19 @@
 import { expect, test } from "@playwright/test";
 
+test("the in-app return link protects a Diary draft and editing restores keyboard focus", async ({ page }) => {
+  await page.goto("/diary/new");
+  await page.getByRole("textbox", { name: "日记正文" }).fill("还没有保存的段落。\n保留原始换行。");
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.getByRole("link", { name: "返回日记", exact: true }).click();
+  await expect(page).toHaveURL(/\/diary\/new$/);
+  await expect(page.getByRole("textbox", { name: "日记正文" })).toContainText("还没有保存的段落。");
+  await page.getByRole("button", { name: "保存日记", exact: true }).click();
+  await expect(page).toHaveURL(/\/diary\/(?!new)[^/]+$/);
+  await page.getByRole("button", { name: "编辑", exact: true }).click();
+  await page.getByRole("button", { name: "取消", exact: true }).click();
+  await expect(page.getByRole("button", { name: "编辑", exact: true })).toBeFocused();
+});
+
 async function openDiary(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/diary");
   await page.getByRole("link", { name: "新建日记" }).click();

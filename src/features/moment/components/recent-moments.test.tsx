@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Attachment } from "@/features/attachment/model/types";
@@ -171,6 +171,86 @@ describe("RecentMoments", () => {
     expect(mocks.listRecentMoments).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps existing rows, image URLs and append drafts during an asynchronous refresh", async () => {
+    const old = moment("old", "旧片段", "2026-09-01T10:00:00.000Z");
+    const latest = moment("new", "新片段", "2026-09-01T11:00:00.000Z");
+    let finishRefresh!: (records: Moment[]) => void;
+    mocks.listRecentMoments.mockResolvedValueOnce([old]).mockImplementationOnce(
+      () => new Promise<Moment[]>((resolve) => { finishRefresh = resolve; }),
+    );
+    mocks.listMomentAttachments.mockImplementation(async (id: string) =>
+      id === "old" ? [attachment("photo", id, "keep.png")] : [],
+    );
+    const createURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:keep");
+    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const view = render(<RecentMoments refreshKey={0} />);
+    const image = await screen.findByRole("img", { name: "keep.png" });
+    const article = screen.getByRole("article");
+    fireEvent.click(within(article).getByRole("button", { name: "追加" }));
+    const input = within(article).getByRole("textbox", { name: "追加文字" });
+    fireEvent.change(input, { target: { value: "尚未保存的追加" } });
+
+    view.rerender(<RecentMoments refreshKey={1} />);
+    expect(screen.getByRole("article")).toBe(article);
+    expect(screen.getByRole("img")).toBe(image);
+    expect(screen.queryByText("正在读取…")).not.toBeInTheDocument();
+    expect(revokeURL).not.toHaveBeenCalled();
+    await act(async () => { finishRefresh([latest, { ...old }]); });
+
+    expect(screen.getAllByRole("article")[1]).toBe(article);
+    expect(screen.getByRole("img")).toBe(image);
+    expect(within(article).getByRole("textbox", { name: "追加文字" })).toBe(input);
+    expect(input).toHaveValue("尚未保存的追加");
+    expect(createURL).toHaveBeenCalledTimes(1);
+    expect(revokeURL).not.toHaveBeenCalled();
+    view.unmount();
+    expect(revokeURL).toHaveBeenCalledExactlyOnceWith("blob:keep");
+  });
+
+  it("discards a stale attachment response without replacing newer rows or allocating URLs", async () => {
+    const stale = moment("stale", "过期结果", "2026-09-01T10:00:00.000Z");
+    const current = moment("current", "当前结果", "2026-09-01T11:00:00.000Z");
+    let finishStale!: (images: Attachment[]) => void;
+    mocks.listRecentMoments.mockResolvedValueOnce([stale]).mockResolvedValueOnce([current]);
+    mocks.listMomentAttachments.mockImplementation(async (id: string) =>
+      id === "stale"
+        ? new Promise<Attachment[]>((resolve) => { finishStale = resolve; })
+        : [],
+    );
+    const createURL = vi.spyOn(URL, "createObjectURL");
+    const view = render(<RecentMoments refreshKey={0} />);
+    await waitFor(() => expect(mocks.listMomentAttachments).toHaveBeenCalledWith("stale"));
+    view.rerender(<RecentMoments refreshKey={1} />);
+    const currentRow = await screen.findByRole("article");
+    await act(async () => { finishStale([attachment("stale-photo", "stale", "stale.png")]); });
+
+    expect(screen.getByRole("article")).toBe(currentRow);
+    expect(currentRow).toHaveTextContent("当前结果");
+    expect(screen.queryByText("过期结果")).not.toBeInTheDocument();
+    expect(createURL).not.toHaveBeenCalled();
+  });
+
+  it("retains the last successful view and its images after a failed refresh and retry", async () => {
+    const old = moment("old", "仍可阅读", "2026-09-01T10:00:00.000Z");
+    mocks.listRecentMoments.mockResolvedValueOnce([old]).mockRejectedValueOnce(new Error("read failed")).mockResolvedValueOnce([{ ...old }]);
+    mocks.listMomentAttachments.mockResolvedValue([attachment("photo", "old", "keep.png")]);
+    const createURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:keep");
+    const revokeURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const view = render(<RecentMoments refreshKey={0} />);
+    const image = await screen.findByRole("img", { name: "keep.png" });
+    const article = screen.getByRole("article");
+    view.rerender(<RecentMoments refreshKey={1} />);
+    await screen.findByRole("alert");
+    expect(screen.getByRole("article")).toBe(article);
+    expect(screen.getByRole("img")).toBe(image);
+    fireEvent.click(screen.getByRole("button", { name: "重新读取" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(screen.getByRole("article")).toBe(article);
+    expect(screen.getByRole("img")).toBe(image);
+    expect(createURL).toHaveBeenCalledTimes(1);
+    expect(revokeURL).not.toHaveBeenCalled();
+  });
+
   it("revokes object URLs when data is replaced and on unmount", async () => {
     const first = moment("first", "第一条", "2026-09-01T10:00:00.000Z");
     const second = moment("second", "第二条", "2026-09-01T11:00:00.000Z");
@@ -189,7 +269,7 @@ describe("RecentMoments", () => {
     view.rerender(<RecentMoments refreshKey={1} />);
     await screen.findByRole("img", { name: "second.png" });
 
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:first");
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith("blob:first"));
     expect(createObjectURL).toHaveBeenCalledTimes(2);
     view.unmount();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:second");

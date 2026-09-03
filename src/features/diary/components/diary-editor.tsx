@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { StatefulButton, type StatefulButtonResult } from "@/components/ui/stateful-button";
+import { BackLink, PageNav } from "@/components/ui/page-nav";
+import { WritingTextarea } from "@/components/ui/writing-textarea";
+import styles from "./diary-page.module.css";
 
 import { createDiary, updateDiaryContent } from "../repository/diary-repository";
 
@@ -72,14 +74,19 @@ export function DiaryEditor({ diaryId, initialTitle = "", initialBody = "", onSa
     else router.push("/diary");
   }
 
+  function canReturnToList(): boolean {
+    if (isSaving) return false;
+    return (title === initialTitle && body === initialBody) || window.confirm("放弃这篇尚未保存的日记？");
+  }
+
   return (
-    <main className="diary-page">
-      <nav className="diary-nav"><Link href="/diary">返回日记</Link></nav>
-      <section className="diary-editor" aria-label={diaryId ? "编辑日记" : "新建日记"}>
+    <main className={`diary-page ui-page ${styles.page}`}>
+      <PageNav label="写作导航"><BackLink href="/diary" onClick={(event) => { if (!event.ctrlKey && !event.metaKey && !canReturnToList()) event.preventDefault(); }}>返回日记</BackLink></PageNav>
+      <section className="diary-editor" aria-label={diaryId ? "编辑日记" : "新建日记"} aria-busy={isSaving}>
         <h1>{diaryId ? "编辑日记" : "新建日记"}</h1>
         <input aria-label="日记标题（可选）" disabled={isSaving} onChange={(event) => setTitle(event.target.value)} placeholder="标题（可选）" value={title} />
-        <textarea aria-label="日记正文" autoFocus disabled={isSaving} onChange={(event) => setBody(event.target.value)} placeholder="写下这一段时间……" value={body} />
-        {error ? <p role="alert">{error}</p> : null}
+        <WritingTextarea aria-label="日记正文" aria-invalid={!!error} aria-describedby={error ? "diary-save-error" : undefined} autoFocus disabled={isSaving} onChange={(event) => setBody(event.target.value)} placeholder="写下这一段时间……" value={body} />
+        {error ? <p id="diary-save-error" role="alert">{error}</p> : null}
         <div className="diary-actions"><button disabled={isSaving} type="button" onClick={cancel}>取消</button><StatefulButton disabled={isSaving} label="保存日记" onAction={save} /></div>
       </section>
     </main>

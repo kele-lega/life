@@ -5,7 +5,7 @@ import { DiaryEditor } from "./diary-editor";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), push: vi.fn() }));
 vi.mock("../repository/diary-repository", () => ({ createDiary: mocks.create, updateDiaryContent: mocks.update }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }), usePathname: () => "/diary/new" }));
 
 beforeEach(() => {
   vi.useFakeTimers();

@@ -1,0 +1,35 @@
+.page.page { max-width: 760px; }
+.page :global(.diary-header) { margin-bottom: 40px; }
+.page :global(.diary-header) h1, .page :global(.diary-editor) h1 { margin: 0; font: 400 2.5rem/1.4 var(--font-reading); }
+.page :global(.diary-header) p { margin: 12px 0 0; font-size: 0.875rem; }
+.page :global(.diary-list) { display: grid; }
+.page :global(.diary-entry) { display: grid; grid-template-columns: 144px minmax(0, 1fr); gap: 12px 32px; padding: 28px 0; border: 0; border-top: 1px solid var(--app-line); color: inherit; text-decoration: none; }
+.page :global(.diary-entry) time { grid-row: span 2; color: var(--app-secondary); font: 400 0.8125rem/1.8 var(--font-ui); }
+.page :global(.diary-entry) h2 { margin: 0; font: 400 1.5rem/1.6 var(--font-reading); overflow-wrap: anywhere; }
+.page :global(.diary-entry) p { grid-column: 2; margin: 0; font: 400 1.0625rem/1.9 var(--font-reading); overflow-wrap: anywhere; }
+.page :global(.diary-entry):hover h2 { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.page :global(.diary-entry):hover { color: var(--app-action); }
+.page :global(.diary-editor) { display: grid; gap: 24px; }
+.page :global(.diary-editor) h1 { margin-bottom: 8px; }
+.page :global(.diary-editor) input, .page :global(.diary-editor) textarea { width: 100%; min-width: 0; background: var(--app-surface); color: var(--app-ink); border: 0; border-radius: 0; padding: 12px 0; }
+.page :global(.diary-editor) input { font: 400 1.875rem/1.5 var(--font-reading); border-bottom: 1px solid var(--app-line); }
+.page :global(.diary-editor) textarea { min-height: 420px; field-sizing: content; resize: vertical; font: 400 1.125rem/1.95 var(--font-ui); overflow-wrap: anywhere; scroll-margin-block: 24px; }
+.page :global(.diary-actions) { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid var(--app-line); }
+.page :global(.diary-actions) > button:first-child { min-width: 64px; min-height: 44px; padding: 10px 16px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--app-secondary); }
+.page :global(.diary-actions) > button:first-child:hover { background: var(--app-subtle); }
+.page :global(.diary-view) h1 { margin: 0 0 20px; font: 400 2.25rem/1.5 var(--font-reading); overflow-wrap: anywhere; }
+.page :global(.diary-view) > time { display: block; margin-bottom: 40px; color: var(--app-secondary); font: 400 0.8125rem/1.7 var(--font-ui); }
+.page :global(.diary-body) { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 1.125rem/1.95 var(--font-reading); }
+.page :global(.primary-link) { color: var(--app-action); }
+.page :global(.diary-empty) { color: var(--app-secondary); font-size: 0.875rem; }
+@media (max-width: 767px) {
+  .page :global(.diary-header) h1, .page :global(.diary-editor) h1 { font-size: 2rem; }
+  .page :global(.diary-entry) { display: block; }
+  .page :global(.diary-entry) h2 { margin-top: 12px; font-size: 1.375rem; }
+  .page :global(.diary-entry) p { margin-top: 12px; }
+  .page :global(.diary-editor) { gap: 20px; }
+  .page :global(.diary-editor) input { font-size: 1.625rem; }
+  .page :global(.diary-editor) textarea { min-height: 340px; font-size: 1.0625rem; }
+  .page :global(.diary-view) h1 { font-size: 1.875rem; }
+  .page :global(.diary-body) { font-size: 1.0625rem; }
+}

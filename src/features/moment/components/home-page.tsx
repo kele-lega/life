@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useState } from "react";
 
 import { QuickMomentRecord } from "./quick-moment-record";
@@ -19,12 +19,12 @@ export function HomePage() {
           <QuickMomentRecord onSaved={() => setRecentRevision((current) => current + 1)} />
           <RecentMoments refreshKey={recentRevision} />
           <nav className="home-secondary-nav" aria-label="更多功能">
-            <span>更多</span>
+            <h2>更多</h2>
             <div className="home-secondary-links">
-              <Link href="/timeline">时间线</Link>
-              <Link href="/calendar">日历</Link>
-              <Link href="/diary">日记</Link>
-              <Link href="/search">搜索</Link>
+              <NavLink href="/timeline">时间线</NavLink>
+              <NavLink href="/calendar">日历</NavLink>
+              <NavLink href="/diary">日记</NavLink>
+              <NavLink href="/search">搜索</NavLink>
             </div>
           </nav>
         </div>

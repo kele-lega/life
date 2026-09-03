@@ -19,7 +19,8 @@ for (const colorScheme of ["light", "dark"] as const) {
         const day = page.locator(".calendar-day").first();
         await day.click();
         await expect(day).toHaveAttribute("aria-pressed", "true");
-        await expect(day).toHaveCSS("border-top-color", ink);
+        await expect(day).toHaveCSS("background-color", colorScheme === "dark" ? "rgb(179, 78, 67)" : "rgb(167, 47, 38)");
+        await expect(day).toHaveCSS("color", "rgb(255, 255, 255)");
       }
       await page.screenshot({ path: testInfo.outputPath(`${route.replaceAll("/", "_") || "home"}.png`), fullPage: true });
     }

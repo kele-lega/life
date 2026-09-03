@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { motionDistance, motionDuration, motionEase, saveFeedbackMs } from "./motion";
 
 /** false means validation/save failed; a callback completes presentation after feedback. */
 export type StatefulButtonResult = false | void | (() => void);
@@ -15,80 +16,91 @@ interface StatefulButtonProps {
 
 export function StatefulButton({ label, loadingLabel = "保存中…", disabled = false, onAction }: StatefulButtonProps) {
   const [phase, setPhase] = useState<"idle" | "loading" | "done">("idle");
+  const [failed, setFailed] = useState(false);
   const reducedMotion = useReducedMotion();
   const busy = useRef(false);
   const mounted = useRef(false);
-  const timeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generation = useRef(0);
 
   useEffect(() => {
     mounted.current = true;
-    const pending = timeouts.current;
     return () => {
       mounted.current = false;
-      pending.forEach(clearTimeout);
-      pending.length = 0;
+      generation.current += 1;
+      if (timeout.current !== null) clearTimeout(timeout.current);
+      timeout.current = null;
     };
   }, []);
 
   async function run(): Promise<void> {
     if (disabled || busy.current) return;
+    const current = ++generation.current;
+    if (timeout.current !== null) clearTimeout(timeout.current);
+    timeout.current = null;
     busy.current = true;
+    setFailed(false);
     setPhase("loading");
     let result: StatefulButtonResult;
+    let rejected = false;
     try {
       // No simulated loading delay: success can only follow the real operation.
       result = await onAction();
     } catch {
-      // The feature owns its error message and retained inputs, not the button.
+      // Returned false is feature-owned validation; unexpected rejection also gets live feedback.
+      rejected = true;
       result = false;
     }
-    if (!mounted.current) return;
+    if (!mounted.current || current !== generation.current) return;
     if (result === false) {
       busy.current = false;
+      setFailed(rejected);
       setPhase("idle");
       return;
     }
     setPhase("done");
     const finish = result;
-    timeouts.current.push(setTimeout(() => {
-      timeouts.current.length = 0;
-      if (!mounted.current) return;
+    timeout.current = setTimeout(() => {
+      timeout.current = null;
+      if (!mounted.current || current !== generation.current) return;
       busy.current = false;
       setPhase("idle");
       if (typeof finish === "function") finish();
-    }, 1500));
+    }, saveFeedbackMs);
   }
+
+  const currentLabel = phase === "loading" ? loadingLabel : phase === "done" ? "已保存" : label;
 
   return (
     <motion.button
       type="button"
       tabIndex={0}
-      className="sb:relative sb:inline-flex sb:h-11 sb:min-w-[104px] sb:shrink-0 sb:items-center sb:justify-center sb:overflow-hidden sb:rounded-lg sb:border sb:border-solid sb:border-white/20 sb:bg-zinc-950 sb:px-7 sb:py-0 sb:font-sans sb:text-sm sb:leading-5 sb:font-bold sb:whitespace-nowrap sb:text-white sb:opacity-100 sb:transition-colors sb:enabled:hover:bg-zinc-800 sb:focus-visible:outline-2 sb:focus-visible:outline-offset-4 sb:focus-visible:outline-zinc-500 sb:disabled:cursor-default"
+      className="stateful-button"
       disabled={disabled || phase !== "idle"}
-      aria-label={phase === "loading" ? loadingLabel : label}
+      aria-label={currentLabel}
       aria-busy={phase === "loading"}
       data-phase={phase}
-      layout={!reducedMotion}
-      transition={{ layout: { type: "spring", stiffness: 500, damping: 32 } }}
-      whileTap={reducedMotion || phase !== "idle" || disabled ? undefined : { scale: 0.96 }}
+      transition={{ duration: reducedMotion ? 0 : motionDuration.instant, ease: motionEase }}
+      whileTap={reducedMotion || phase !== "idle" || disabled ? undefined : { scale: 0.98 }}
       onClick={() => void run()}
     >
-      <AnimatePresence initial={false} mode="popLayout">
+      <span className="stateful-button-size" aria-hidden="true">
+        <span>{label}</span>
+        <span><span className="stateful-button-icon-space" />{loadingLabel}</span>
+        <span><span className="stateful-button-icon-space" />已保存</span>
+      </span>
+      <AnimatePresence initial={false}>
         <motion.span
           key={phase}
-          className="sb:inline-flex sb:items-center sb:justify-center sb:gap-2"
+          className="stateful-button-content"
           aria-hidden="true"
-          initial={reducedMotion ? false : { opacity: 0, y: 8, scale: 0.6 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.6 }}
-          transition={{ duration: reducedMotion ? 0 : 0.18 }}
+          initial={reducedMotion ? false : { opacity: 0, y: motionDistance.button }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: reducedMotion ? 0 : -motionDistance.button }}
+          transition={{ duration: reducedMotion ? 0 : motionDuration.instant, ease: motionEase }}
         >
           {phase === "loading" ? (
-            <motion.span
-              className="sb:block sb:h-4 sb:w-4 sb:rounded-full sb:border-2 sb:border-solid sb:border-white/25 sb:border-t-white"
-              animate={reducedMotion ? undefined : { rotate: 360 }}
-              transition={{ duration: 0.8, ease: "linear", repeat: Infinity }}
-            />
+            <span className="stateful-button-spinner sb:block sb:h-4 sb:w-4 sb:rounded-full sb:border-2 sb:border-solid sb:border-white/25 sb:border-t-white" />
           ) : (
             <>
               {phase === "done" ? (
@@ -101,18 +113,19 @@ export function StatefulButton({ label, loadingLabel = "保存中…", disabled 
                     strokeLinejoin="round"
                     initial={{ pathLength: reducedMotion ? 1 : 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: reducedMotion ? 0 : 0.5 }}
+                    transition={{ duration: reducedMotion ? 0 : motionDuration.fast, ease: motionEase }}
                   />
                 </svg>
               ) : null}
-              {label}
             </>
           )}
+          {currentLabel}
         </motion.span>
       </AnimatePresence>
       <span className="sb:sr-only" role="status" aria-live="polite" aria-atomic="true">
         {phase === "loading" ? loadingLabel : phase === "done" ? "已保存" : ""}
       </span>
+      {failed ? <span className="visually-hidden" role="alert">保存失败，请重试。</span> : null}
     </motion.button>
   );
 }
