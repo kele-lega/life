@@ -133,6 +133,7 @@ describe("TimelinePage", () => {
     expect(article).not.toBeNull();
     if (!article) throw new Error("Moment article missing");
     expect(within(article).getByText("原始 Moment")).toBeInTheDocument();
+    expect(within(article).getByText("随笔")).toBeInTheDocument();
     expect(within(article).getByText("上海市 · 静安寺")).toBeInTheDocument();
     expect(within(article).getAllByRole("img")).toHaveLength(2);
     expect(within(article).getByText("真实追加")).toBeInTheDocument();
@@ -140,6 +141,7 @@ describe("TimelinePage", () => {
     expect(within(article).getByText("追加内容暂时无法读取。")).toBeInTheDocument();
     const diaryLink = screen.getByRole("link", { name: /无标题日记正文/ });
     expect(diaryLink).toHaveAttribute("href", "/diary/diary-1");
+    expect(within(diaryLink).getByText("日记")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
 
     unmount();

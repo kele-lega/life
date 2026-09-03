@@ -1,9 +1,53 @@
+/* Shared color-only theme; homepage retains its scoped UI typography and layout. */
+:root {
+  color-scheme: light;
+  --app-surface: #faf9f6;
+  --app-subtle: #f0f1ec;
+  --app-ink: #252621;
+  --app-secondary: #666960;
+  --app-line: #dadcd5;
+  --app-boundary: #85897f;
+  --app-error: #a72f26;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --app-surface: #1c1d1c;
+    --app-subtle: #272925;
+    --app-ink: #e7e5df;
+    --app-secondary: #aaa9a3;
+    --app-line: #3a3d39;
+    --app-error: #e58e80;
+  }
+}
+.diary-editor input,
+.diary-editor textarea,
+.search-form input {
+  background: var(--app-surface);
+  color: var(--app-ink);
+}
+.diary-editor input::placeholder,
+.diary-editor textarea::placeholder,
+.search-form input::placeholder {
+  color: var(--app-secondary);
+  opacity: 1;
+}
+.search-nav a { color: var(--app-secondary); }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
-body { background: #ffffff; color: #171717; font-family: system-ui, sans-serif; }
-button, textarea { font: inherit; }
+body { background: var(--app-surface); color: var(--app-ink); font-family: system-ui, sans-serif; }
+button, input, textarea { font: inherit; }
 button { cursor: pointer; }
-button:disabled, textarea:disabled { cursor: not-allowed; opacity: 0.55; }
+button:disabled, input:disabled, textarea:disabled { cursor: not-allowed; opacity: 0.55; }
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--app-ink);
+  outline-offset: 3px;
+}
 
 .home-page {
   width: min(100%, 680px);
@@ -16,15 +60,15 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: 0.55; }
   display: grid;
   min-height: 160px;
   place-items: center;
-  border-bottom: 1px solid #e7e7e7;
+  border-bottom: 1px solid var(--app-line);
   padding-bottom: 40px;
 }
 
 .write-button {
-  border: 1px solid #171717;
+  border: 1px solid var(--app-ink);
   border-radius: 4px;
-  background: #171717;
-  color: #ffffff;
+  background: var(--app-ink);
+  color: var(--app-surface);
   padding: 12px 24px;
 }
 
@@ -37,38 +81,35 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: 0.55; }
 .record-panel textarea {
   min-height: 180px;
   resize: vertical;
-  border: 1px solid #b5b5b5;
+  border: 1px solid var(--app-boundary);
   border-radius: 4px;
   padding: 16px;
-  color: #171717;
+  color: var(--app-ink);
   line-height: 1.6;
-}
-
-.record-panel textarea:focus,
-button:focus-visible {
-  outline: 2px solid #171717;
-  outline-offset: 3px;
 }
 
 .record-panel p {
   margin: 0;
-  color: #9b1c1c;
+  color: var(--app-error);
   font-size: 0.9rem;
 }
 
 .record-panel > button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
   justify-self: start;
   border: 0;
   background: transparent;
   padding: 0;
-  color: #555555;
+  color: var(--app-secondary);
   text-decoration: underline;
 }
 
 .location-field {
   display: grid;
   gap: 8px;
-  color: #686868;
+  color: var(--app-secondary);
   font-size: 0.85rem;
 }
 
@@ -79,18 +120,21 @@ button:focus-visible {
 
 .location-field input {
   width: 100%;
-  border: 1px solid #c9c9c9;
+  border: 1px solid var(--app-boundary);
   border-radius: 4px;
   padding: 8px 10px;
-  color: #171717;
+  color: var(--app-ink);
 }
 
 .location-field button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
   justify-self: start;
   border: 0;
   background: transparent;
   padding: 0;
-  color: #666666;
+  color: var(--app-secondary);
   font-size: 0.85rem;
   text-decoration: underline;
 }
@@ -115,9 +159,10 @@ button:focus-visible {
 }
 
 .image-preview button {
+  min-height: 40px;
   border: 0;
   background: transparent;
-  color: #555555;
+  color: var(--app-secondary);
   font-size: 0.85rem;
 }
 
@@ -128,16 +173,17 @@ button:focus-visible {
 }
 
 .record-actions button {
-  border: 1px solid #b5b5b5;
+  min-height: 44px;
+  border: 1px solid var(--app-boundary);
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--app-surface);
   padding: 8px 16px;
 }
 
 .record-actions button:last-child {
-  border-color: #171717;
-  background: #171717;
-  color: #ffffff;
+  border-color: var(--app-ink);
+  background: var(--app-ink);
+  color: var(--app-surface);
 }
 
 .recent-moments {
@@ -148,7 +194,7 @@ button:focus-visible {
 .recent-error,
 .attachment-error {
   margin: 0;
-  color: #8a3333;
+  color: var(--app-error);
   font-size: 0.9rem;
 }
 
@@ -158,7 +204,7 @@ button:focus-visible {
 
 .moment-group h2 {
   margin: 0 0 12px;
-  color: #686868;
+  color: var(--app-secondary);
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -176,11 +222,11 @@ button:focus-visible {
 }
 
 .moment-entry + .moment-entry {
-  border-top: 1px solid #eeeeee;
+  border-top: 1px solid var(--app-line);
 }
 
 .moment-entry time {
-  color: #777777;
+  color: var(--app-secondary);
   font-size: 0.85rem;
   line-height: 1.7;
 }
@@ -194,8 +240,15 @@ button:focus-visible {
 
 .moment-images,
 .moment-entry .attachment-error,
+.moment-location,
 .moment-appends {
   grid-column: 2;
+}
+
+.moment-location {
+  color: var(--app-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 .moment-images {
@@ -220,7 +273,7 @@ button:focus-visible {
   display: grid;
   gap: 14px;
   margin: 4px 0 12px;
-  border-left: 1px solid #dddddd;
+  border-left: 1px solid var(--app-line);
   padding-left: 14px;
 }
 
@@ -235,7 +288,7 @@ button:focus-visible {
 
 .append-entry p {
   margin: 0;
-  color: #4e4e4e;
+  color: var(--app-ink);
   line-height: 1.65;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -243,9 +296,12 @@ button:focus-visible {
 
 .append-trigger,
 .append-actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
   border: 0;
   background: transparent;
-  color: #666666;
+  color: var(--app-secondary);
   padding: 0;
   font-size: 0.85rem;
   text-decoration: underline;
@@ -260,10 +316,10 @@ button:focus-visible {
 .append-editor textarea {
   min-height: 96px;
   resize: vertical;
-  border: 1px solid #c9c9c9;
+  border: 1px solid var(--app-boundary);
   border-radius: 4px;
   padding: 10px 12px;
-  color: #171717;
+  color: var(--app-ink);
   line-height: 1.6;
 }
 
@@ -274,25 +330,48 @@ button:focus-visible {
 }
 
 .append-actions button:last-child {
-  color: #171717;
+  color: var(--app-ink);
 }
 
 .moment-appends .append-error {
   margin: 0;
-  color: #8a3333;
+  color: var(--app-error);
   font-size: 0.85rem;
 }
 
 .home-secondary-nav {
-  padding: 18px 0 0;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 48px;
+  border-top: 1px solid var(--app-line);
+  padding-top: 14px;
+  color: var(--app-secondary);
   font-size: 0.9rem;
+}
+
+.home-secondary-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 18px;
+}
+
+.home-secondary-nav a,
+.diary-nav a,
+.timeline-nav a,
+.calendar-nav a,
+.search-nav a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
 }
 
 .home-secondary-nav a,
 .diary-nav a,
 .diary-nav button {
-  color: #555555;
+  color: var(--app-secondary);
 }
 
 .diary-page {
@@ -326,7 +405,7 @@ button:focus-visible {
 
 .diary-header p {
   margin: 8px 0 32px;
-  color: #686868;
+  color: var(--app-secondary);
 }
 
 .diary-list {
@@ -335,7 +414,7 @@ button:focus-visible {
 
 .diary-entry {
   display: block;
-  border-top: 1px solid #eeeeee;
+  border-top: 1px solid var(--app-line);
   padding: 20px 0;
   color: inherit;
   text-decoration: none;
@@ -343,7 +422,7 @@ button:focus-visible {
 
 .diary-entry time,
 .diary-view time {
-  color: #777777;
+  color: var(--app-secondary);
   font-size: 0.85rem;
 }
 
@@ -355,12 +434,12 @@ button:focus-visible {
 
 .diary-entry p {
   margin: 8px 0 0;
-  color: #4e4e4e;
+  color: var(--app-ink);
   line-height: 1.6;
 }
 
 .diary-empty {
-  color: #686868;
+  color: var(--app-secondary);
 }
 
 .diary-editor {
@@ -371,10 +450,10 @@ button:focus-visible {
 .diary-editor input,
 .diary-editor textarea {
   width: 100%;
-  border: 1px solid #b5b5b5;
+  border: 1px solid var(--app-boundary);
   border-radius: 4px;
   padding: 12px;
-  color: #171717;
+  color: var(--app-ink);
 }
 
 .diary-editor textarea {
@@ -385,7 +464,7 @@ button:focus-visible {
 
 .diary-editor p[role="alert"] {
   margin: 0;
-  color: #8a3333;
+  color: var(--app-error);
 }
 
 .diary-actions {
@@ -395,16 +474,17 @@ button:focus-visible {
 }
 
 .diary-actions button {
-  border: 1px solid #b5b5b5;
+  min-height: 44px;
+  border: 1px solid var(--app-boundary);
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--app-surface);
   padding: 8px 16px;
 }
 
 .diary-actions button:last-child {
-  border-color: #171717;
-  background: #171717;
-  color: #ffffff;
+  border-color: var(--app-ink);
+  background: var(--app-ink);
+  color: var(--app-surface);
 }
 
 .diary-view p {
@@ -429,7 +509,7 @@ button:focus-visible {
 
 .timeline-nav a,
 .timeline-page button {
-  color: #555555;
+  color: var(--app-secondary);
 }
 
 .timeline-header h1 {
@@ -440,7 +520,7 @@ button:focus-visible {
 
 .timeline-header p {
   margin: 8px 0 32px;
-  color: #686868;
+  color: var(--app-secondary);
 }
 
 .timeline-group + .timeline-group {
@@ -449,7 +529,7 @@ button:focus-visible {
 
 .timeline-group h2 {
   margin: 0 0 12px;
-  color: #686868;
+  color: var(--app-secondary);
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -463,11 +543,11 @@ button:focus-visible {
   grid-template-columns: 52px minmax(0, 1fr);
   gap: 6px 16px;
   padding: 18px 0;
-  border-top: 1px solid #eeeeee;
+  border-top: 1px solid var(--app-line);
 }
 
 .timeline-entry time {
-  color: #777777;
+  color: var(--app-secondary);
   font-size: 0.85rem;
   line-height: 1.7;
 }
@@ -479,7 +559,7 @@ button:focus-visible {
 .timeline-kind,
 .timeline-location,
 .timeline-append-label {
-  color: #686868;
+  color: var(--app-secondary);
   font-size: 0.82rem;
 }
 
@@ -512,7 +592,7 @@ button:focus-visible {
 
 .timeline-appends {
   margin-top: 16px;
-  border-left: 1px solid #dddddd;
+  border-left: 1px solid var(--app-line);
   padding-left: 14px;
 }
 
@@ -521,7 +601,7 @@ button:focus-visible {
 }
 
 .timeline-append p {
-  color: #4e4e4e;
+  color: var(--app-ink);
 }
 
 .timeline-diary-link {
@@ -538,21 +618,21 @@ button:focus-visible {
 
 .timeline-child-error,
 .timeline-page > [role="alert"] {
-  color: #8a3333;
+  color: var(--app-error);
   font-size: 0.9rem;
 }
 
 .timeline-page > button {
   margin-top: 24px;
-  border: 1px solid #b5b5b5;
+  border: 1px solid var(--app-boundary);
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--app-surface);
   padding: 8px 16px;
 }
 
 .timeline-empty,
 .timeline-end {
-  color: #686868;
+  color: var(--app-secondary);
 }
 
 .calendar-page {
@@ -577,7 +657,7 @@ button:focus-visible {
 
 .calendar-nav a,
 .calendar-page button {
-  color: #555555;
+  color: var(--app-secondary);
 }
 
 .calendar-header h1,
@@ -593,11 +673,11 @@ button:focus-visible {
 
 .calendar-header p {
   margin: 8px 0 32px;
-  color: #686868;
+  color: var(--app-secondary);
 }
 
 .calendar-month {
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--app-line);
   border-radius: 8px;
   padding: 20px;
 }
@@ -611,12 +691,16 @@ button:focus-visible {
   font-size: 1.05rem;
 }
 
+.calendar-month-nav button { min-width: 44px; }
+.calendar-month-nav button span { font-size: 1.5rem; line-height: 1; }
+
 .calendar-month-nav button,
 .calendar-current-month,
 .calendar-filters button {
-  border: 1px solid #d2d2d2;
+  min-height: 44px;
+  border: 1px solid var(--app-boundary);
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--app-surface);
   padding: 7px 10px;
 }
 
@@ -626,7 +710,7 @@ button:focus-visible {
 }
 
 .calendar-page button:disabled {
-  color: #aaaaaa;
+  color: var(--app-secondary);
 }
 
 .calendar-weekdays,
@@ -638,7 +722,7 @@ button:focus-visible {
 
 .calendar-weekdays {
   margin-bottom: 6px;
-  color: #888888;
+  color: var(--app-secondary);
   font-size: 0.78rem;
   text-align: center;
 }
@@ -659,8 +743,8 @@ button:focus-visible {
 }
 
 .calendar-day-recorded {
-  background: #f0f3ef;
-  color: #222222 !important;
+  background: var(--app-subtle);
+  color: var(--app-ink) !important;
   font-weight: 600;
 }
 
@@ -668,15 +752,15 @@ button:focus-visible {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #667565;
+  background: var(--app-secondary);
 }
 
 .calendar-day-today {
-  border-color: #aab3aa;
+  border-color: var(--app-boundary);
 }
 
 .calendar-day[aria-pressed="true"] {
-  border-color: #333333;
+  border-color: var(--app-ink);
 }
 
 .calendar-day-detail {
@@ -698,18 +782,17 @@ button:focus-visible {
 }
 
 .calendar-filters button[aria-pressed="true"] {
-  border-color: #333333;
-  color: #222222;
+  border-color: var(--app-ink);
+  color: var(--app-ink);
 }
 
-.calendar-day-empty,
-.calendar-select-hint {
-  color: #686868;
+.calendar-day-empty {
+  color: var(--app-secondary);
 }
 
 .calendar-day-detail > [role="alert"],
 .calendar-month > [role="alert"] {
-  color: #8a3333;
+  color: var(--app-error);
 }
 
 .search-page {
@@ -733,13 +816,13 @@ button:focus-visible {
 
 .search-header p {
   margin: 8px 0 28px;
-  color: #686868;
+  color: var(--app-secondary);
 }
 
 .search-form label {
   display: block;
   margin-bottom: 8px;
-  color: #555555;
+  color: var(--app-secondary);
   font-size: 0.9rem;
 }
 
@@ -751,7 +834,7 @@ button:focus-visible {
 
 .search-form input {
   width: 100%;
-  border: 1px solid #cfcfcf;
+  border: 1px solid var(--app-boundary);
   border-radius: 5px;
   padding: 10px 12px;
   font: inherit;
@@ -759,16 +842,17 @@ button:focus-visible {
 
 .search-form button,
 .search-load-more {
-  border: 1px solid #b5b5b5;
+  min-height: 44px;
+  border: 1px solid var(--app-boundary);
   border-radius: 5px;
-  background: #ffffff;
+  background: var(--app-surface);
   padding: 9px 16px;
 }
 
 .search-initial,
 .search-empty,
 .search-end {
-  color: #686868;
+  color: var(--app-secondary);
 }
 
 .search-initial,
@@ -787,7 +871,7 @@ button:focus-visible {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 8px;
-  color: #777777;
+  color: var(--app-secondary);
   font-size: 0.82rem;
 }
 
@@ -800,12 +884,16 @@ button:focus-visible {
 }
 
 .search-page > [role="alert"] {
-  color: #8a3333;
+  color: var(--app-error);
 }
 
 @media (max-width: 520px) {
   .home-page {
     padding: 40px 20px 64px;
+  }
+
+  .home-secondary-nav {
+    gap: 12px;
   }
 
   .moment-entry {
@@ -818,6 +906,11 @@ button:focus-visible {
   }
 
   .calendar-page {
+    padding: 40px 16px 64px;
+  }
+
+  .diary-page,
+  .timeline-page {
     padding: 40px 16px 64px;
   }
 

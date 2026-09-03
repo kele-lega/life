@@ -177,10 +177,13 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
 
   return (
     <section className="recent-moments" aria-label="最近记录" aria-busy={isLoading}>
+      <h2 className="recent-heading">最近记录</h2>
+      {isLoading && groups.length === 0 ? <p className="recent-status" role="status">正在读取…</p> : null}
+      {!isLoading && !error && groups.length === 0 ? <p className="recent-status recent-empty">还没有留下片段。</p> : null}
       {error ? <p className="recent-error" role="alert">{error}</p> : null}
       {groups.map((group) => (
         <section className="moment-group" key={group.key} aria-labelledby={`date-${group.key}`}>
-          <h2 id={`date-${group.key}`}>{group.label}</h2>
+          <h3 id={`date-${group.key}`}>{group.label}</h3>
           <div className="moment-list">
             {group.moments.map(({ moment, images, attachmentError }) => (
               <article className="moment-entry" key={moment.id}>
@@ -190,11 +193,13 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
                     minute: "2-digit",
                     hour12: false,
                   }).format(new Date(moment.createdAt))}
-                  {locationLabel(moment) ? ` · ${locationLabel(moment)}` : ""}
                 </time>
                 <p>{moment.originalText}</p>
+                {locationLabel(moment) ? (
+                  <div className="moment-location">{locationLabel(moment)}</div>
+                ) : null}
                 {images.length > 0 ? (
-                  <div className="moment-images" aria-label={`${moment.originalText}的图片`}>
+                  <div className="moment-images" data-single={images.length === 1 || undefined} aria-label={`${moment.originalText}的图片`}>
                     {images.map((image) => (
                       // Object URLs are local-only previews and do not use remote optimization.
                       // eslint-disable-next-line @next/next/no-img-element

@@ -78,6 +78,11 @@ describe("CalendarPage", () => {
     const user = userEvent.setup();
     render(<CalendarPage now={new Date(2026, 11, 15, 12)} />);
 
+    expect(screen.getByRole("button", { name: "上一个月" })).toHaveTextContent("‹");
+    expect(screen.getByRole("button", { name: "下一个月" })).toHaveTextContent("›");
+    expect(screen.getByRole("button", { name: "返回当前月" })).toHaveTextContent("本月");
+    expect(screen.queryByText("选择一个日期查看内容。")).not.toBeInTheDocument();
+
     expect(await screen.findByRole("button", { name: "2026 年 12 月 1 日，有记录" }))
       .toHaveAttribute("data-has-records", "true");
     await user.click(screen.getByRole("button", { name: "下一个月" }));

@@ -75,6 +75,7 @@ describe("RecentMoments", () => {
       expect(mocks.listRecentMoments).toHaveBeenCalledWith(RECENT_MOMENT_LIMIT),
     );
     expect(screen.getByLabelText("最近记录")).toBeInTheDocument();
+    expect(await screen.findByText("还没有留下片段。")).toBeInTheDocument();
     expect(screen.queryByRole("article")).not.toBeInTheDocument();
     expect(screen.queryByText(/第一天|连续记录|完成/)).not.toBeInTheDocument();
   });
@@ -210,6 +211,7 @@ describe("RecentMoments", () => {
 
     const articles = await screen.findAllByRole("article");
     expect(within(articles[0]).getByText(/上海 · 武康路/)).toBeInTheDocument();
+    expect(within(articles[0]).getByRole("time")).not.toHaveTextContent("上海");
     expect(within(articles[0]).queryByText(/31\.2|121\.4/)).not.toBeInTheDocument();
     expect(within(articles[1]).queryByText(/°|上海|武康路/)).not.toBeInTheDocument();
   });

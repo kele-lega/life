@@ -114,6 +114,35 @@ Implement the single “write something” flow, text input, save, and error sta
 
 **Done when:** offline keyword search finds content and excludes the recycle bin.
 
+## V1 Core Experience Audit (non-feature phase)
+
+- [x] Audit Home, quick recording, Diary, Timeline, Calendar, and Search against PRODUCT.md without adding product capabilities.
+- [x] Restore the homepage hierarchy to quick recording, recent Moments, then a quiet secondary “More” navigation area.
+- [x] Keep Moment text visually primary by moving location out of the narrow time column and using “随笔/日记” in history views.
+- [x] Improve keyboard focus visibility, mobile touch targets, narrow-screen page padding, and secondary-navigation wrapping without introducing a UI framework.
+- [x] Check representative desktop, 390px, and 430px layouts in real Chromium and retain all existing behavior tests.
+
+**Done when:** the current V1 core feels quieter and easier to read on desktop and mobile, no data or product capability changes, and every quality command still passes.
+
+## UI-1 - Homepage UI 2.0 (non-feature phase)
+
+- [x] Follow DESIGN.md and the approved light/dark references using system fonts and homepage-scoped styles.
+- [x] Keep quick recording, recent Moments, then More; retain the existing save, location, image, and Append behavior.
+- [x] Add a presentation-only local date margin, quiet metadata, readable full mobile text, small images, and clear focus/touch targets.
+- [x] Check desktop empty/populated/writing states and 390px mobile, with additional 320/430/768px checks in both themes; save browser screenshots.
+- [x] Pass typecheck, lint, 152 Vitest tests, and 24 Playwright tests (latest save-button verification).
+- [x] Pass the standard production build; reverified after the user's environment repair.
+- [ ] Obtain user approval of UI-1 before starting UI-2.
+
+**Done when:** all five validation commands pass and the user has reviewed the homepage. No data-layer changes, new product features, or early redesign of Timeline, Calendar, Diary, or Search.
+
+### Stateful save-button refinement (explicit follow-up)
+
+- [x] Share animated save feedback across Quick Moment, MomentAppend, and Diary without changing original button labels or repository calls.
+- [x] Use real pending/success/failure outcomes, duplicate protection, 1.5-second success feedback, unmount cleanup, and reduced-motion support.
+- [x] Scope Tailwind to the new button without a global reset; check desktop/mobile and both color schemes.
+- [x] Retain persistence/retry regression coverage and add button lifecycle, Diary feedback, and real-browser checks. No new product phase or data capability.
+
 ## Phase 12 - Manual tags
 
 Implement Tag and ContentTag, normalization, optional assignment, filtering, and search inclusion.

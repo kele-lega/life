@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { StatefulButton, type StatefulButtonResult } from "@/components/ui/stateful-button";
 
 import type { MomentAppend } from "@/features/moment/model/types";
 import {
@@ -23,6 +24,7 @@ function formatAppendTime(timestamp: string): string {
 }
 
 export function MomentAppends({ momentId }: MomentAppendsProps) {
+  const inputId = useId();
   const [appends, setAppends] = useState<MomentAppend[]>([]);
   const [isWriting, setIsWriting] = useState(false);
   const [text, setText] = useState("");
@@ -65,11 +67,11 @@ export function MomentAppends({ momentId }: MomentAppendsProps) {
     setIsWriting(false);
   }
 
-  async function saveAppend(): Promise<void> {
-    if (isSubmittingRef.current) return;
+  async function saveAppend(): Promise<StatefulButtonResult> {
+    if (isSubmittingRef.current) return false;
     if (text.trim().length === 0) {
       setSaveError("请输入文字后再保存。");
-      return;
+      return false;
     }
 
     isSubmittingRef.current = true;
@@ -78,13 +80,17 @@ export function MomentAppends({ momentId }: MomentAppendsProps) {
     try {
       await createMomentAppend(momentId, { text });
       setText("");
-      setIsWriting(false);
       setRefreshRevision((current) => current + 1);
+      return () => {
+        setIsWriting(false);
+        isSubmittingRef.current = false;
+        setIsSaving(false);
+      };
     } catch {
       setSaveError("追加保存失败，请重试。输入内容仍然保留。");
-    } finally {
       isSubmittingRef.current = false;
       setIsSaving(false);
+      return false;
     }
   }
 
@@ -94,7 +100,7 @@ export function MomentAppends({ momentId }: MomentAppendsProps) {
         <div className="append-list">
           {appends.map((append) => (
             <div className="append-entry" key={append.id}>
-              <time dateTime={append.createdAt}>{formatAppendTime(append.createdAt)}</time>
+              <time dateTime={append.createdAt}>后来补充 {formatAppendTime(append.createdAt)}</time>
               <p>{append.text}</p>
             </div>
           ))}
@@ -103,7 +109,9 @@ export function MomentAppends({ momentId }: MomentAppendsProps) {
       {readError ? <p className="append-error" role="status">{readError}</p> : null}
       {isWriting ? (
         <div className="append-editor">
+          <label htmlFor={inputId}>追加文字</label>
           <textarea
+            id={inputId}
             aria-label="追加文字"
             autoFocus
             disabled={isSaving}
@@ -114,9 +122,7 @@ export function MomentAppends({ momentId }: MomentAppendsProps) {
           {saveError ? <p className="append-error" role="alert">{saveError}</p> : null}
           <div className="append-actions">
             <button disabled={isSaving} type="button" onClick={cancelWriting}>取消</button>
-            <button disabled={isSaving} type="button" onClick={saveAppend}>
-              {isSaving ? "保存中…" : "保存追加"}
-            </button>
+            <StatefulButton disabled={isSaving} label="保存追加" onAction={saveAppend} />
           </div>
         </div>
       ) : (

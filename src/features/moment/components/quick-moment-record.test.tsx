@@ -32,10 +32,13 @@ describe("QuickMomentRecord", () => {
 
     expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(resolveLocationMock).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "写点什么" }));
 
     expect(screen.getByRole("textbox", { name: "记录内容" })).toBeInTheDocument();
+    expect(screen.getByLabelText("写点什么")).toBe(screen.getByRole("textbox", { name: "记录内容" }));
+    expect(screen.getByRole("textbox", { name: "记录内容" })).toHaveFocus();
     expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
   });
 
@@ -50,7 +53,8 @@ describe("QuickMomentRecord", () => {
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(createMomentMock).toHaveBeenCalledWith({ originalText: text, location: { city: null, placeName: null, latitude: null, longitude: null }, attachments: [] }));
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存" })).toHaveAttribute("data-phase", "done");
+    await waitFor(() => expect(screen.queryByRole("textbox")).not.toBeInTheDocument(), { timeout: 2500 });
     expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
   });
 
@@ -125,7 +129,7 @@ describe("QuickMomentRecord", () => {
 
     expect(createMomentMock).toHaveBeenCalledTimes(1);
     resolveSave({ id: "moment-1" });
-    await waitFor(() => expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument(), { timeout: 2500 });
   });
 
   it("keeps input and allows retry when repository saving fails", async () => {
@@ -144,7 +148,7 @@ describe("QuickMomentRecord", () => {
 
     createMomentMock.mockResolvedValueOnce({ id: "moment-1" });
     await user.click(screen.getByRole("button", { name: "保存" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument(), { timeout: 2500 });
   });
 
   it("selects, previews, removes, and saves multiple images", async () => {

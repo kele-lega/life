@@ -1,0 +1,231 @@
+/* UI-1 is deliberately scoped: no body tokens or styling of history routes. */
+.page.page {
+  --surface: #faf9f6;
+  --surface-subtle: #f0f1ec;
+  --ink: #252621;
+  --secondary: #666960;
+  --line: #dadcd5;
+  --boundary: #85897f;
+  --action: #a94e40;
+  --focus: #a72f26;
+  --error: #a72f26;
+  --editorial: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --ui: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--ui);
+  color-scheme: light;
+}
+
+.sheet {
+  display: grid;
+  grid-template-columns: 192px minmax(0, 760px);
+  column-gap: 48px;
+  width: min(1120px, calc(100% - 80px));
+  margin-inline: auto;
+  padding-block: 72px 80px;
+}
+
+.content { min-width: 0; }
+.page :global(.home-date) h1 {
+  min-height: 60px;
+  margin: 0;
+  font: 400 3rem/1.25 var(--editorial);
+}
+.page :global(.date-number) { font-family: Georgia, "Times New Roman", serif; }
+.page :global(.date-unit) { margin-inline: 0.12em 0.25em; font-size: 0.58em; }
+.page :global(.home-date) p {
+  min-height: 21px;
+  margin: 12px 0 0;
+  color: var(--secondary);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  letter-spacing: 0.08em;
+}
+.page button, .page a {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 4px;
+  font-family: var(--ui);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+  touch-action: manipulation;
+}
+.page :is(button, a, input, textarea):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.page button:disabled, .page input:disabled, .page textarea:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+.page button:disabled { color: var(--secondary); background: var(--surface-subtle); }
+.page :global(.quick-record) {
+  display: block;
+  place-items: normal;
+  min-height: 160px;
+  padding: 0 0 32px;
+  border-bottom: 1px solid var(--line);
+}
+.page :global(.write-button) {
+  display: block;
+  margin-inline: auto;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--secondary);
+  font: 700 1.875rem/1.4 var(--editorial);
+  text-align: center;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 12px;
+}
+.page :global(.write-button):hover { color: var(--ink); text-decoration-color: var(--boundary); }
+.page :global(.record-panel) { width: 100%; gap: 16px; }
+.page :global(.record-heading) {
+  margin: 0;
+  text-align: center;
+  font: 700 1.875rem/1.4 var(--editorial);
+}
+.page :global(.record-panel) textarea, .page :global(.append-editor) textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 144px;
+  field-sizing: content;
+  resize: vertical;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--boundary);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font: 400 1.0625rem/1.75 var(--ui);
+}
+.page :global(.record-panel) textarea {
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+.page textarea::placeholder, .page input::placeholder { color: var(--secondary); opacity: 1; }
+.page :global(.record-tools) { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 24px; }
+.page :global(.location-field) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; max-width: 100%; }
+.page :global(.location-field) > span:empty { display: none; }
+.page :global(.location-field) > span { overflow-wrap: anywhere; }
+.page :global(.location-field) label { width: 100%; }
+.page :global(.location-field) input {
+  min-height: 44px;
+  border: 1px solid var(--boundary);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+}
+.page :global(.record-tools) button,
+.page :global(.append-trigger),
+.page :global(.image-preview) button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--secondary);
+  text-decoration: none;
+}
+.page :global(.record-tools) button:hover,
+.page :global(.append-trigger):hover,
+.page :global(.image-preview) button:hover { background: var(--surface-subtle); color: var(--ink); }
+.page :global(.record-tools) button,
+.page :global(.append-trigger) { font-weight: 600; }
+.page :global(.record-actions), .page :global(.append-actions) { gap: 12px; flex-wrap: wrap; }
+.page :global(.record-actions) button, .page :global(.append-actions) button {
+  justify-content: center;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--secondary);
+  text-decoration: none;
+}
+.page :global(.record-actions) button:last-child,
+.page :global(.append-actions) button:last-child {
+  background: var(--action);
+  color: #fff;
+  font-weight: 700;
+}
+.page :global(.record-actions) button:hover,
+.page :global(.append-actions) button:hover { border-color: var(--boundary); }
+.page :global(.record-actions) button:disabled,
+.page :global(.append-actions) button:disabled { border-style: dashed; border-color: var(--boundary); }
+.page :global(.recent-moments) { padding-top: 40px; min-height: 0; }
+.page :global(.recent-heading) { margin: 0 0 28px; font: 600 1.125rem/1.6 var(--ui); letter-spacing: 0.06em; }
+.page :global(.recent-status) { margin: 0; color: var(--secondary); font-size: 0.8125rem; line-height: 1.55; }
+.page :global(.recent-empty) { padding-block: 4px 12px; font: 400 0.9375rem/1.8 var(--ui); }
+.page :global(.moment-group) + :global(.moment-group) { margin-top: 48px; }
+.page :global(.moment-group) h3 { margin: 0 0 12px; color: var(--secondary); font: 400 0.8125rem/1.55 var(--ui); }
+.page :global(.moment-entry) { grid-template-columns: 52px minmax(0, 1fr); gap: 8px 16px; padding: 0; }
+.page :global(.moment-entry) + :global(.moment-entry) { margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--line); }
+.page :global(.moment-entry) time { color: var(--secondary); font: 400 0.8125rem/1.55 var(--ui); font-variant-numeric: tabular-nums; }
+.page :global(.moment-entry) > p { max-width: 34em; color: var(--ink); font: 400 1.0625rem/1.9 var(--ui); }
+.page :global(.moment-location), .page :global(.location-field) { color: var(--secondary); font-size: 0.8125rem; line-height: 1.55; overflow-wrap: anywhere; }
+.page :global(.moment-images) { grid-template-columns: repeat(3, minmax(0, 160px)); margin-top: 8px; gap: 12px; }
+.page :global(.moment-images)[data-single] { display: block; }
+.page :global(.moment-images)[data-single] img { display: block; width: auto; height: auto; max-width: min(100%, 320px); max-height: 240px; aspect-ratio: auto; object-fit: contain; }
+.page :global(.moment-appends) { margin-top: 16px; }
+.page :global(.append-list) { padding-left: 16px; border-color: var(--line); gap: 16px; margin: 0 0 8px; }
+.page :global(.append-entry) p { max-width: 34em; color: var(--ink); font: 400 1rem/1.85 var(--ui); }
+.page :global(.append-editor) { gap: 8px; }
+.page :global(.append-editor) label { color: var(--secondary); font-size: 0.875rem; }
+.page :global(.append-editor) textarea { min-height: 112px; }
+.page :global(.home-secondary-nav) { display: block; margin-top: 56px; padding-top: 0; border: 0; color: var(--secondary); font-size: 0.8125rem; }
+.page :global(.home-secondary-nav) > span { display: block; margin-bottom: 8px; font-weight: 600; }
+.page :global(.home-secondary-links) { justify-content: flex-start; gap: 8px 12px; margin-left: -12px; }
+.page :global(.home-secondary-nav) a { min-width: 64px; min-height: 48px; justify-content: center; padding: 12px; color: var(--secondary); text-decoration: none; }
+.page :global(.home-secondary-nav) a:hover { background: var(--surface-subtle); }
+.page :global(.home-secondary-nav) a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.page :global(.record-panel) [role="alert"],
+.page :global(.recent-error), .page :global(.attachment-error), .page :global(.moment-appends) :global(.append-error) { color: var(--error); font: 400 0.8125rem/1.55 var(--ui); }
+
+@media (prefers-color-scheme: dark) {
+  .page.page {
+    --surface: #1c1d1c;
+    --surface-subtle: #272925;
+    --ink: #e7e5df;
+    --secondary: #aaa9a3;
+    --line: #3a3d39;
+    --action: #a94e40;
+    --focus: #e58e80;
+    --error: #e58e80;
+    color-scheme: dark;
+  }
+}
+@media (max-width: 1023px) {
+  .sheet { display: block; width: min(720px, calc(100% - 64px)); padding-top: 40px; }
+  .page :global(.home-date) { margin-bottom: 32px; }
+}
+@media (max-width: 767px) {
+  .sheet { width: calc(100% - 48px); padding-block: 32px calc(32px + env(safe-area-inset-bottom)); }
+  .page :global(.home-date) h1 { min-height: 50px; font-size: 2.5rem; }
+  .page :global(.write-button), .page :global(.record-heading) { font-size: 1.625rem; }
+  .page :global(.quick-record) { min-height: 128px; padding-bottom: 24px; }
+  .page :global(.record-tools) { gap: 8px 16px; }
+  .page :global(.record-panel) textarea, .page :global(.append-editor) textarea { font-size: 1rem; }
+  .page :global(.recent-heading) { font-size: 1.0625rem; }
+  .page :global(.moment-entry) { display: flex; flex-direction: column; gap: 8px; }
+  .page :global(.moment-entry) > p { font-size: 1rem; }
+  .page :global(.moment-images) { grid-template-columns: repeat(2, minmax(0, 160px)); }
+  .page :global(.home-secondary-nav) { margin-top: 40px; }
+  .page :global(.home-secondary-links) { justify-content: flex-start; gap: 8px; }
+  .page button, .page a { font-size: 0.9375rem; }
+  .page :global(.write-button) { font-size: 1.625rem; }
+}
+@media (max-width: 359px) {
+  .sheet { width: calc(100% - 32px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .page button, .page a { transition: color 150ms, background-color 150ms, border-color 150ms; }
+}

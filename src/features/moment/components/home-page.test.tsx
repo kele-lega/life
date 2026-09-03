@@ -61,6 +61,10 @@ describe("HomePage", () => {
     expect(screen.getByRole("link", { name: "日历" })).toHaveAttribute("href", "/calendar");
     expect(screen.getByRole("link", { name: "日记" })).toHaveAttribute("href", "/diary");
     expect(screen.getByRole("link", { name: "搜索" })).toHaveAttribute("href", "/search");
+    const recent = screen.getByLabelText("最近记录");
+    const more = screen.getByRole("navigation", { name: "更多功能" });
+    expect(recent.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "写点什么" }));
     expect(screen.getByRole("textbox", { name: "记录内容" })).toBeInTheDocument();
@@ -90,6 +94,7 @@ describe("HomePage", () => {
     await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
     expect(screen.getAllByRole("article")[0]).toHaveTextContent(created.originalText);
     expect(mocks.listRecentMoments).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存" })).toHaveAttribute("data-phase", "done");
+    await waitFor(() => expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument(), { timeout: 2500 });
   });
 });

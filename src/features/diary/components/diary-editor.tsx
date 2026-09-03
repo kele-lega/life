@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { StatefulButton, type StatefulButtonResult } from "@/components/ui/stateful-button";
 
 import { createDiary, updateDiaryContent } from "../repository/diary-repository";
 
@@ -21,10 +22,11 @@ export function DiaryEditor({ diaryId, initialTitle = "", initialBody = "", onSa
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitting = useRef(false);
+  const persisted = useRef(false);
 
   useEffect(() => {
     function handleBeforeUnload(event: BeforeUnloadEvent): void {
-      if (title !== initialTitle || body !== initialBody) {
+      if (!persisted.current && (title !== initialTitle || body !== initialBody)) {
         event.preventDefault();
       }
     }
@@ -32,16 +34,16 @@ export function DiaryEditor({ diaryId, initialTitle = "", initialBody = "", onSa
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [body, initialBody, initialTitle, title]);
 
-  async function save(): Promise<void> {
-    if (submitting.current) return;
+  async function save(): Promise<StatefulButtonResult> {
+    if (submitting.current) return false;
     if (body.trim().length === 0) {
       setError("请输入正文后再保存。");
-      return;
+      return false;
     }
     if (diaryId && title === initialTitle && body === initialBody) {
       if (onCancel) onCancel();
       else router.push(`/diary/${diaryId}`);
-      return;
+      return false;
     }
     submitting.current = true;
     setIsSaving(true);
@@ -50,13 +52,16 @@ export function DiaryEditor({ diaryId, initialTitle = "", initialBody = "", onSa
       const diary = diaryId
         ? await updateDiaryContent(diaryId, { title, body })
         : await createDiary({ title, body });
-      if (onSaved) onSaved(diary);
-      else router.push(`/diary/${diary.id}`);
+      persisted.current = true;
+      return () => {
+        if (onSaved) onSaved(diary);
+        else router.push(`/diary/${diary.id}`);
+      };
     } catch {
       setError("保存失败，请重试。正文仍然保留。");
-    } finally {
       submitting.current = false;
       setIsSaving(false);
+      return false;
     }
   }
 
@@ -75,7 +80,7 @@ export function DiaryEditor({ diaryId, initialTitle = "", initialBody = "", onSa
         <input aria-label="日记标题（可选）" disabled={isSaving} onChange={(event) => setTitle(event.target.value)} placeholder="标题（可选）" value={title} />
         <textarea aria-label="日记正文" autoFocus disabled={isSaving} onChange={(event) => setBody(event.target.value)} placeholder="写下这一段时间……" value={body} />
         {error ? <p role="alert">{error}</p> : null}
-        <div className="diary-actions"><button disabled={isSaving} type="button" onClick={cancel}>取消</button><button disabled={isSaving} type="button" onClick={save}>{isSaving ? "保存中…" : "保存日记"}</button></div>
+        <div className="diary-actions"><button disabled={isSaving} type="button" onClick={cancel}>取消</button><StatefulButton disabled={isSaving} label="保存日记" onAction={save} /></div>
       </section>
     </main>
   );

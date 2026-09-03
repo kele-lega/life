@@ -58,7 +58,8 @@ describe("MomentAppends", () => {
     await waitFor(() => expect(mocks.createMomentAppend).toHaveBeenCalledWith("moment-1", { text: exactText }));
     await waitFor(() => expect(mocks.listMomentAppends).toHaveBeenCalledTimes(2));
     expect(screen.getByText((_, element) => element?.textContent === exactText)).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "追加文字" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存追加" })).toHaveAttribute("data-phase", "done");
+    await waitFor(() => expect(screen.queryByRole("textbox", { name: "追加文字" })).not.toBeInTheDocument(), { timeout: 2500 });
   });
 
   it.each(["", "   ", "\n\t"]) ("rejects blank append %j", async (text) => {
@@ -96,7 +97,7 @@ describe("MomentAppends", () => {
 
     await waitFor(() => expect(mocks.listMomentAppends).toHaveBeenCalledTimes(2));
     const sections = view.container.querySelectorAll(".moment-appends");
-    const firstTexts = within(sections[0] as HTMLElement).getAllByText(/补充/);
+    const firstTexts = within(sections[0] as HTMLElement).getAllByText(/补充/, { selector: "p" });
     expect(firstTexts[0]).toHaveTextContent("较早补充");
     expect(firstTexts[1]).toHaveTextContent("较晚补充");
     expect(within(sections[0] as HTMLElement).queryByText("另一条记录的补充")).not.toBeInTheDocument();
@@ -133,7 +134,7 @@ describe("MomentAppends", () => {
 
     expect(mocks.createMomentAppend).toHaveBeenCalledTimes(1);
     resolveSave(append("append-1", "moment-1", "只保存一次", "2026-09-01T10:00:00.000Z"));
-    await waitFor(() => expect(screen.getByRole("button", { name: "追加" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "追加" })).toBeInTheDocument(), { timeout: 2500 });
   });
 
   it("keeps input after failure and allows retry", async () => {

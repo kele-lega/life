@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { StatefulButton, type StatefulButtonResult } from "@/components/ui/stateful-button";
 
 import type { LocationMetadata, Moment } from "@/features/moment/model/types";
 import { createMomentWithAttachments } from "@/features/moment/repository/moment-repository";
@@ -17,6 +18,7 @@ interface PendingImage {
 }
 
 export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
+  const inputId = useId();
   const [isRecording, setIsRecording] = useState(false);
   const [text, setText] = useState("");
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
@@ -98,11 +100,11 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
     setPendingImages((current) => current.filter((image) => image.previewUrl !== previewUrl));
   }
 
-  async function saveRecording(): Promise<void> {
-    if (isSaving) return;
+  async function saveRecording(): Promise<StatefulButtonResult> {
+    if (isSaving) return false;
     if (text.trim().length === 0) {
       setError("请输入文字后再保存。");
-      return;
+      return false;
     }
     setError(null);
     setIsSaving(true);
@@ -122,16 +124,20 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
       });
       clearPendingImages();
       setText("");
-      setLocation({ city: null, placeName: null, latitude: null, longitude: null });
-      setIsEditingPlace(false);
-      setIsRecording(false);
-      locationAttemptedRef.current = false;
       locationRequestRef.current += 1;
+      setIsLocating(false);
       onSaved?.(moment);
+      return () => {
+        setLocation({ city: null, placeName: null, latitude: null, longitude: null });
+        setIsEditingPlace(false);
+        setIsRecording(false);
+        locationAttemptedRef.current = false;
+        setIsSaving(false);
+      };
     } catch {
       setError("保存失败，请重试。文字和已选图片仍然保留。");
-    } finally {
       setIsSaving(false);
+      return false;
     }
   }
 
@@ -141,9 +147,11 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
 
   return (
     <section className="quick-record">
-      <div className="record-panel" aria-label="快速记录">
-        <textarea aria-label="记录内容" autoFocus disabled={isSaving} onChange={(event) => setText(event.target.value)} placeholder="今天突然想到……" value={text} />
-        <div className="location-field">
+      <div className="record-panel" aria-label="快速记录" aria-busy={isSaving}>
+        <h2 className="record-heading"><label htmlFor={inputId}>写点什么</label></h2>
+        <textarea id={inputId} aria-label="记录内容" aria-invalid={!!error} aria-describedby={error ? `${inputId}-error` : undefined} autoFocus disabled={isSaving} onChange={(event) => setText(event.target.value)} placeholder="今天突然想到……" value={text} />
+        <div className="record-tools">
+          <div className="location-field">
           <span aria-live="polite">{isLocating ? "正在获取位置" : location.city ?? ""}</span>
           {isEditingPlace ? (
             <label>
@@ -153,9 +161,10 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
           ) : (
             <button disabled={isSaving} type="button" onClick={() => setIsEditingPlace(true)}>添加具体地点</button>
           )}
+          </div>
+          <input ref={fileInputRef} accept="image/*" aria-label="选择图片" hidden multiple type="file" onChange={handleImagesSelected} />
+          <button disabled={isSaving} type="button" onClick={chooseImages}>添加图片</button>
         </div>
-        <input ref={fileInputRef} accept="image/*" aria-label="选择图片" hidden multiple type="file" onChange={handleImagesSelected} />
-        <button disabled={isSaving} type="button" onClick={chooseImages}>添加图片</button>
         {pendingImages.length > 0 ? (
           <div className="image-previews" aria-label="待保存图片">
             {pendingImages.map(({ file, previewUrl }) => (
@@ -168,10 +177,10 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
             ))}
           </div>
         ) : null}
-        {error ? <p role="alert">{error}</p> : null}
+        {error ? <p id={`${inputId}-error`} role="alert">{error}</p> : null}
         <div className="record-actions">
           <button disabled={isSaving} type="button" onClick={cancelRecording}>取消</button>
-          <button disabled={isSaving} type="button" onClick={saveRecording}>{isSaving ? "保存中…" : "保存"}</button>
+          <StatefulButton disabled={isSaving} label="保存" onAction={saveRecording} />
         </div>
       </div>
     </section>

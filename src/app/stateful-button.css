@@ -1,0 +1,6 @@
+/* Only this component uses Tailwind. No Preflight/reset or automatic source scan.
+   Prefixed, important utilities insulate it from legacy page-level button rules. */
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme) prefix(sb);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(sb) source(none) important;
+@source "../components/ui/stateful-button.tsx";

@@ -23,7 +23,7 @@ export function TimelineItemView({ item }: { item: TimelineItem }) {
       <time dateTime={item.createdAt}>{formatTimelineTime(item.createdAt)}</time>
       {item.type === "moment" ? (
         <div className="timeline-content">
-          <div className="timeline-kind">Moment</div>
+          <div className="timeline-kind">随笔</div>
           {location ? <div className="timeline-location">{location}</div> : null}
           <p>{item.moment.originalText}</p>
           {item.attachments.length > 0 ? (
@@ -51,7 +51,7 @@ export function TimelineItemView({ item }: { item: TimelineItem }) {
         </div>
       ) : (
         <Link className="timeline-content timeline-diary-link" href={`/diary/${item.diary.id}`}>
-          <div className="timeline-kind">Diary</div>
+          <div className="timeline-kind">日记</div>
           {item.diary.title ? <h3>{item.diary.title}</h3> : null}
           <p>{diaryPreview(item.diary.body)}</p>
         </Link>

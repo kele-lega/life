@@ -152,17 +152,19 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
 
       <section className="calendar-month" aria-label={monthTitle(visibleMonth)}>
         <div className="calendar-month-nav">
-          <button type="button" onClick={() => showMonth(shiftLocalMonth(visibleMonth, -1))}>上一个月</button>
+          <button type="button" aria-label="上一个月" title="上一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, -1))}><span aria-hidden="true">‹</span></button>
           <h2>{monthTitle(visibleMonth)}</h2>
-          <button type="button" onClick={() => showMonth(shiftLocalMonth(visibleMonth, 1))}>下一个月</button>
+          <button type="button" aria-label="下一个月" title="下一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, 1))}><span aria-hidden="true">›</span></button>
         </div>
         <button
           className="calendar-current-month"
+          aria-label="返回当前月"
+          title="返回当前月"
           disabled={visibleMonth.year === currentMonth.year && visibleMonth.month === currentMonth.month}
           type="button"
           onClick={() => showMonth(currentMonth)}
         >
-          返回当前月
+          本月
         </button>
         {monthError ? <p role="alert">{monthError}</p> : null}
         <div className="calendar-weekdays" aria-hidden="true">
@@ -218,7 +220,7 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
             ))}
           </div>
         </section>
-      ) : <p className="calendar-select-hint">选择一个日期查看内容。</p>}
+      ) : null}
     </main>
   );
 }
