@@ -406,3 +406,16 @@ Motion：颜色与透明度 120-180ms；展开/页面状态切换最多 180ms。
 - `useReducedMotion` 与精确 CSS media query 取消位移、错峰、spinner 和等待式过渡，保留焦点与状态反馈。没有全局 `*` 动画覆盖、永久 will-change、逐帧 React state 或新增动画依赖。
 
 实现、前后截图、测试与边界见 [动效验收记录](design/motion-system/README.md)。
+
+## 26. Life Visualization
+
+`/life` 延续纸面、细线、低饱和与系统中文衬线的既有语言，但把事件结构放进有机地形，而不是矩形统计卡。桌面由 68px Lens 顶栏、Life Map 与右侧轻量预览构成；没有底部逐条事件轨迹。详情仅在区域悬浮、键盘聚焦或触屏点按时贴近该区域出现。
+
+- 地图区域大小由真实 eventCount 的平方根缩放，颜色只对应已有四类，轮廓和沉积线由 Canvas 在客户端确定性绘制。
+- 相邻 14 个自然日内连续出现的不同主题产生微弱连接；该关系只帮助阅读地图，不写回 LifeEvent，也不声称语义因果。
+- Activities 按 category + exact name；Places 只使用 place name；Themes 使用四类。没有可靠人物字段时不展示伪造的人物统计，也不把技术来源暴露为观察视角。
+- 地图区域由可访问 button 覆盖，Canvas 为装饰层。活动区域高亮时，其余区域与无关连线同步降暗；浮层显示次数、累计时长、首次/最近日期和趋势描述。
+- 右侧 Places 与 Themes 都使用同一套轻量胶囊预览。默认观察过去 30 天，可切换 30/90/365 天；范围仍是 Life Statistics 的 `[startDate, endDate)`。
+- Canvas 在数据、范围或 Lens 改变后直接绘制稳定结果，不为每次切换重播生长动画。悬浮降暗只使用短促的透明度过渡，reduced motion 下同样保持可读状态。
+
+参考图、实现截图和视觉验收见 `design/life-visualization/` 与根目录 `design-qa.md`。

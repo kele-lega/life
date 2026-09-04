@@ -65,6 +65,41 @@ Timeline, Calendar, Search, and Favorites are query views over normalized local 
 
 Deletion writes `deletedAt` as a UTC timestamp. Normal queries exclude soft-deleted entities; the recycle bin queries them explicitly. Permanent cleanup is a later, user-visible action governed by the 30-day retention rule.
 
+## LifeEvent Foundation boundary
+
+Phase 12 adds a separate `features/life-event` vertical slice and Dexie v5 table. A thin `/lab/life-events` Server Component renders a client-only form/readback boundary; no Server Component imports the database. The form uses only LifeEvent repository APIs, not raw Dexie, network requests or global state. It has no navigation/home entry and does not feed Timeline, Calendar or Search.
+
+The repository alone reads source tables in batches and writes only `lifeEvents`. Source checks, idempotent UUID comparison and batch inserts share an IndexedDB transaction. Local WebCrypto SHA-256 work uses `Dexie.waitFor` to retain the transaction snapshot; no content leaves the device. Failed writes roll back the whole batch. Read-time source validity respects original deletion without changing existing deletion/restore transactions. A changed Diary yields a `stale` view status, never an automatic rewrite. Original Moment/Diary/Append repositories remain unchanged.
+
+The lab retains the current submission UUID and inputs across failures, locks concurrent saves, and reads the saved event plus first page from IndexedDB after commit. A post-commit read failure is distinguished from a write failure and retry reuses the same ID; no synthetic success or optimistic final data is used. Persisted data survives remount/reload, but unsaved lab inputs are not a draft-storage feature. There are no Events in existing recall views and no new AI/provider, dependency, device or analysis integration.
+
+### Life Statistics query boundary
+
+The future visualization dependency direction is strictly:
+
+```text
+LifeEvent table
+  -> LifeEvent repository eligibility/range read
+    -> Life Statistics domain query
+      -> Life Visualization presentation
+```
+
+`life-insights` imports only the LifeEvent repository/model API and never Dexie. The repository uses the existing `[occurredOn+id]` compound index for a half-open natural-date range, checks source validity in bounded 512-event batches, and removes stale events from the statistics-eligible result. Summary and sparse time-series aggregation then operate in memory over that range. They return counts, integer-second duration totals, category aggregates, and calendar bucket boundaries only; there are no chart coordinates, colors, SVG, UI strings, framework state, caches, or new persisted entities.
+
+The Life Visualization phase adds `getLifeEventExploration` to the same read-only boundary. One source-valid range read produces the existing summary/time series plus exact `category + name` aggregates, exact source-kind aggregates, and a bounded newest-event projection for timeline/drill-down. The projection removes source fingerprints and exposes only source type/ID. Its limit is 160 by default and 500 maximum; aggregate totals still cover the complete requested range.
+
+### Life Visualization boundary
+
+The `/life` component reads through a Visualization-owned adapter. In production the adapter delegates directly to `getLifeEventExploration`. In development only, it may return the deterministic in-memory projection from `life-visualization-mock.ts`; this branch never opens Dexie, calls a repository, or writes a LifeEvent. `NODE_ENV !== "development"` disables the branch before the production UI chooses its data source. The adapter exposes its mode so the UI can show the `Demo Data` marker.
+
+`features/life-visualization` imports `life-insights` only. It never imports Dexie, the database client, or Moment/Diary/Timeline/Calendar/Search repositories. `/life` is a thin Server Component wrapping a client-owned IndexedDB visualization surface. Existing record routes and homepage navigation remain unchanged.
+
+The Canvas layer owns only deterministic organic geometry, contour texture, temporal flow lines and category tones. Accessible HTML buttons sit over Canvas regions; Lens state, selected region/event, date-range state and responsive layout remain presentation concerns. The map uses four truthful views over current fields: exact activity names, place-category names, fixed categories, and source kinds. It does not infer people or semantic relationships from original text.
+
+The bottom Life Timeline receives a bounded source-valid event projection from `life-insights`; its nodes are not a second timeline repository or a persisted feed. Source links route Diary events to their existing detail route and Moment/Append events to the existing Timeline without adding focus/query semantics. No database table, index, cache, worker, AI call or original-record write is introduced.
+
+Both statistics functions currently materialize the eligible requested range. Development benchmarks through the actual query code and fake-indexeddb cover 1,000/10,000/50,000 records. This is sufficient for a contract and index decision, not a production device latency guarantee. Future visualization must profile representative Chrome/Safari devices and may introduce worker/off-main-thread computation or incremental aggregates only from measured need. No extra index or Dexie migration is justified by Phase 12.6.
+
 ## Future synchronization constraints
 
 All main entities use application-generated UUIDs, UTC timestamps, and `createdAt`, `updatedAt`, and `deletedAt`. Tombstones prevent deleted records from silently returning on another device. Moment original text is immutable and append content is independent, reducing merge conflicts. No account ID, device ID, sync cursor, or conflict engine is added before a real sync protocol is designed.

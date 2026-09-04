@@ -45,3 +45,83 @@ No remaining actionable P0/P1/P2 visual differences were found within this scope
 final result: passed
 
 Engineering acceptance: blocked (`npm run build` exits 1 with Windows UNKNOWN on generated files). Visual QA does not override that gate.
+
+---
+
+# Life Visualization design QA
+
+Date: 2026-09-03. Scope: the new read-only `/life` route.
+
+## Sources and evidence
+
+- Source truth: `D:/code/life/design/life-visualization/reference.png` (1280 × 800), the user's Life Map brief, and `D:/code/life/DESIGN.md` section 26.
+- Desktop implementation: `D:/code/life/design/life-visualization/implementation-1280.png`, Chromium viewport and capture 1280 × 800, device scale factor 1.
+- Mobile implementation: `D:/code/life/design/life-visualization/implementation-390.png`, Chromium viewport 390 × 844, device scale factor 1; full-page capture height follows stacked content.
+- The reference and both implementation captures were opened together in one comparison input. The desktop comparison uses the same pixel viewport as the reference. The mobile capture verifies the responsive transformation rather than claiming a source-image match.
+- Evidence data is created as valid independent `LifeEvent` records in an isolated browser context. The visible regions, totals, dates, places, durations and timeline nodes all pass through the real Life Statistics query layer.
+
+## Findings and comparison history
+
+1. [P2, fixed] The first render made regions look like separate geometric bubbles. Region radius, deterministic contour drift and tonal density were increased. The second comparison shows overlapping territories and shared flow lines, which reads as one accumulated field.
+2. [P2, fixed] Initial evidence included the Next.js development indicator and a focused skip link. The capture fixture now hides those two development/accessibility artifacts only while taking screenshots; application focus behavior remains unchanged.
+3. The reference's People lens and several relationship labels cannot be derived from the current `LifeEvent` contract. The implementation uses Sources as the fourth lens and shows only independent, Moment, Append and Diary provenance. This is an intentional data-truth constraint.
+4. The reference uses an always-visible floating tooltip. The implementation uses an adjacent inspector on desktop and a stacked inspector on mobile so event details, source links and keyboard focus remain stable without obscuring the terrain.
+
+## Required fidelity surfaces
+
+- Composition: quiet top bar, centered lens control, wide terrain as the first visual, a secondary inspector, and one continuous timeline at the bottom. No Dashboard grid or rectangular category-card collection appears.
+- Material: warm paper background, fine borders, low-saturation olive/orange/violet/blue regions, translucent contour sediment and sparse time traces. Dark mode uses the existing project tokens and preserves the same hierarchy.
+- Data hierarchy: region size derives from event count; the inspector reveals duration, first/last occurrence and recent nodes; timeline point size derives from duration while null duration remains a counted event.
+- Interaction: lens, range, region and event controls use semantic buttons/tabs, visible focus and at least 44px targets. Motion is restrained to entry/selection transitions and is removed under reduced motion.
+- Responsive behavior: desktop keeps map and inspector side by side. At 820px and below they stack; at 390px and 320px the map remains legible, details become linear, and the timeline scrolls within its own rail without page-level horizontal overflow.
+
+## Engineering and evidence limits
+
+- Canvas receives a presentation model and never imports Dexie or a repository. Exact aggregates and the bounded recent-event projection come from `life-insights`.
+- Cross-topic lines express chronological proximity only; they are not persisted relationships or semantic claims.
+- The recent event projection is bounded to 160 entries while summary/name/source aggregates cover the full selected range. Very large histories should receive real-device main-thread profiling before adding workers, caches or indexes.
+- Native Safari/iOS, VoiceOver and physical touch testing are outside this Chromium evidence. No accessibility certification is claimed.
+
+## Implementation checklist
+
+- [x] Compare the reference and populated desktop render at 1280 × 800.
+- [x] Correct region isolation and recompare reference plus implementation.
+- [x] Verify populated mobile layout and 320px reduced-motion behavior.
+- [x] Verify lens selection, region exploration, timeline event details and source links.
+- [x] Preserve LifeEvent-only data provenance and exclude stale/deleted sources through Life Statistics.
+- [x] Complete the full repository quality gate: typecheck, zero-warning lint, 28 files / 219 tests, 42 Chromium E2E tests and production build all pass.
+
+## Development demo data follow-up, 2026-09-04
+
+- Compared `design/life-visualization/reference.png`, `demo-desktop-1280.png`, and `demo-mobile-390.png` together. The development dataset produces distinct but connected organic regions, visible density variation, accumulated flow lines, location previews, and an event-rich continuous timeline without introducing dashboard cards or standard charts.
+- Verified the `Demo Data` marker is visible only when the visualization adapter selects its development provider. A production build served locally showed neither the marker nor mock records.
+- Verified the default 30-day view contains enough recent activity to inspect map formation and event details, while the generated year preserves the intended shift from earlier learning toward increased recent fitness and creation.
+- The final repository gate passes with typecheck, zero-warning lint, 29 files / 223 unit-integration tests, 43 Chromium E2E tests, and a production build that prerenders `/life`.
+
+No remaining actionable P0/P1/P2 visual difference was found within the model-supported scope. Reference-only People semantics and richer grain density are documented differences rather than fabricated product behavior.
+
+final result: passed
+
+## Reference-fidelity follow-up, 2026-09-04
+
+The first accepted implementation preserved the organic-map idea but diverged visibly from the supplied composition. The user correctly identified that it felt different. A new same-viewport comparison led to these changes:
+
+1. [P1, fixed] The separate map and conventional right inspector made the page read like an analytics screen. The detail became a compact floating sheet over the terrain; the right side now contains organic Places, Themes and Sources previews.
+2. [P1, fixed] Regions were isolated and shared too little visual mass. The layout now uses a continuous outer field, denser sediment/flow lines, packed overlaps and topic-level presentation tones while retaining count-based size.
+3. [P2, fixed] Header hierarchy, 365-day default and two-line timeline differed from the source. The page now uses the `Life OS` wordmark, English lens labels with Chinese accessible names, the 30-day default, time-distribution label, search affordance and compact one-line event track.
+4. [P2, fixed] Activities included `place` names, which duplicated the right-side place map. Activities now contains non-place event names; Places owns exact place names. This is a presentation-query transformation only and does not change LifeEvent or statistics contracts.
+5. [P2, fixed] Generic category icons weakened topic identity. Known work, photography, music and travel names use existing Radix icons; unknown names still fall back to their stable category icon without storing or inferring new metadata.
+
+The revised desktop evidence remains 1280 × 800, matching the reference dimensions, and the revised mobile evidence remains a full-page 390px capture. That revision used Sources as a truthful replacement for People; the later hover-exploration follow-up removes the technical lens from the visible product.
+
+follow-up result: passed
+
+## Hover exploration follow-up, 2026-09-04
+
+The persistent detail and dense bottom event rail made the page feel busier as the data volume grew. The accepted interaction now leaves the terrain undisturbed until exploration: hovering, focusing or tapping a region highlights it, dims unrelated regions and connections, and places its compact detail directly beside the territory. Moving away removes the detail without replaying a transition sequence.
+
+The visible lenses are now Activities, Places and Themes. Sources and the bottom LifeEvent list are removed, while Places and Themes share one quiet pill-preview treatment. The Life Statistics contract still retains source and recent-event projections for domain compatibility; the presentation simply does not expose them here.
+
+The refreshed 1280 × 800 evidence captures the reading region's hover state and the refreshed 390 × 844 evidence verifies the simplified narrow layout. Focused component tests and all three Life Visualization Chromium tests pass.
+
+hover follow-up result: passed

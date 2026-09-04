@@ -174,7 +174,45 @@ No schema, repository API, entity structure, or Timeline/Calendar/Search query f
 
 Existing repository row-limit enforcement, cross-route Search state restoration and native iOS/Safari/VoiceOver acceptance are documented in the motion review; no data-layer or framework-cache change is included.
 
-## Phase 12 - Manual tags (future product work)
+## Phase 12 - LifeEvent Foundation
+
+- [x] 12.1: Implement independent manual LifeEvent types, source fingerprints, date/time/duration validation and original-record isolation.
+- [x] 12.2: Add only the v5 `lifeEvents` table; test v4 migration with all original tables and exact Blob bytes.
+- [x] 12.3: Add atomic single/batch creation, idempotent UUID retries, source validation, default soft-delete filtering and bounded keyset reads.
+- [x] 12.4: Add direct-only `/lab/life-events` manual form and actual IndexedDB readback; no navigation, homepage or recall integration.
+- [x] Complete repository, migration, component, real Chromium verification and all five quality commands: typecheck, lint, 201 unit/integration tests (25 files), 40 Playwright tests and production build pass on 2026-09-03. This phase adds 42 Vitest cases and 2 Chromium E2E cases.
+
+**Done when:** real manual events survive refresh, many events can share one source/name, failed writes do not create partial data, retries cannot overwrite originals/events, and all required checks pass. Life Visualization and AI remain outside this phase.
+
+### Phase 12.5 - Life Statistics Contract
+
+- [x] Define conservative statistics eligibility: include active independent/current-source manual events; exclude stale, inactive-source and deleted events without mutating them.
+- [x] Add repository-owned `[startDate, endDate)` eligible range reads and UI-independent summary/time-series queries.
+- [x] Aggregate by natural `occurredOn`, nullable integer-second duration and the unchanged four-category vocabulary; define sparse day/Monday-week/month buckets.
+- [x] Document the real-data `/lab` policy and `LifeEvent -> Life Statistics -> future visualization` dependency direction.
+- [x] Complete full regression verification: typecheck, lint, 26 files / 211 unit-integration tests, 40 Chromium E2E tests and production build passed on 2026-09-03.
+
+### Phase 12.6 - Life Statistics Performance Baseline
+
+- [x] Benchmark 1,000, 10,000 and 50,000 active standalone events through the real statistics implementation in fake-indexeddb.
+- [x] Measure 30-day, one-year, five-year monthly and five-year category aggregation after a warm read, using the median of three measured runs.
+- [x] Retain Dexie v5 and existing indexes: the benchmark does not justify a speculative schema/index expansion.
+
+**Done when:** the statistics contract is deterministic, stale/deleted data cannot affect totals, benchmarks and limitations are recorded, and all five quality commands pass. No visualization surface is part of this phase.
+
+## Life Visualization - post statistics contract
+
+- [x] Add the `/life` read-only route without changing the homepage or existing record/recall flows.
+- [x] Extend `life-insights` with UI-neutral exact-name/source aggregates and a bounded source-valid event projection; keep existing Summary/Time Series contracts stable.
+- [x] Render a responsive Canvas Life Map with organic regions, contour sediment, temporal flow and data-derived topic affinity instead of Dashboard cards or conventional charts.
+- [x] Add Activities, Places and Themes lenses using only dimensions that the current LifeEvent model can support truthfully; keep technical provenance out of the visible Lens control.
+- [x] Add transient adjacent region details with hover/focus/touch activation and dim unrelated terrain; omit the dense bottom LifeEvent list.
+- [x] Cover empty/loading/error, keyboard focus, reduced motion, light/dark tokens and 320px no-overflow behavior.
+- [x] Complete the full repository quality gate: typecheck, zero-warning lint, 29 files / 223 unit-integration tests, 43 Chromium E2E tests and production build passed on 2026-09-04; comparison evidence is stored under `design/life-visualization/`.
+
+**Done when:** the first screen reads as a personal life map, every visible value comes through Life Statistics, stale/deleted data cannot enter, Canvas remains presentation-only, and all required quality commands pass.
+
+## Manual tags (deferred, previously scheduled as Phase 12)
 
 Implement Tag and ContentTag, normalization, optional assignment, filtering, and search inclusion.
 
