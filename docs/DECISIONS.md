@@ -192,9 +192,56 @@
 ## ADR-028: Life Visualization is an organic read-only projection over Life Statistics
 
 - **Status:** Accepted (2026-09-03 explicit Life Visualization request).
-- **Experience:** `/life` presents exact LifeEvent names as overlapping organic regions with contours and temporal traces. Hover, keyboard focus or touch highlights one region, dims unrelated terrain and reveals an adjacent detail; no region is selected by default and no dense bottom event rail is shown. It intentionally avoids Dashboard cards and conventional line, bar or pie charts.
+- **Experience:** `/life` presents exact LifeEvent names as overlapping organic regions with contours and temporal traces. Hover, keyboard focus or touch highlights one region, dims unrelated terrain and reveals an adjacent narrative detail; no region is selected by default and no dense bottom event rail is shown. It intentionally avoids Dashboard cards and conventional line, bar or pie charts.
 - **Data boundary:** `getLifeEventExploration` remains inside `life-insights` and performs one statistics-eligible range read. It adds UI-neutral exact name/source aggregates and a bounded recent event projection while preserving Summary/Time Series APIs. Canvas geometry, colors, labels and interactions stay in `life-visualization`; no UI imports Dexie.
-- **Truthfulness:** Visible lenses are activities, places and themes. People are not inferred from private text or invented from open metadata, while source provenance remains available to the domain contract without becoming a user-facing observation mode. Temporal affinity connects adjacent visible event topics within fourteen natural days; it is a presentation relationship, not persisted meaning.
+- **Truthfulness:** Visible lenses are activities, places and themes. People are not inferred from private text or invented from open metadata, while source provenance remains available to the domain contract without becoming a user-facing observation mode. Temporal affinity connects consecutive visible event topics within fourteen natural days; place affinity is rendered as a route trace, while all such links remain presentation relationships rather than persisted meaning.
 - **Lifecycle:** Stale, inactive-source and deleted LifeEvents remain absent under ADR-027 and are never removed or repaired by the map. `/lab` records are ordinary LifeEvents and therefore appear if eligible. The visualizer does not mutate, classify or backfill them.
+- **Evolution:** 30/90/365 is a sediment-depth control. Only range responses interpolate the previous and next presentation frames; Lens changes remain immediate and reduced motion receives the final frame. Frequency controls grain density, accumulated duration controls radius/contour weight, and neither value is stored back on LifeEvent.
 - **Scale:** Aggregate values cover the complete requested range. The default page window is 30 days with explicit 30/90/365-day choices. Existing Dexie v5 indexes remain sufficient; no new table/index, worker or cache is added before real-device evidence.
 - **Impact:** Existing Moment, Diary, Timeline, Calendar, Search and homepage code stay unchanged. The route includes loading, empty, error, keyboard, reduced-motion, dark-mode and narrow-screen states.
+
+## ADR-029: Life Intelligence begins as a proposal-first, non-persistent contract
+
+- **Status:** Accepted (2026-09-04 Phase 14.1 request).
+- **Decision:** Add `features/life-intelligence` contracts for extraction jobs, validated proposals, a terminal proposal state machine, insert-only materialization plans, a repository port and a deterministic fake extractor. Do not add a Dexie migration, database adapter, route, network call, save hook or automatic job.
+- **Review semantics:** Accept plans an AI-origin LifeEvent. Correct plans a manual-origin LifeEvent containing the user's revision. Reject creates no event. Pending/rejected/superseded proposals never reach Life Statistics. Equal proposal retries return the first proposal; conflicting candidate-key reuse fails.
+- **Manual priority:** The materialization port exposes a manual-conflict check and has no update operation. Future adapters must atomically reject event-ID collisions and any attempt to replace existing manual data.
+- **Reason:** The current physical LifeEvent schema permits only `origin: manual`. A pure contract proves extraction and review behavior without weakening that invariant or creating data that existing statistics would misinterpret.
+- **Impact:** Dexie stays v5. Moment, MomentAppend, Diary, LifeEvent, Statistics, Life Map and navigation remain unchanged. Persisting accepted/corrected events is deferred until an explicit schema phase.
+
+## ADR-030: Life Intelligence Lab reviews only session-owned proposals
+
+- **Status:** Accepted (2026-09-04 Phase 14.2 request).
+- **Decision:** Add a direct `/lab/life-extraction` route backed by the deterministic fake extractor and an in-memory implementation of the Phase 14.1 repository port. Users explicitly extract text and review each candidate with Accept, Correct or Reject. Do not add Dexie persistence, a real AI provider, a source-save hook or navigation entry.
+- **Review behavior:** Accept produces one session-owned AI materialization, Correct produces one session-owned manual materialization with the edited category/name/date/duration/timezone, and Reject produces none. Repeated terminal review is idempotent. A corrected manual result blocks a later equal AI interpretation within the same session.
+- **Refresh behavior:** Refresh intentionally clears the lab. The page communicates this before extraction; E2E verifies the reset and that a clean browser context has no `life` IndexedDB database after the flow.
+- **Reason:** This creates a complete, inspectable review loop while preserving the approved no-schema constraint. Persisting proposal state or pretending the current manual-only LifeEvent table accepted AI output would violate the existing model.
+- **Impact:** Lab output cannot enter Statistics or Life Map. Existing persisted manual LifeEvents are outside the in-memory conflict set. Recovery, full provenance persistence and cross-session manual conflict checks remain deferred to a separately approved adapter phase.
+
+## ADR-031: Life Intelligence review is persisted atomically in Dexie v6
+
+- **Status:** Accepted (2026-09-05 explicit Phase 14.3 confirmation). Supersedes ADR-030's session-only storage behavior while retaining its user-triggered fake-extractor scope.
+- **Schema:** Dexie v6 adds `lifeExtractionJobs` with unique `requestKey`, `lifeEventProposals` with unique `[jobId+candidateKey]`, and a sparse unique `extractionProposalId` index on `lifeEvents`. Ordinary manual Events omit this optional property entirely. There is no `upgrade()` transform, backfill, automatic Job, Proposal, or Event.
+- **Provenance:** Accept inserts an `ai` Event with a Proposal ID; Correct inserts a `manual` Event with a Proposal ID; direct manual creation has no Proposal ID. Proposal and Event retain reciprocal IDs, and the database permits at most one Event per Proposal. Review data is not placed in LifeEvent metadata.
+- **Terminal review:** `pending` may become `accepted`, `corrected`, `rejected`, or `superseded`; every destination is terminal. Equal terminal retries return the first result. Accepted-to-corrected is forbidden, and future edits to accepted Events require an independent revision design.
+- **Transactions:** Job plus all candidates commit atomically. Accept/Correct re-read Job, Proposal, original source fingerprint, active manual conflicts, and Event identity in one transaction before inserting the Event and resolving the Proposal. Reject writes only Proposal state. Existing manual Events and original records are never updated or deleted.
+- **Source validity:** Scratch inputs persist exact text with a 64 KiB limit. Record inputs persist only source type/ID/fingerprint. Proposal source status is derived as scratch/current/stale/missing; stale or missing blocks materialization but still permits rejection. No stale audit record is removed.
+- **Read boundary:** Life Statistics now includes active final AI and manual Events and continues excluding stale, missing-source, and deleted Events. It never reads Proposals. Life Visualization consumes the unchanged exploration contract and has no AI-specific path.
+- **Lab and scope:** `/lab/life-extraction` restores persisted review state and warns that Accept/Correct creates real data that affects Life Map. There is no `isLab`, route-dependent business rule, real provider, automatic extraction, worker, homepage feature, or new business entity beyond the approved persistence records.
+- **Performance:** A 50,000-LifeEvent v5-to-v6 fake-indexeddb benchmark is retained as migration evidence. It is a development comparison rather than a browser/device SLA and does not justify more indexes.
+
+## ADR-032: Homepage navigation unfolds as a life path
+
+- **Status:** Accepted (2026-09-05 explicit homepage navigation request).
+- **Decision:** Replace the permanent “More” text-link row with one collapsed “Life Path” disclosure after recent records. On request it reveals standard links to Timeline, Calendar, Search, Diary, and Life Map along one continuous visual path. Desktop uses an undulating horizontal route; narrow screens use the same ordered route vertically.
+- **Priority:** The date, quick Moment recording, and recent records retain their current order and visual weight. The portal starts collapsed, stores no preference, and keeps Life Map as the final destination rather than a first-screen feature card.
+- **Accessibility:** The disclosure exposes `aria-expanded` and `aria-controls`, Escape collapses and restores trigger focus, links remain semantic, targets are at least 44 px, and reduced motion receives immediate final states.
+- **Scope:** `/lab/*`, dynamic Diary details, and the new-Diary editor do not become homepage destinations. They remain development-only or are reached through their owning product page. No repository, query, IndexedDB, or record flow changes.
+
+## ADR-033: Unify the record and recall surfaces with presentation-only iOS styling
+
+- **Status:** Accepted (2026-09-05 explicit whole-site UI upgrade request).
+- **Decision:** Replace the previous serif/paper appearance with system sans typography, neutral grouped surfaces, consistent touch targets and restrained depth. Keep the existing vermilion accent, with separate foreground and fill tokens for dark-mode contrast. Use the existing CSS Modules, Radix icon and Framer Motion dependencies.
+- **Interaction:** Share a segmented control across Calendar and Life Map. Map tabs expose arrow/Home/End navigation and an associated panel. Inspector exit animation never leaves stale content interactive or readable by assistive technology. Canvas emphasis animates from its last rendered alpha and redraws on system theme changes; reduced motion cancels interpolation.
+- **Boundary:** All six main routes and Diary subroutes preserve their existing behavior. Moment originals, local saves, queries, schemas, LifeEvent eligibility, extraction/proposals and AI architecture are unchanged. Screenshots use disposable browser-context fixtures and never seed a personal browser profile.
+- **Tradeoff:** The web implementation approximates iOS materials while preserving normal browser navigation and forms. Native Safari, iOS keyboard and VoiceOver still require device verification. See DESIGN.md section 27 and `design/ios-refresh/` for final tokens and verification evidence.

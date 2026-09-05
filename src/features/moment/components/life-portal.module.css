@@ -1,0 +1,314 @@
+.portal {
+  display: block;
+  margin-top: 32px;
+  border-top: 1px solid var(--app-line);
+  color: var(--app-secondary);
+}
+
+.trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-6);
+  width: 100%;
+  min-height: 104px;
+  margin: 0;
+  padding: 22px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.triggerCopy {
+  display: grid;
+  justify-items: start;
+  min-width: 0;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: var(--app-secondary);
+  font: 400 0.75rem/1.5 var(--font-ui);
+  letter-spacing: 0.12em;
+}
+
+.triggerTitle {
+  color: var(--app-ink);
+  font: 500 1.0625rem/1.55 var(--font-reading);
+}
+
+.triggerHint {
+  margin-top: 4px;
+  color: var(--app-secondary);
+  font: 400 0.8125rem/1.6 var(--font-ui);
+}
+
+.signal {
+  display: flex;
+  align-items: center;
+  min-width: 132px;
+}
+
+.signalTrail {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-around;
+  height: 44px;
+}
+
+.signalTrail::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 4px;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--app-line) 15%, var(--app-line) 86%, transparent);
+}
+
+.signalTrail i {
+  position: relative;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--app-boundary);
+  opacity: 0.48;
+}
+
+.signalTrail i:nth-child(2) { width: 6px; height: 6px; opacity: 0.58; }
+.signalTrail i:nth-child(3) { opacity: 0.7; }
+.signalTrail i:nth-child(4) { width: 7px; height: 7px; opacity: 0.82; }
+
+.signalEnd {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--app-line);
+  border-radius: 50%;
+  background: var(--app-paper);
+  color: var(--app-accent-ink);
+  box-shadow: var(--shadow-paper);
+}
+
+.signalEnd svg { width: 18px; height: 18px; }
+
+.trigger[aria-expanded="true"] .signalEnd svg { transform: rotate(180deg); }
+
+.reveal { overflow: clip; }
+
+.pathCanvas {
+  position: relative;
+  min-height: 296px;
+  padding: 18px 0 34px;
+  border-top: 1px solid color-mix(in srgb, var(--app-line) 64%, transparent);
+}
+
+.pathIntroduction {
+  margin: 0;
+  color: var(--app-secondary);
+  font: 400 0.8125rem/1.7 var(--font-ui);
+}
+
+.pathLine {
+  position: absolute;
+  inset: 58px 0 auto;
+  width: 100%;
+  height: 190px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.pathLine path {
+  fill: none;
+  stroke: var(--app-line);
+  stroke-width: 1.25;
+  stroke-dasharray: 2 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.stops {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: 220px;
+  padding-top: 28px;
+}
+
+.stop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 116px;
+  flex-direction: column;
+  align-items: center;
+  align-self: start;
+  gap: 10px;
+  padding: 0 6px;
+  color: var(--app-secondary);
+  text-align: center;
+  text-decoration: none;
+}
+
+.stop:nth-child(even) { transform: translateY(94px); }
+
+.stopMark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--app-line);
+  border-radius: 50%;
+  background: var(--app-surface);
+  color: var(--app-secondary);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--app-surface) 82%, transparent);
+}
+
+.stopMark svg { width: 18px; height: 18px; }
+
+.stopCopy { display: grid; justify-items: center; gap: 3px; min-width: 0; }
+
+.stopCopy strong {
+  color: var(--app-ink);
+  font: 500 0.9375rem/1.5 var(--font-reading);
+}
+
+.stopCopy small {
+  max-width: 10rem;
+  color: var(--app-secondary);
+  font: 400 0.75rem/1.55 var(--font-ui);
+  text-wrap: balance;
+}
+
+.stop[data-destination="true"] .stopMark {
+  width: 58px;
+  height: 58px;
+  margin-top: -5px;
+  border-color: color-mix(in srgb, var(--app-action) 42%, var(--app-line));
+  background: color-mix(in srgb, var(--app-action) 7%, var(--app-paper));
+  color: var(--app-accent-ink);
+  box-shadow:
+    0 0 0 9px color-mix(in srgb, var(--app-action) 4%, transparent),
+    0 0 0 18px color-mix(in srgb, var(--app-action) 2%, transparent);
+}
+
+.stop[data-destination="true"] .stopCopy strong { color: var(--app-accent-ink); }
+
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover .triggerTitle { color: var(--app-accent-ink); }
+  .trigger:hover .signalEnd { border-color: color-mix(in srgb, var(--app-action) 48%, var(--app-line)); }
+  .stop:hover .stopMark {
+    border-color: color-mix(in srgb, var(--app-action) 44%, var(--app-line));
+    background: var(--app-paper);
+    color: var(--app-accent-ink);
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--app-action) 5%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .triggerTitle,
+  .signalEnd,
+  .signalEnd svg,
+  .stop,
+  .stopMark {
+    transition:
+      color var(--motion-fast) var(--ease-soft),
+      background-color var(--motion-fast) var(--ease-soft),
+      border-color var(--motion-fast) var(--ease-soft),
+      box-shadow var(--motion-normal) var(--ease-soft),
+      opacity var(--motion-fast) var(--ease-soft),
+      transform var(--motion-normal) var(--ease-soft);
+  }
+
+  .stop:hover,
+  .stop:focus-visible { translate: 0 -2px; }
+}
+
+@media (max-width: 767px) {
+  .portal { margin-top: 32px; }
+
+  .trigger {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-4);
+    min-height: 104px;
+    padding-block: 20px;
+  }
+
+  .triggerTitle { font-size: 1.0625rem; }
+  .signal { min-width: 44px; }
+  .signalTrail { display: none; }
+
+  .pathCanvas {
+    min-height: 0;
+    padding: 18px 0 22px;
+  }
+
+  .pathIntroduction { max-width: 22rem; margin-bottom: 14px; }
+  .pathLine { display: none; }
+
+  .stops {
+    display: grid;
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .stop,
+  .stop:nth-child(even) {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    align-self: auto;
+    gap: 14px;
+    min-height: 76px;
+    padding: 8px 4px;
+    text-align: left;
+    transform: none;
+  }
+
+  .stop::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 27px;
+    top: -14px;
+    bottom: 48px;
+    width: 1px;
+    background: var(--app-line);
+  }
+
+  .stop:first-child::before { top: 38px; }
+  .stop:last-child::before { bottom: 38px; }
+
+  .stopMark,
+  .stop[data-destination="true"] .stopMark {
+    width: 46px;
+    height: 46px;
+    margin: 0;
+    box-shadow: 0 0 0 6px var(--app-surface);
+  }
+
+  .stop[data-destination="true"] .stopMark {
+    width: 52px;
+    height: 52px;
+    margin-left: -3px;
+  }
+
+  .stopCopy { justify-items: start; gap: 2px; }
+  .stopCopy small { max-width: none; text-wrap: pretty; }
+}
+
+@media (max-width: 359px) {
+  .triggerHint { max-width: 13rem; }
+  .triggerTitle { font-size: 1rem; }
+}
+
+@media (forced-colors: active) {
+  .signalEnd,
+  .stopMark { border-color: CanvasText; }
+  .pathLine path { stroke: CanvasText; }
+}

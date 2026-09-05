@@ -13,6 +13,7 @@ import {
 import type { SearchResult } from "../model/types";
 import { querySearchPage, SEARCH_PAGE_SIZE } from "../query/search-query";
 import { BackLink, PageNav } from "@/components/ui/page-nav";
+import { EmptyState } from "@/components/ui/empty-state";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import styles from "./search-page.module.css";
 
@@ -173,9 +174,9 @@ export function SearchPage() {
       </form>
       <p className="visually-hidden" role="status" aria-live="polite">{loading ? "搜索中…" : submitted && !error ? `已显示 ${results.length} 条记录。` : ""}</p>
       {error ? <p role="alert">{error}</p> : null}
-      {!submitted && !loading ? <p className="search-initial">输入关键词后查看结果。</p> : null}
+      {!submitted && !loading ? <EmptyState icon={<MagnifyingGlassIcon />}>输入关键词后查看结果。</EmptyState> : null}
       {submitted && !loading && !error && results.length === 0
-        ? <p className="search-empty">没有找到相关记录。</p>
+        ? <EmptyState icon={<MagnifyingGlassIcon />}>没有找到相关记录。</EmptyState>
         : null}
       {results.length > 0 ? (
         <section className="search-results ui-content-enter" aria-label="搜索结果" aria-busy={loadingMore}>

@@ -1,6 +1,6 @@
 # Data Model
 
-This document separates the implemented physical schema from future logical models. Dexie v5 contains `Moment`, `MomentAppend`, Moment-owned `Attachment`, `Diary`, and `LifeEvent`. Tags and AI entities below remain design-only. The v2/v3/v4 sections are historical schema snapshots.
+This document separates the implemented physical schema from future logical models. Dexie v6 contains `Moment`, `MomentAppend`, Moment-owned `Attachment`, `Diary`, `LifeEvent`, `LifeExtractionJob`, and `LifeEventProposal`. Tags and the unrelated generic AI entities below remain design-only. The v2–v5 sections are historical schema snapshots.
 
 ## Phase 12 physical schema: LifeEvent (v5)
 
@@ -9,7 +9,8 @@ Version 5 adds only `lifeEvents`, with primary key `id` and indexes `[occurredOn
 `LifeEvent` is a separate structured layer, never embedded in Moment/Diary:
 
 - `id`: application UUID; callers reuse a submission's UUID and payload for retries.
-- `origin: 'manual'` only. AI and device ingestion are not implemented.
+- `origin: 'manual' | 'ai'`. Dexie v5 rows are manual; v6 permits only reviewed LifeEvent Proposals to create `ai` rows.
+- `extractionProposalId?: EntityId`: absent on ordinary manual rows, required on accepted AI rows and corrected-manual rows. It is never stored as `null`.
 - `source: null | { type: 'moment' | 'momentAppend' | 'diary'; id; contentFingerprint }`. A standalone manual event needs no source record. One source may have many events, including identical names.
 - `category: 'activity' | 'learning' | 'creation' | 'place'`.
 - `name`: required non-whitespace string, preserved exactly.
@@ -35,7 +36,7 @@ No confidence, health/emotion, value/unit, location, AI/device provenance, or vi
 
 Life Statistics is a non-persistent domain read model over LifeEvent, not another table. Its default eligible set is:
 
-- include manual events whose own `deletedAt` is null and whose source status is `unlinked` or `current`;
+- include final manual or AI events whose own `deletedAt` is null and whose source status is `unlinked` or `current`;
 - exclude `stale` events, but retain their stored records unchanged;
 - exclude events whose source is missing/soft-deleted, including an Append whose parent Moment is inactive;
 - exclude LifeEvent tombstones.
@@ -44,7 +45,7 @@ All ranges are natural-date half-open intervals: `startDate <= occurredOn < endD
 
 Summary results always return the four categories in this order: `activity`, `learning`, `creation`, `place`, including zero-valued categories. Time-series results are sparse and ascending: absent periods are omitted rather than materialized. Day buckets use the natural date, week buckets begin Monday, and month buckets begin on day 1. Bucket bounds describe their complete calendar period and may extend outside a partial requested range. A future cross-day interval is attributed wholly to its stored `occurredOn`; Phase 12.5 does not split it or fabricate instants.
 
-The model supports the drill hierarchy `category -> name -> LifeEvent -> optional source record`: category and exact name remain on each event, and source retains type/ID/fingerprint. The Life Visualization phase adds a non-persistent exploration read model without changing this stored model. It returns exact category/name and source-kind aggregates for the complete requested range, plus the newest 160 eligible event projections by default (500 maximum) for visible timeline and source drill-down. A projection includes event identity, natural/time fields, duration and source type/ID, but never exposes `contentFingerprint`, stale status, presentation color or coordinates.
+The model supports the drill hierarchy `category -> name -> LifeEvent -> optional source record`: category and exact name remain on each event, and source retains type/ID/fingerprint. The Life Visualization phase adds a non-persistent exploration read model without changing this stored model. It returns exact category/name and source-kind aggregates for the complete requested range, plus the newest 160 eligible event projections by default (500 maximum) for temporal affinity and future record drill-down. A projection includes event identity, natural/time fields, duration and source type/ID, but never exposes `contentFingerprint`, stale status, presentation color or coordinates.
 
 Exploration uses the same conservative eligibility as Summary and Time Series. Name groups use the exact stored name and remain category-scoped, so identical names in different categories do not merge. Source-kind groups distinguish `independent`, `moment`, `momentAppend` and `diary` without confusing `origin: manual` with source provenance. Their first/last dates are calculated from the full range, not estimated from the bounded event projection.
 
@@ -153,6 +154,40 @@ Images are not embedded in text. This preserves future export, album, map, and i
 Many-to-many content tagging uses a `ContentTag` relation with `id`, `contentType`, `contentId`, `tagId`, and common timestamps. A relation entity is easier to sync than arrays embedded in content.
 
 ## AI-derived entities
+
+### Historical Phase 14.1–14.2 Life Intelligence contract
+
+Phase 14.1 introduces TypeScript contracts only. Dexie remains v5 and the physical `LifeEvent` shape remains manual-only. No extraction job, proposal or AI-origin event is written to IndexedDB.
+
+`LifeExtractionJob` describes a future extraction attempt over one exact source fingerprint. It carries a source reference, natural-date/timezone interpretation context, extractor name/version/schema version, lifecycle status, attempt count, timestamps and a non-content error code. Its contract statuses are `queued`, `processing`, `succeeded`, `failed` and `superseded`.
+
+`LifeEventProposal` describes one validated candidate from a job. It contains the exact source fingerprint, a stable candidate key, existing LifeEvent domain fields, source-text evidence offsets and a review state. Review states are `pending`, `accepted`, `corrected`, `rejected` and `superseded`; terminal decisions cannot be silently changed. Pending/rejected/superseded proposals are never statistics data.
+
+`LifeEventMaterialization` is a future insert command rather than the current stored entity. Accept produces an `ai` command; correction produces a `manual` command with user-supplied fields. Both retain `extractionProposalId`. The repository contract is insert-only, checks manual conflicts and requires the proposal transition plus optional event insertion to be atomic. Implementing this command physically requires a separately approved schema migration.
+
+The fake extractor does not persist source text, jobs or proposals. It emits deterministic, validated candidates for supported development phrases and returns an empty successful result for unsupported text. It never turns day-part wording into fabricated `startAt` or `endAt` values.
+
+Phase 14.2 exercises these contracts through `/lab/life-extraction`. Its `LifeExtractionJob`, proposals and materialized results live only in a component-owned in-memory repository. Refresh discards all of them, and the lab never reads or writes the physical LifeEvent table. The route's synthetic Moment source reference is contract context only and does not create or modify a Moment. Consequently, accepted/corrected lab output is not eligible for Statistics or Life Map and is never presented as persisted user data.
+
+### Phase 14.3 Life Intelligence persistence (v6)
+
+Dexie v6 supersedes the temporary Phase 14.2 storage behavior and adds two stores without an `upgrade()` transform or backfill:
+
+- `lifeExtractionJobs`: primary key `id`; unique `requestKey`; `createdAt`; sparse record-source index `[input.source.type+input.source.id]`.
+- `lifeEventProposals`: primary key `id`; `jobId`; unique `[jobId+candidateKey]`.
+- `lifeEvents` retains its v5 keys and adds the sparse unique `extractionProposalId` index.
+
+Existing v5 LifeEvents remain byte-for-byte unchanged. Ordinary manual creation still omits `extractionProposalId`, so multiple ordinary manual rows remain outside the sparse unique index. No Job, Proposal, or AI Event is generated by migration.
+
+`LifeExtractionJob.input` is discriminated. A `scratch` job stores the exact explicit Lab text plus its versioned fingerprint, capped at 64 KiB. A `record` job stores only source type, source ID, and source fingerprint; it does not duplicate Moment/Append/Diary text. Jobs also store natural-date/timezone context, extractor name/version/schema version, status, attempt count, timestamps, and a non-content error code. Provider/model remain null in Phase 14.3 and no provider response is stored. A unique SHA-256 `requestKey` covers input identity, context, and extractor descriptor, so exact retries recover the first Job and Proposal set.
+
+`LifeEventProposal` stores one immutable validated candidate, evidence offsets, candidate key, review state, optional corrected candidate, optional materialized Event ID, and timestamps. `accepted`, `corrected`, `rejected`, and `superseded` are terminal. The only state changes are from `pending`; specifically, accepted-to-corrected is not supported. Accepted and corrected Proposals reference exactly one Event in both directions. Rejected and superseded Proposals reference none. Statistics never reads this table.
+
+Accept atomically creates `origin: 'ai'` plus `extractionProposalId`. Correct atomically creates `origin: 'manual'` plus `extractionProposalId` from the user's corrected candidate. Direct manual creation remains `origin: 'manual'` with the field absent. Review never updates or removes an existing manual Event. Source validity and exact manual conflicts are checked inside the same Dexie transaction as Event insertion and Proposal resolution.
+
+Proposal source status remains a non-persistent read view: `scratch`, `current`, `stale`, or `missing`. A stale/missing record source blocks Accept and Correct but permits Reject; no stale Job, Proposal, or Event is deleted. An accepted record Event continues to use the existing LifeEvent fingerprint eligibility, so later Diary edits make it stale and remove it from Statistics without rewriting either record.
+
+`/lab/life-extraction` now persists explicit fake-extractor Jobs and reviews. Refresh restores the latest scratch Job, all Proposals, terminal decisions, and materialized Events. Accept/Correct creates real LifeEvents that can affect Statistics and Life Map; the page states this before review. There is no `isLab`, route-dependent data rule, provider call, automatic extraction, worker, or original-record mutation.
 
 ### AiMetadata
 

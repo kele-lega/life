@@ -74,14 +74,18 @@ export function buildLifeMapTopics(
 }
 
 export function layoutLifeMapTopics(topics: readonly LifeMapTopic[], lens?: LifeLens): LifeMapRegion[] {
-  const maximum = Math.max(...topics.map((topic) => topic.eventCount), 1);
   return topics.map((topic, index) => {
     const [x, y] = POSITIONS[index % POSITIONS.length];
+    const frequency = 1 - Math.exp(-topic.eventCount / 24);
+    const durationHours = topic.totalDurationSeconds / 3600;
+    const weight = 1 - Math.exp(-durationHours / 18);
     return {
       ...topic,
       x,
       y,
-      radius: 0.13 + Math.sqrt(topic.eventCount / maximum) * 0.13,
+      radius: 0.105 + frequency * 0.095 + weight * 0.06,
+      frequency,
+      weight,
       tone: lens === "activities" ? ACTIVITY_TONES[index % ACTIVITY_TONES.length] : topic.category,
     };
   });
@@ -97,8 +101,13 @@ export function buildLifeMapConnections(
   lens: LifeLens,
 ): LifeMapConnection[] {
   const topicKeys = new Set(topics.map((topic) => topic.key));
-  const chronological = [...events].sort((left, right) =>
-    left.occurredOn < right.occurredOn ? -1 : left.occurredOn > right.occurredOn ? 1 : left.id < right.id ? -1 : 1);
+  const chronological = events
+    .filter((event) => {
+      const key = eventTopicKey(event, lens);
+      return key !== null && topicKeys.has(key);
+    })
+    .sort((left, right) =>
+      left.occurredOn < right.occurredOn ? -1 : left.occurredOn > right.occurredOn ? 1 : left.id < right.id ? -1 : 1);
   const weights = new Map<string, { from: string; to: string; count: number }>();
   for (let index = 1; index < chronological.length; index += 1) {
     const previous = chronological[index - 1];

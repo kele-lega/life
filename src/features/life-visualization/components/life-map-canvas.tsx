@@ -12,18 +12,28 @@ import {
 } from "@radix-ui/react-icons";
 import { useEffect, useRef, type CSSProperties } from "react";
 import type { LifeEventTimeSeriesPoint } from "@/features/life-insights/model/types";
-import type { LifeMapConnection, LifeMapRegion } from "../model/types";
+import type { LifeLens, LifeMapConnection, LifeMapRegion } from "../model/types";
 import styles from "./life-visualization.module.css";
 
 interface LifeMapCanvasProps {
   regions: LifeMapRegion[];
   connections: LifeMapConnection[];
   timePoints: LifeEventTimeSeriesPoint[];
+  lens: LifeLens;
+  evolutionRevision: number;
+  isEvolving: boolean;
   activeKey: string | null;
   onActiveChange: (region: LifeMapRegion | null) => void;
 }
 
+interface PreviousFrame {
+  revision: number;
+  lens: LifeLens;
+  regions: LifeMapRegion[];
+}
+
 const TAU = Math.PI * 2;
+const EVOLUTION_DURATION = 760;
 
 function hash(value: string): number {
   let result = 2166136261;
@@ -77,22 +87,69 @@ function categoryIcon(region: LifeMapRegion) {
   return <ActivityLogIcon aria-hidden="true" />;
 }
 
+function easeSediment(value: number): number {
+  const remaining = 1 - value;
+  return 1 - remaining * remaining * remaining;
+}
+
+function interpolateRegions(previous: readonly LifeMapRegion[], next: readonly LifeMapRegion[], progress: number): LifeMapRegion[] {
+  const byKey = new Map(previous.map((region) => [region.key, region]));
+  return next.map((region) => {
+    const from = byKey.get(region.key) ?? { ...region, radius: 0.035, frequency: 0, weight: 0 };
+    return {
+      ...region,
+      x: from.x + (region.x - from.x) * progress,
+      y: from.y + (region.y - from.y) * progress,
+      radius: from.radius + (region.radius - from.radius) * progress,
+      frequency: from.frequency + (region.frequency - from.frequency) * progress,
+      weight: from.weight + (region.weight - from.weight) * progress,
+    };
+  });
+}
+
 export function LifeMapCanvas({
   regions,
   connections,
   timePoints,
+  lens,
+  evolutionRevision,
+  isEvolving,
   activeKey,
   onActiveChange,
 }: LifeMapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const previousFrameRef = useRef<PreviousFrame | null>(null);
+  const emphasisRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const stage = stageRef.current;
     if (!canvas || !stage) return;
 
-    const draw = () => {
+    const previousFrame = previousFrameRef.current;
+    const motionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const colorQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const reducedMotion = motionQuery?.matches ?? false;
+    const shouldEvolve = Boolean(
+      previousFrame
+      && previousFrame.lens === lens
+      && previousFrame.revision !== evolutionRevision
+      && !reducedMotion,
+    );
+    const startingRegions = shouldEvolve ? previousFrame?.regions ?? regions : regions;
+    previousFrameRef.current = { revision: evolutionRevision, lens, regions };
+
+    let currentProgress = shouldEvolve ? 0 : 1;
+    const fromEmphasis = new Map(emphasisRef.current);
+    const targetEmphasis = (key: string) => activeKey !== null && activeKey !== key ? 0.24 : 1;
+    const shouldEmphasize = !reducedMotion && regions.some((region) =>
+      fromEmphasis.has(region.key) && fromEmphasis.get(region.key) !== targetEmphasis(region.key));
+    let emphasisProgress = shouldEmphasize ? 0 : 1;
+    let animationFrame = 0;
+    let cancelled = false;
+
+    const draw = (progress: number) => {
       const bounds = stage.getBoundingClientRect();
       const width = Math.max(1, bounds.width);
       const height = Math.max(1, bounds.height);
@@ -113,12 +170,15 @@ export function LifeMapCanvas({
       context.setTransform(density, 0, 0, density, 0, 0);
       context.clearRect(0, 0, width, height);
 
+      const visibleRegions = shouldEvolve
+        ? interpolateRegions(startingRegions, regions, progress)
+        : regions;
       const css = getComputedStyle(stage);
       const ink = css.getPropertyValue("--life-map-ink");
       const flow = css.getPropertyValue("--life-map-flow");
       const tone = (category: LifeMapRegion["category"]) => css.getPropertyValue(`--life-map-${category}`);
 
-      if (regions.length > 1) {
+      if (visibleRegions.length > 1) {
         const fieldRadius = Math.min(width * 0.46, height * 0.73);
         organicPath(context, width * 0.43, height * 0.52, fieldRadius, 1847, 1);
         context.fillStyle = colorWithAlpha(tone("learning"), 0.025);
@@ -135,26 +195,27 @@ export function LifeMapCanvas({
 
       context.save();
       context.lineCap = "round";
+      const temporalDensity = Math.min(timePoints.length / 24, 1);
       for (let line = 0; line < 13; line += 1) {
         const y = height * (0.13 + line * 0.061);
         context.beginPath();
         context.moveTo(width * 0.015, y);
         context.bezierCurveTo(
           width * 0.25,
-          y - 32 - line * 1.5,
+          y - 32 - line * (1.2 + temporalDensity),
           width * 0.67,
           y + 38 - line * 2.2,
           width * 0.985,
           y + Math.sin(line * 0.9) * 20,
         );
-        context.strokeStyle = colorWithAlpha(flow, activeKey ? 0.11 : 0.22);
+        context.strokeStyle = colorWithAlpha(flow, activeKey ? 0.09 : 0.16 + temporalDensity * 0.07);
         context.lineWidth = line % 3 === 0 ? 1 : 0.6;
         context.setLineDash(line % 2 === 0 ? [2, 5] : [1, 7]);
         context.stroke();
       }
       context.restore();
 
-      const byKey = new Map(regions.map((region) => [region.key, region]));
+      const byKey = new Map(visibleRegions.map((region) => [region.key, region]));
       for (const connection of connections) {
         const from = byKey.get(connection.from);
         const to = byKey.get(connection.to);
@@ -164,53 +225,72 @@ export function LifeMapCanvas({
         const y1 = from.y * height;
         const x2 = to.x * width;
         const y2 = to.y * height;
+        const controlY = Math.min(y1, y2) - height * (lens === "places" ? 0.12 : 0.08);
+
         context.beginPath();
         context.moveTo(x1, y1);
-        context.quadraticCurveTo((x1 + x2) / 2, Math.min(y1, y2) - height * 0.08, x2, y2);
-        context.strokeStyle = colorWithAlpha(ink, connectedToActive ? 0.12 + connection.strength * 0.12 : 0.025);
-        context.lineWidth = connectedToActive ? 0.8 + connection.strength : 0.55;
-        context.setLineDash([2, 6]);
+        context.quadraticCurveTo((x1 + x2) / 2, controlY, x2, y2);
+        if (lens === "places") {
+          context.strokeStyle = colorWithAlpha(tone("place"), connectedToActive ? 0.06 + connection.strength * 0.09 : 0.018);
+          context.lineWidth = 5 + connection.strength * 8;
+          context.setLineDash([]);
+          context.stroke();
+          context.beginPath();
+          context.moveTo(x1, y1);
+          context.quadraticCurveTo((x1 + x2) / 2, controlY, x2, y2);
+        }
+        context.strokeStyle = colorWithAlpha(ink, connectedToActive ? 0.1 + connection.strength * 0.14 : 0.022);
+        context.lineWidth = connectedToActive ? 0.75 + connection.strength : 0.5;
+        context.setLineDash(lens === "places" ? [1, 5] : [2, 6]);
         context.stroke();
       }
       context.setLineDash([]);
 
-      for (const region of regions) {
+      emphasisRef.current.clear();
+      for (const region of visibleRegions) {
         const isActive = activeKey === region.key;
-        const isDimmed = activeKey !== null && !isActive;
         const seed = hash(region.key);
         const x = region.x * width;
         const y = region.y * height;
         const radius = region.radius * Math.min(width, height * 1.45);
         const regionTone = tone(region.tone);
         context.save();
-        context.globalAlpha = isDimmed ? 0.22 : 1;
+        const target = targetEmphasis(region.key);
+        const from = fromEmphasis.get(region.key) ?? target;
+        const emphasis = from + (target - from) * emphasisProgress;
+        emphasisRef.current.set(region.key, emphasis);
+        context.globalAlpha = emphasis;
+        context.shadowColor = colorWithAlpha(regionTone, 0.08 + region.weight * 0.08);
+        context.shadowBlur = 10 + region.weight * 22;
         const gradient = context.createRadialGradient(x - radius * 0.2, y - radius * 0.28, radius * 0.08, x, y, radius * 1.08);
-        gradient.addColorStop(0, colorWithAlpha(regionTone, isActive ? 0.39 : 0.3));
-        gradient.addColorStop(0.72, colorWithAlpha(regionTone, isActive ? 0.23 : 0.17));
-        gradient.addColorStop(1, colorWithAlpha(regionTone, 0.035));
+        gradient.addColorStop(0, colorWithAlpha(regionTone, (isActive ? 0.42 : 0.27) + region.weight * 0.08));
+        gradient.addColorStop(0.72, colorWithAlpha(regionTone, (isActive ? 0.24 : 0.14) + region.weight * 0.06));
+        gradient.addColorStop(1, colorWithAlpha(regionTone, 0.03));
         organicPath(context, x, y, radius, seed);
         context.fillStyle = gradient;
         context.fill();
-        context.strokeStyle = colorWithAlpha(regionTone, isActive ? 0.58 : 0.3);
-        context.lineWidth = isActive ? 1.8 : 0.9;
+        context.shadowBlur = 0;
+        context.strokeStyle = colorWithAlpha(regionTone, (isActive ? 0.56 : 0.24) + region.weight * 0.12);
+        context.lineWidth = (isActive ? 1.55 : 0.72) + region.weight * 0.45;
         context.stroke();
 
-        for (let ring = 1; ring <= 7; ring += 1) {
-          organicPath(context, x, y, radius, seed + ring * 31, 1 - ring * 0.078);
-          context.strokeStyle = colorWithAlpha(regionTone, isActive ? 0.24 : 0.13);
-          context.lineWidth = 0.65;
+        const contourCount = 4 + Math.round(region.weight * 6);
+        for (let ring = 1; ring <= contourCount; ring += 1) {
+          organicPath(context, x, y, radius, seed + ring * 31, 1 - ring * (0.68 / (contourCount + 1)));
+          context.strokeStyle = colorWithAlpha(regionTone, isActive ? 0.23 : 0.085 + region.weight * 0.07);
+          context.lineWidth = 0.55 + region.weight * 0.16;
           context.stroke();
         }
 
-        const pointCount = Math.min(region.eventCount * 10, 180);
+        const pointCount = Math.round(18 + region.frequency * 172);
         for (let point = 0; point < pointCount; point += 1) {
           const angle = point * 2.399963 + (seed % 360);
           const distance = Math.sqrt((point + 0.5) / Math.max(pointCount, 1)) * radius * 0.72;
           const px = x + Math.cos(angle) * distance;
           const py = y + Math.sin(angle) * distance * 0.8;
           context.beginPath();
-          context.arc(px, py, point % 9 === 0 ? 1.35 : 0.75, 0, TAU);
-          context.fillStyle = colorWithAlpha(regionTone, point % 9 === 0 ? 0.52 : 0.28);
+          context.arc(px, py, point % 11 === 0 ? 1.25 + region.weight * 0.4 : 0.62, 0, TAU);
+          context.fillStyle = colorWithAlpha(regionTone, point % 11 === 0 ? 0.5 : 0.19 + region.frequency * 0.13);
           context.fill();
         }
         context.restore();
@@ -218,32 +298,93 @@ export function LifeMapCanvas({
 
       if (timePoints.length) {
         const maxCount = Math.max(...timePoints.map((point) => point.eventCount), 1);
+        const reveal = shouldEvolve ? progress : 1;
         timePoints.forEach((point, index) => {
-          const x = width * (0.07 + (index / Math.max(timePoints.length - 1, 1)) * 0.86);
-          const y = height * 0.87 + Math.sin(index * 1.7) * 4;
+          const ratio = index / Math.max(timePoints.length - 1, 1);
+          if (ratio > reveal + 0.05) return;
+          const intensity = point.eventCount / maxCount;
+          const x = width * (0.055 + ratio * 0.89);
+          const y = height * (0.89 - intensity * 0.035) + Math.sin(index * 1.7) * 3;
           context.beginPath();
-          context.arc(x, y, 1.2 + (point.eventCount / maxCount) * 2.2, 0, TAU);
-          context.fillStyle = colorWithAlpha(ink, activeKey ? 0.1 : 0.18);
+          context.arc(x, y, 1 + intensity * 2.4, 0, TAU);
+          context.fillStyle = colorWithAlpha(ink, activeKey ? 0.07 : 0.11 + intensity * 0.11);
           context.fill();
+          if (index > 0) {
+            const previousRatio = (index - 1) / Math.max(timePoints.length - 1, 1);
+            const previousPoint = timePoints[index - 1];
+            const previousIntensity = previousPoint.eventCount / maxCount;
+            context.beginPath();
+            context.moveTo(width * (0.055 + previousRatio * 0.89), height * (0.89 - previousIntensity * 0.035) + Math.sin((index - 1) * 1.7) * 3);
+            context.lineTo(x, y);
+            context.strokeStyle = colorWithAlpha(flow, activeKey ? 0.035 : 0.065);
+            context.lineWidth = 0.55 + intensity * 0.35;
+            context.stroke();
+          }
         });
       }
     };
 
-    draw();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(draw);
+    const startedAt = performance.now();
+    const animate = (now: number) => {
+      if (cancelled) return;
+      const elapsed = Math.min((now - startedAt) / (shouldEvolve ? EVOLUTION_DURATION : 180), 1);
+      currentProgress = shouldEvolve ? easeSediment(elapsed) : 1;
+      emphasisProgress = easeSediment(Math.min((now - startedAt) / 180, 1));
+      draw(currentProgress);
+      if (elapsed < 1) animationFrame = requestAnimationFrame(animate);
+    };
+
+    if (shouldEvolve || shouldEmphasize) animationFrame = requestAnimationFrame(animate);
+    else draw(1);
+
+    const updatePreferences = () => {
+      if (motionQuery?.matches) {
+        cancelAnimationFrame(animationFrame);
+        currentProgress = 1;
+        emphasisProgress = 1;
+      }
+      draw(currentProgress);
+    };
+    colorQuery?.addEventListener("change", updatePreferences);
+    motionQuery?.addEventListener("change", updatePreferences);
+    const cleanPreferences = () => {
+      colorQuery?.removeEventListener("change", updatePreferences);
+      motionQuery?.removeEventListener("change", updatePreferences);
+    };
+
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(animationFrame);
+        cleanPreferences();
+      };
+    }
+    const observer = new ResizeObserver(() => draw(currentProgress));
     observer.observe(stage);
-    return () => observer.disconnect();
-  }, [activeKey, connections, regions, timePoints]);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+      cleanPreferences();
+    };
+  }, [activeKey, connections, evolutionRevision, lens, regions, timePoints]);
 
   return (
-    <div className={styles.mapStage} ref={stageRef} onClick={() => onActiveChange(null)}>
+    <div
+      className={styles.mapStage}
+      ref={stageRef}
+      data-evolving={isEvolving}
+      data-lens={lens}
+      onClick={() => onActiveChange(null)}
+    >
       <canvas className={styles.mapCanvas} ref={canvasRef} aria-hidden="true" />
       <div className={styles.regionLayer} aria-label="生活地图区域">
         {regions.map((region) => (
           <div
             key={region.key}
             className={styles.regionPosition}
+            data-active={activeKey === region.key}
+            data-dimmed={activeKey !== null && activeKey !== region.key}
             style={{
               "--region-x": `${region.x * 100}%`,
               "--region-y": `${region.y * 100}%`,
@@ -256,7 +397,6 @@ export function LifeMapCanvas({
               data-active={activeKey === region.key}
               data-dimmed={activeKey !== null && activeKey !== region.key}
               onMouseEnter={() => onActiveChange(region)}
-              onMouseLeave={() => onActiveChange(null)}
               onFocus={() => onActiveChange(region)}
               onBlur={() => onActiveChange(null)}
               onClick={(event) => {

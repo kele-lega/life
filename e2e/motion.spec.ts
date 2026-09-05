@@ -64,8 +64,8 @@ async function seed(page: Page, count: number) {
       request.onerror = () => reject(request.error);
     });
     const transaction = db.transaction(["moments", "momentAppends", "diaries"], "readwrite");
-    const now = new Date();
-    now.setHours(6, 0, 0, 0);
+    // Keep fixtures older than the record created later in the test at every time of day.
+    const now = new Date(Date.now() - 60_000);
     const root = (id: string, offset: number) => {
       const createdAt = new Date(now.getTime() - offset * 60_000).toISOString();
       return { id, createdAt, updatedAt: createdAt, deletedAt: null, isFavorite: false, location: null };
@@ -311,7 +311,7 @@ for (const colorScheme of ["light", "dark"] as const) {
         await expect(page.getByRole("article")).toHaveCount(3);
         await settle(page);
         await fit(page);
-        await expect(page.locator("body")).toHaveCSS("background-color", colorScheme === "dark" ? "rgb(28, 29, 28)" : "rgb(250, 249, 246)");
+        await expect(page.locator("body")).toHaveCSS("background-color", colorScheme === "dark" ? "rgb(21, 21, 23)" : "rgb(245, 245, 247)");
         const suffix = `${viewport.width}-${colorScheme}-${reducedMotion}`;
         await page.screenshot({ path: testInfo.outputPath(`motion-home-${suffix}.png`), fullPage: true });
         if (reducedMotion === "reduce") {
@@ -365,7 +365,8 @@ test("page boundaries keep same-route input and native back/forward navigation",
   const errors = watchErrors(page);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await seed(page, 3);
-  await page.getByRole("link", { name: "搜索", exact: true }).click();
+  await page.getByRole("button", { name: "生活脉络" }).click();
+  await page.getByRole("link", { name: /搜索/ }).click();
   const search = page.getByRole("searchbox");
   await search.fill("片段");
   await search.press("Enter");

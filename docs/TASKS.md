@@ -212,6 +212,64 @@ Existing repository row-limit enforcement, cross-route Search state restoration 
 
 **Done when:** the first screen reads as a personal life map, every visible value comes through Life Statistics, stale/deleted data cannot enter, Canvas remains presentation-only, and all required quality commands pass.
 
+### Homepage progressive product navigation
+
+- [x] Replace the permanent “More” text links with one quiet, collapsed Life Path after recent records.
+- [x] Reveal Timeline, Calendar, Search, Diary and Life Map as a continuous responsive route rather than a card grid.
+- [x] Keep Lab routes out of product navigation and preserve indirect Diary new/detail access through Diary.
+- [x] Add Escape focus restoration, reduced-motion final states, 44 px targets and 320/390/430/768/1440 overflow coverage.
+- [x] Preserve before/after desktop and mobile screenshots under `design/home-navigation/`.
+- [x] Pass typecheck, zero-warning lint, 34 files / 258 unit-integration tests, 45/45 Chromium E2E tests, and the production build on 2026-09-05.
+
+### Life Map Evolution follow-up
+
+- [x] Replace the range select with a quiet 30/90/365 sediment-depth control and continuously interpolate only range changes.
+- [x] Let absolute event accumulation affect map formation: frequency controls grain density and duration controls territory weight/contours.
+- [x] Render place affinity as trajectory traces without adding a map field, table or persisted relationship.
+- [x] Rewrite adjacent exploration details around theme, time span, recent change and related direction; keep counts/duration secondary.
+- [x] Preserve direct Lens switching, transient hover/focus/touch exploration, 320px behavior and reduced-motion final states.
+- [x] Capture 30-day, one-year, place-lens and 390px comparison evidence under `design/life-visualization/`.
+- [x] Pass the repository gate: typecheck, zero-warning lint, 29 files / 224 unit-integration tests, 43 Chromium E2E tests and production build on 2026-09-04.
+- [x] Remove single-line name clipping, raise active labels above overlapping terrain, and clamp the narrow-screen inspector inside the viewport; verify every Lens at 320px with geometric overflow/overlap assertions.
+
+## Phase 14 - Life Intelligence V1
+
+### Phase 14.1 - Contract layer
+
+- [x] Define non-persistent `LifeExtractionJob` and `LifeEventProposal` contracts without changing Dexie v5.
+- [x] Add the terminal proposal lifecycle and idempotent retry rules.
+- [x] Add accept/reject/correct materialization contracts with explicit manual-event conflict protection.
+- [x] Add a deterministic local fake extractor that preserves day precision and calls no AI service.
+- [x] Add a repository port with no Dexie adapter, route, save hook or automatic task.
+- [x] Cover proposal lifecycle, accepted AI materialization, rejection, corrected manual materialization, manual priority and duplicate proposal idempotency.
+- [x] Pass typecheck, zero-warning lint, 32 files / 238 unit-integration tests, 43 Chromium E2E tests and the production build on 2026-09-04.
+
+**Done when:** the extraction/review contract is executable and tested while the physical LifeEvent schema, all original repositories, application navigation and IndexedDB remain unchanged.
+
+### Phase 14.2 - Life Intelligence Lab Review
+
+- [x] Add the direct `/lab/life-extraction` route without a homepage or navigation entry.
+- [x] Run the deterministic fake extractor only after an explicit user action and register its output as in-memory proposals.
+- [x] Show the immutable source snapshot, candidate fields, review status and final materialized contract object.
+- [x] Support Accept, editable Correct and Reject through the Phase 14.1 review service.
+- [x] Add a session-only repository adapter with duplicate-review idempotency and corrected-manual conflict protection.
+- [x] State that refresh clears all lab state; verify reset and absence of IndexedDB writes in Chromium.
+- [x] Pass typecheck, zero-warning lint, 34 files / 245 unit-integration tests, 44 Chromium E2E tests and the production build on 2026-09-04.
+
+**Done when:** the complete manual review loop works in the lab, every result remains session-only, and all existing product repositories and statistics behavior remain unchanged.
+
+### Phase 14.3 - Life Intelligence Persistence
+
+- [x] 14.3A: Advance Dexie v5 to v6 with `lifeExtractionJobs`, `lifeEventProposals`, and sparse unique LifeEvent proposal provenance; preserve v1–v5 data without a transform or backfill.
+- [x] 14.3B: Add the IndexedDB Life Intelligence repository, atomic Job/Proposal insertion, unique request/candidate identity, scratch/record inputs, 64 KiB scratch limit, and refresh queries.
+- [x] 14.3C: Materialize Accept/Correct in one source-validating Dexie transaction, keep Reject Proposal-only, enforce manual priority and one Event per Proposal, and persist explicit supersession as a terminal state.
+- [x] 14.3D: Replace the Lab memory adapter with IndexedDB restoration and state clearly that Accept/Correct creates real LifeEvents that affect Life Map.
+- [x] 14.3E: Include active final AI/corrected-manual Events through the unchanged Life Statistics and Life Map query contract; retain stale/missing/deleted exclusions.
+- [x] Benchmark v5-to-v6 opening with 50,000 existing LifeEvents; retain the approved indexes because the result does not establish a need for more.
+- [x] Pass typecheck, zero-warning lint, 34 files / 258 unit-integration tests, 44/44 Chromium E2E tests, and the production build on 2026-09-05.
+
+**Done when:** Job, Proposal, review state, and materialized Event survive refresh; all review terminal states remain terminal; transaction failures leave no partial Event/Proposal state; original records and ordinary manual Events remain untouched; no provider, automatic extraction, worker, or homepage AI behavior is added.
+
 ## Manual tags (deferred, previously scheduled as Phase 12)
 
 Implement Tag and ContentTag, normalization, optional assignment, filtering, and search inclusion.
@@ -224,7 +282,7 @@ Implement favorite toggling and a chronological favorites view for Moments and D
 
 **Done when:** favorite state persists offline and unfavoriting removes the item immediately.
 
-## Phase 14 - Recycle bin and restore
+## Recycle bin and restore (deferred from the previous Phase 14 roadmap)
 
 Implement transactional soft delete and restore, with the 30-day eligibility rule and no unconfirmed automatic permanent deletion.
 
@@ -265,3 +323,16 @@ Generate summaries by local date/timezone and expose them only when the user ope
 Add end-to-end coverage for recording, recall, recycle bin, and non-blocking AI; verify browser behavior, quotas, privacy, and production build.
 
 **Done when:** every V1 scope item has tests or recorded manual evidence, and account, sync, map, health, and export UI remain explicitly excluded.
+
+## 2026-09-05 — 全站 iOS 风格 UI 升级
+
+- [x] 统一系统字体、明暗主题 tokens、间距、圆角、阅读面、按钮、输入、焦点及空状态。
+- [x] 覆盖首页、日记列表 / 新建 / 阅读 / 编辑、时间线、日历、搜索与生活地图；保留既有页面和产品行为。
+- [x] 统一页面进入和按压反馈，复用 Calendar / Life Map 分段控件，支持 reduced motion。
+- [x] 精化地图控制与移动端详情；实现键盘切换、可移入浮层、高亮插值、主题重绘和范围失败重试。
+- [x] 保持数据模型、repository 语义、统计 contract 和 AI / proposal 边界不变。
+- [x] typecheck、零 warning lint、34 文件 / 259 个单元与集成测试、47 个 Chromium E2E、生产构建通过。
+- [x] 保存生产版 54 张截图，覆盖 1440 / 390 / 430px 和明暗主题；色彩对比度 18 / 18 通过。
+- [x] 同步 DESIGN.md 第 27 节、架构说明和 ADR-033；交付说明见 `design/ios-refresh/README.md`。
+
+原生 iOS Safari、软键盘与 VoiceOver 尚需真机验收，不作为已执行的浏览器模拟结果报告。

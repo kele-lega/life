@@ -16,6 +16,10 @@ export interface LifeMapRegion extends LifeMapTopic {
   x: number;
   y: number;
   radius: number;
+  /** Accumulated event frequency intensity, normalized to 0..1. */
+  frequency: number;
+  /** Accumulated duration intensity, normalized to 0..1. */
+  weight: number;
   tone: LifeMapTone;
 }
 

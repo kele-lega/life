@@ -67,8 +67,13 @@ for (const colorScheme of ["light", "dark"] as const) {
     const recording = await page.locator(".quick-record").boundingBox();
     // The whole invitation row is a touch target, not only its lettering.
     expect(invitation!.width).toBeCloseTo(recording!.width, 0);
-    await expect(page.getByRole("link", { name: "时间线", exact: true })).toHaveCSS("font-weight", "400");
-    await expect(page.locator("main")).toHaveCSS("background-color", colorScheme === "light" ? "rgb(250, 249, 246)" : "rgb(28, 29, 28)");
+    const lifePortal = page.getByRole("button", { name: "生活脉络" });
+    await expect(lifePortal).toHaveAttribute("aria-expanded", "false");
+    await lifePortal.click();
+    await expect(page.getByRole("link", { name: /时间线/ })).toHaveCSS("font-weight", "400");
+    await expect(page.getByRole("link", { name: /生活地图/ })).toHaveAttribute("href", "/life");
+    await page.getByRole("button", { name: "生活脉络" }).click();
+    await expect(page.locator("main")).toHaveCSS("background-color", colorScheme === "light" ? "rgb(245, 245, 247)" : "rgb(21, 21, 23)");
     await page.screenshot({ path: testInfo.outputPath(`desktop-empty-${colorScheme}.png`), fullPage: true });
 
     const original = "傍晚去湖边走了走。\n风很轻，湖面像一面镜子。坐在长椅上发呆，听见树叶响动，心里也慢慢静了下来。";
@@ -76,7 +81,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     const input = page.getByRole("textbox", { name: "记录内容" });
     await expect(input).toBeFocused();
     await expect(page.getByRole("heading", { name: "写点什么", exact: true })).toBeVisible();
-    await expect(input).toHaveCSS("border-radius", "12px");
+    await expect(input).toHaveCSS("border-radius", "16px");
     await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCSS("font-weight", "700");
     await expect(page.getByRole("button", { name: "取消", exact: true })).toHaveCSS("font-weight", "400");
     await expect(page.getByRole("button", { name: "添加图片", exact: true })).toBeEnabled();
@@ -139,3 +144,36 @@ for (const colorScheme of ["light", "dark"] as const) {
     expect(errors).toEqual([]);
   });
 }
+
+test("life path progressively reveals every product destination without overflowing", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  for (const width of [320, 390, 430, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const trigger = page.getByRole("button", { name: "生活脉络" });
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.click();
+
+    for (const destination of [
+      ["时间线", "/timeline"],
+      ["日历", "/calendar"],
+      ["搜索", "/search"],
+      ["日记", "/diary"],
+      ["生活地图", "/life"],
+    ] as const) {
+      await expect(page.getByRole("link", { name: new RegExp(destination[0]) }))
+        .toHaveAttribute("href", destination[1]);
+    }
+
+    await noOverflow(page);
+    await targetsFit(page);
+    if (width === 390 || width === 1440) {
+      await page.screenshot({ path: testInfo.outputPath(`life-path-${width}.png`), fullPage: true });
+    }
+
+    await page.getByRole("link", { name: /日历/ }).focus();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: "生活脉络" })).toBeFocused();
+  }
+});

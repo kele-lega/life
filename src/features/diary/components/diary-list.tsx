@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import type { Diary } from "../model/types";
 import { listDiaries } from "../repository/diary-repository";
 import { BackLink, PageNav } from "@/components/ui/page-nav";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ReaderIcon } from "@radix-ui/react-icons";
 import styles from "./diary-page.module.css";
 
 function formatDate(timestamp: string): string {
@@ -42,7 +44,7 @@ export function DiaryList() {
       <header className="diary-header"><h1>日记</h1><p>记录完整的一段生活。</p></header>
       {loading ? <p className="ui-status" role="status">正在读取日记……</p> : null}
       {error ? <div className="ui-error"><p role="alert">{error}</p><button className="ui-quiet-button" type="button" onClick={() => { setLoading(true); setError(null); setRevision((value) => value + 1); }}>重新读取</button></div> : null}
-      {diaries.length === 0 && !loading && !error ? <p className="diary-empty">还没有日记。</p> : null}
+      {diaries.length === 0 && !loading && !error ? <EmptyState icon={<ReaderIcon />}>还没有日记。</EmptyState> : null}
       <div className="diary-list" aria-busy={loading}>
         {diaries.map((diary) => (
           <Link className="diary-entry" href={`/diary/${diary.id}`} key={diary.id}>

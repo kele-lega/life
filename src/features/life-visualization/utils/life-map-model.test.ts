@@ -47,10 +47,14 @@ describe("Life Map presentation model", () => {
     expect(buildLifeMapTopics(exploration, "themes").map((topic) => topic.label)).toEqual(["活动", "学习", "地点"]);
   });
 
-  it("scales organic regions by count and connects nearby chronological topics", () => {
+  it("uses frequency for density, duration for weight and connects nearby chronological topics", () => {
     const topics = buildLifeMapTopics(exploration, "activities");
     const regions = layoutLifeMapTopics(topics);
     expect(regions[0].radius).toBeGreaterThan(regions[1].radius);
+    expect(regions[0].frequency).toBeGreaterThan(0);
+    expect(regions[0].weight).toBeGreaterThan(0);
+    expect(regions[1].frequency).toBeLessThan(regions[0].frequency);
+    expect(regions[1].weight).toBeLessThan(regions[0].weight);
     expect(buildLifeMapConnections(exploration.recentEvents, topics, "activities")).toEqual(expect.arrayContaining([
       expect.objectContaining({ from: eventTopicKey(exploration.recentEvents[2], "activities"), to: eventTopicKey(exploration.recentEvents[1], "activities") }),
     ]));

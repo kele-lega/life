@@ -57,14 +57,27 @@ describe("HomePage", () => {
     render(<HomePage />);
 
     expect(screen.getByRole("button", { name: "写点什么" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "时间线" })).toHaveAttribute("href", "/timeline");
-    expect(screen.getByRole("link", { name: "日历" })).toHaveAttribute("href", "/calendar");
-    expect(screen.getByRole("link", { name: "日记" })).toHaveAttribute("href", "/diary");
-    expect(screen.getByRole("link", { name: "搜索" })).toHaveAttribute("href", "/search");
     const recent = screen.getByLabelText("最近记录");
-    const more = screen.getByRole("navigation", { name: "更多功能" });
+    const more = screen.getByRole("navigation", { name: "浏览生活" });
     expect(recent.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING)
       .toBeTruthy();
+
+    const portal = screen.getByRole("button", { name: /生活脉络/ });
+    expect(portal).toHaveAccessibleName(/从此刻，慢慢走向全部生活/);
+    expect(portal).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: /生活地图/ })).not.toBeInTheDocument();
+    await user.click(portal);
+    expect(portal).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: /时间线/ })).toHaveAttribute("href", "/timeline");
+    expect(screen.getByRole("link", { name: /日历/ })).toHaveAttribute("href", "/calendar");
+    expect(screen.getByRole("link", { name: /日记/ })).toHaveAttribute("href", "/diary");
+    expect(screen.getByRole("link", { name: /搜索/ })).toHaveAttribute("href", "/search");
+    expect(screen.getByRole("link", { name: /生活地图/ })).toHaveAttribute("href", "/life");
+
+    screen.getByRole("link", { name: /日历/ }).focus();
+    await user.keyboard("{Escape}");
+    expect(portal).toHaveFocus();
+    expect(portal).toHaveAttribute("aria-expanded", "false");
 
     await user.click(screen.getByRole("button", { name: "写点什么" }));
     expect(screen.getByRole("textbox", { name: "记录内容" })).toBeInTheDocument();

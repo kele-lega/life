@@ -125,3 +125,36 @@ The visible lenses are now Activities, Places and Themes. Sources and the bottom
 The refreshed 1280 × 800 evidence captures the reading region's hover state and the refreshed 390 × 844 evidence verifies the simplified narrow layout. Focused component tests and all three Life Visualization Chromium tests pass.
 
 hover follow-up result: passed
+
+## Life Map Evolution follow-up, 2026-09-04
+
+The accepted 30-day terrain, current one-year terrain, Places lens and 390px render were opened together for comparison. The same deterministic history now reads as accumulated formation rather than three unrelated filtered snapshots:
+
+1. [P1, fixed] A native select made 30/90/365 feel like a report filter. It is now a low-contrast sediment-depth track. Only a range response morphs positions, radius and density over 760ms; Lens changes remain direct and reduced motion skips the morph.
+2. [P1, fixed] Relative scaling kept the largest topic visually constant across time. Frequency and duration now use separate absolute saturating curves, so the 30-day map remains lighter and more discrete while the one-year map becomes denser, heavier and more connected.
+3. [P2, fixed] Generic affinity lines did not make the Places lens feel spatial. Consecutive visible place events within fourteen days now form wide translucent route traces over the same truthful place-name regions.
+4. [P2, fixed] The adjacent inspector still read as a compact statistics panel. It now leads with theme, time span, recent change and related direction; count and duration are reduced to a final footprint line.
+
+The evolution remains a presentation projection. No LifeEvent field, Dexie schema, repository, statistics function, homepage entry or existing record/recall surface changed. The evidence set is listed in `design/life-visualization/README.md`.
+
+Final repository verification passed: typecheck, zero-warning lint, 29 files / 224 unit-integration tests, 43/43 Chromium E2E tests, and a production build that prerenders `/life`.
+
+evolution follow-up result: passed
+
+## Typography occlusion follow-up, 2026-09-04
+
+The region-name audit found two concrete defects. Long names inherited the region hit area's inner width and were ellipsized, and the horizontal desktop inspector offset could push a narrow-screen detail beyond the viewport edge. Region names now use a bounded full-text label width with safe character wrapping and a paper-tone text halo; the active region rises above neighboring labels. At 560px and below, the inspector is horizontally clamped and moves above or below the region according to its position.
+
+Browser assertions inspect every rendered region label for scroll clipping, viewport escape and pairwise text-bound overlap. Activities, Places and Themes pass at 320px, including the one-year high-density state; the long-name detail also remains fully inside the viewport. Evidence is stored as `design/life-visualization/typography-detail-320.png`.
+
+typography follow-up result: passed
+
+## Whole-site iOS visual refresh, 2026-09-05
+
+The implementation follows the user's explicit whole-site redesign brief. The six core routes and Diary writing/reading views now share system typography, neutral surfaces, consistent controls, restrained depth and a smaller motion scale. The existing vermilion accent and local-first recording behavior remain intact. Map controls, inspector visibility, keyboard navigation and narrow-screen previews were refined without changing statistical or storage contracts.
+
+Production screenshots cover nine states at 1440, 390 and 430px in both color schemes (54 images). See [the review gallery](design/ios-refresh/index.html) and [the delivery report](design/ios-refresh/README.md) for visual evidence, implementation files and device limitations. Contrast checks pass for all 18 selected text/control combinations. Typecheck, zero-warning lint, 259 unit/integration tests, 47 Chromium E2E tests and the production build pass. A final seven-test production regression also covers the accessible-name correction and screenshot matrix.
+
+Native iOS Safari, the software keyboard and VoiceOver still need real-device verification. Canvas drawing remains on the main thread; no unrelated data or rendering infrastructure rewrite was introduced.
+
+iOS refresh result: passed within the documented browser scope

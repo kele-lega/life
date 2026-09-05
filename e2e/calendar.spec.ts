@@ -82,7 +82,8 @@ test.describe("Calendar real browser flow", () => {
       [{ id: "calendar-diary-status", text: "Status Diary", createdAt: localTimestamp(year, month, 4, 18) }],
     );
 
-    await page.getByRole("link", { name: "日历" }).click();
+    await page.getByRole("button", { name: "生活脉络" }).click();
+    await page.getByRole("link", { name: /日历/ }).click();
     await expect(page.getByRole("button", { name: recordedDateLabel(now, 2) }))
       .toHaveAttribute("data-has-records", "true");
     await expect(page.getByRole("button", { name: recordedDateLabel(now, 4) }))

@@ -15,6 +15,7 @@ describe("LifeEvent repository", () => {
   it("creates standalone manual data with exact name, date, duration and lifecycle; reopens from IndexedDB", async () => {
     const event = await createManualLifeEvent(base);
     expect(event).toMatchObject({ ...base, origin: "manual", source: null, startAt: null, endAt: null, metadata: {}, deletedAt: null });
+    expect(Object.prototype.hasOwnProperty.call(event, "extractionProposalId")).toBe(false);
     expect(event.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(event.createdAt).toBe(event.updatedAt);
     await expect(getLifeEvent(event.id)).resolves.toEqual({ ...event, sourceStatus: "unlinked" });

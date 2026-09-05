@@ -3,9 +3,9 @@ import type { CSSProperties } from "react";
 
 // One source for CSS and Motion. Durations are seconds; feedback is not a save delay.
 export const motionEase = [0.22, 1, 0.36, 1] as const;
-export const motionDuration = { instant: 0.16, fast: 0.22, normal: 0.42, slow: 0.58 } as const;
-export const motionDistance = { page: 8, content: 8, reveal: 6, button: 4, hover: 2 } as const;
-export const motionStagger = { home: 0.08, list: 0.06, maxIndex: 5 } as const;
+export const motionDuration = { instant: 0.12, fast: 0.18, normal: 0.32, slow: 0.46 } as const;
+export const motionDistance = { page: 6, content: 6, reveal: 4, button: 3, hover: 1 } as const;
+export const motionStagger = { home: 0.045, list: 0.035, maxIndex: 4 } as const;
 export const saveFeedbackMs = 1100;
 
 export const contentTransition: Transition = { duration: motionDuration.normal, ease: motionEase };

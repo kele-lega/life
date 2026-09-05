@@ -7,7 +7,9 @@ export interface LifeEventSource extends LifeEventSourceRef { contentFingerprint
 
 export interface LifeEvent {
   id: EntityId;
-  origin: "manual";
+  origin: "manual" | "ai";
+  /** Present only when review of a LifeEventProposal created this event. */
+  extractionProposalId?: EntityId;
   source: LifeEventSource | null;
   category: LifeEventCategory;
   name: string;

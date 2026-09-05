@@ -1,6 +1,9 @@
 "use client";
 
 import { NavLink } from "@/components/ui/nav-link";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { TimelineItemView } from "@/features/timeline/components/timeline-item-view";
@@ -166,9 +169,9 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
       <div className="calendar-layout">
       <section className="calendar-month" aria-label={monthTitle(visibleMonth)}>
         <div className="calendar-month-nav">
-          <button type="button" aria-label="上一个月" title="上一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, -1))}><span aria-hidden="true">‹</span></button>
+          <button type="button" aria-label="上一个月" title="上一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, -1))}><ChevronLeftIcon className="ui-icon" aria-hidden="true" /></button>
           <h2>{monthTitle(visibleMonth)}</h2>
-          <button type="button" aria-label="下一个月" title="下一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, 1))}><span aria-hidden="true">›</span></button>
+          <button type="button" aria-label="下一个月" title="下一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, 1))}><ChevronRightIcon className="ui-icon" aria-hidden="true" /></button>
         </div>
         <button
           className="calendar-current-month"
@@ -215,24 +218,13 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
         <section className="calendar-day-detail" aria-label={`${dayTitle(selectedDateKey)}的记录`} aria-busy={dayLoading}>
           <div className="calendar-detail-header">
             <h2>{dayTitle(selectedDateKey)}</h2>
-            <div className="calendar-filters" role="group" aria-label="记录类型">
-              {FILTERS.map((option) => (
-                <button
-                  aria-pressed={filter === option.value}
-                  key={option.value}
-                  type="button"
-                  onClick={() => setFilter(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl className="calendar-filters" label="记录类型" options={FILTERS} value={filter} onChange={setFilter} />
           </div>
           {dayLoading ? <p className="ui-status" role="status">正在读取这一天的记录……</p> : <p className="visually-hidden" role="status">{`${dayTitle(selectedDateKey)}，已显示 ${filteredItems.length} 条记录。`}</p>}
           {dayError ? <p role="alert">{dayError}</p> : null}
           {dayError ? <button className="ui-quiet-button" type="button" onClick={() => { setDayLoading(true); setDayError(null); setDayRetry((value) => value + 1); }}>重新读取当天</button> : null}
           {!dayLoading && !dayError && filteredItems.length === 0 ? (
-            <p className="calendar-day-empty">这一天没有此类记录。</p>
+            <EmptyState icon={<CalendarIcon />}>这一天没有此类记录。</EmptyState>
           ) : null}
           <div className="calendar-day-list ui-content-enter" key={`${selectedDateKey}-${filter}-${dayLoading}`}>
             {filteredItems.map((item) => (
@@ -240,7 +232,7 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
             ))}
           </div>
         </section>
-      ) : <p className="calendar-prompt">选择一个日期查看内容。</p>}
+      ) : <EmptyState className="calendar-prompt" icon={<CalendarIcon />}>选择一个日期查看内容。</EmptyState>}
       </div>
     </main>
   );

@@ -1,5 +1,5 @@
 import { NavLink } from "./nav-link";
-import { ArrowLeftIcon } from "@radix-ui/react-icons";
+import { ChevronLeftIcon } from "@radix-ui/react-icons";
 import type { MouseEventHandler, ReactNode } from "react";
 
 export function PageNav({ label, children }: { label: string; children: ReactNode }) {
@@ -7,5 +7,5 @@ export function PageNav({ label, children }: { label: string; children: ReactNod
 }
 
 export function BackLink({ href, children, onClick }: { href: string; children: ReactNode; onClick?: MouseEventHandler<HTMLAnchorElement> }) {
-  return <NavLink href={href} onClick={onClick}><ArrowLeftIcon className="ui-icon" aria-hidden="true" />{children}</NavLink>;
+  return <NavLink href={href} onClick={onClick}><ChevronLeftIcon className="ui-icon" aria-hidden="true" />{children}</NavLink>;
 }

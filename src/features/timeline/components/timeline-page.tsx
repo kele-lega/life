@@ -9,6 +9,8 @@ import { groupTimelineItems } from "../utils/local-date";
 import { addTimelineObjectUrls, revokeObjectUrls } from "../utils/object-urls";
 import { TimelineItemView } from "./timeline-item-view";
 import { BackLink, PageNav } from "@/components/ui/page-nav";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ClockIcon } from "@radix-ui/react-icons";
 import styles from "./timeline-page.module.css";
 
 export function TimelinePage() {
@@ -90,7 +92,7 @@ export function TimelinePage() {
       {loading ? <p className="ui-status" role="status">正在读取时间线……</p> : null}
       {error ? <p role="alert">{error}</p> : null}
       {error && items.length === 0 ? <button className="ui-quiet-button" type="button" onClick={() => { setLoading(true); setError(null); setRetryRevision((value) => value + 1); }}>重新读取</button> : null}
-      {!loading && !error && items.length === 0 ? <p className="timeline-empty">还没有记录。</p> : null}
+      {!loading && !error && items.length === 0 ? <EmptyState icon={<ClockIcon />}>还没有记录。</EmptyState> : null}
       <div className="timeline-groups" aria-busy={loading || loadingMore}>
         {groups.map((group) => (
           <section className="timeline-group" key={group.key}>

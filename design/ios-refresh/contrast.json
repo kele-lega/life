@@ -1,0 +1,128 @@
+[
+  {
+    "theme": "light",
+    "name": "正文 / 页面",
+    "ratio": 14.23,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "正文 / 内容面",
+    "ratio": 15.49,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "辅助文字 / 页面",
+    "ratio": 5,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "辅助文字 / 内容面",
+    "ratio": 5.45,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "辅助文字 / 分段底色",
+    "ratio": 4.54,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "主按钮文字",
+    "ratio": 6.05,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "强调文字 / 轻强调底色",
+    "ratio": 5.31,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "输入边界",
+    "ratio": 3.66,
+    "minimum": 3,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "键盘焦点",
+    "ratio": 6.05,
+    "minimum": 3,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "正文 / 页面",
+    "ratio": 16.17,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "正文 / 内容面",
+    "ratio": 14.07,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "辅助文字 / 页面",
+    "ratio": 7.91,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "辅助文字 / 内容面",
+    "ratio": 6.88,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "辅助文字 / 分段底色",
+    "ratio": 5.69,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "主按钮文字",
+    "ratio": 4.91,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "强调文字 / 轻强调底色",
+    "ratio": 6.75,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "输入边界",
+    "ratio": 4.12,
+    "minimum": 3,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "键盘焦点",
+    "ratio": 7.49,
+    "minimum": 3,
+    "pass": true
+  }
+]

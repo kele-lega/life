@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createDiary, updateDiaryContent } from "@/features/diary/repository/diary-repository";
 import { createManualLifeEvent, createManualLifeEvents } from "@/features/life-event/repository/life-event-repository";
+import { fingerprintLifeEventText } from "@/features/life-event/repository/source-fingerprint";
+import { reviewLifeEventProposal } from "@/features/life-intelligence/application/review-proposal";
+import { runLifeExtraction } from "@/features/life-intelligence/application/run-life-extraction";
+import { FakeLifeEventExtractor } from "@/features/life-intelligence/extractor/fake-life-event-extractor";
+import { lifeIntelligenceRepository } from "@/features/life-intelligence/repository/dexie-life-intelligence-repository";
 import { createMoment } from "@/features/moment/repository/moment-repository";
 import { db } from "@/lib/db/client";
 import type { CreateManualLifeEventInput } from "@/features/life-event/model/types";
@@ -38,6 +43,75 @@ afterEach(async () => {
 });
 
 describe("Life Statistics query", () => {
+  it("includes accepted AI and corrected manual Events without exposing intelligence fields", async () => {
+    const extractor = new FakeLifeEventExtractor();
+    const acceptedBatch = await runLifeExtraction(lifeIntelligenceRepository, extractor, {
+      input: { kind: "scratch" },
+      text: "看书40分钟",
+      context: { occurredOn: "2026-09-03", timeZone: "Asia/Shanghai" },
+    });
+    const accepted = acceptedBatch.proposals.find(({ candidate }) => candidate.name === "阅读")!;
+    await reviewLifeEventProposal(lifeIntelligenceRepository, {
+      action: "accept",
+      proposalId: accepted.id,
+      lifeEventId: uuid(90),
+      reviewedAt: "2026-09-03T10:00:00.000Z",
+    });
+
+    const correctedBatch = await runLifeExtraction(lifeIntelligenceRepository, extractor, {
+      input: { kind: "scratch" },
+      text: "跑步半小时",
+      context: { occurredOn: "2026-09-03", timeZone: "Asia/Shanghai" },
+    });
+    const corrected = correctedBatch.proposals.find(({ candidate }) => candidate.name === "跑步")!;
+    await reviewLifeEventProposal(lifeIntelligenceRepository, {
+      action: "correct",
+      proposalId: corrected.id,
+      lifeEventId: uuid(91),
+      reviewedAt: "2026-09-03T11:00:00.000Z",
+      correction: { ...corrected.candidate, name: "慢跑" },
+    });
+
+    const summary = await getLifeEventSummary({ startDate: "2026-09-03", endDate: "2026-09-04" });
+    const exploration = await getLifeEventExploration({
+      startDate: "2026-09-03",
+      endDate: "2026-09-04",
+      granularity: "day",
+    });
+    expect(summary).toMatchObject({ totalEvents: 2, totalDurationSeconds: 4_200 });
+    expect(exploration.names.map(({ name }) => name)).toEqual(["阅读", "慢跑"]);
+    expect(JSON.stringify({ summary, exploration })).not.toMatch(/origin|proposal|extractor|confidence/i);
+  });
+
+  it("excludes an accepted AI Event after its Diary source becomes stale", async () => {
+    await createDiary({ id: "diary-ai-stale", body: "看书40分钟" });
+    const batch = await runLifeExtraction(lifeIntelligenceRepository, new FakeLifeEventExtractor(), {
+      input: {
+        kind: "record",
+        source: {
+          type: "diary",
+          id: "diary-ai-stale",
+          contentFingerprint: await fingerprintLifeEventText(["", "看书40分钟"]),
+        },
+      },
+      text: "看书40分钟",
+      context: { occurredOn: "2026-09-03", timeZone: "Asia/Shanghai" },
+    });
+    const proposal = batch.proposals.find(({ candidate }) => candidate.name === "阅读")!;
+    await reviewLifeEventProposal(lifeIntelligenceRepository, {
+      action: "accept",
+      proposalId: proposal.id,
+      lifeEventId: uuid(92),
+      reviewedAt: "2026-09-03T10:00:00.000Z",
+    });
+    await expect(getLifeEventSummary({ startDate: "2026-09-03", endDate: "2026-09-04" }))
+      .resolves.toMatchObject({ totalEvents: 1 });
+
+    await updateDiaryContent("diary-ai-stale", { body: "日记已经修改" });
+    await expect(getLifeEventSummary({ startDate: "2026-09-03", endDate: "2026-09-04" }))
+      .resolves.toMatchObject({ totalEvents: 0, totalDurationSeconds: 0 });
+  });
+
   it("uses an inclusive/exclusive occurredOn range and stable four-category totals", async () => {
     await createManualLifeEvents([
       event(1, { occurredOn: "2026-09-01", category: "activity", durationSeconds: 60 }),

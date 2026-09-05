@@ -19,7 +19,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     const save = page.locator(".record-actions .stateful-button");
     await expect(save).toHaveCSS("height", "44px");
     await expect(save).toHaveCSS("min-width", "104px");
-    await expect(save).toHaveCSS("border-radius", "8px");
+    await expect(save).toHaveCSS("border-radius", "12px");
     await expect(save).toHaveCSS("font-weight", "700");
     await expect(save).toHaveCSS("border-top-style", "solid");
     const idleWidth = (await save.boundingBox())!.width;

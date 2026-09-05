@@ -1,0 +1,8 @@
+.control { display: inline-flex; gap: 2px; padding: 4px; border-radius: 15px; background: var(--app-subtle); isolation: isolate; }
+.control button { position: relative; display: grid; place-items: center; flex: 1; min-width: 64px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: 11px; background: transparent; color: var(--app-secondary); font: 500 0.875rem/1.4 var(--font-ui); white-space: nowrap; }
+.control button:is([aria-selected="true"], [aria-pressed="true"]) { color: var(--app-ink); }
+.control button:active { transform: none; }
+.selection { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--app-paper); box-shadow: 0 1px 4px rgb(30 30 45 / 10%); }
+.label { position: relative; }
+.control button:focus-visible { outline-offset: 1px; }
+@media (forced-colors: active) { .selection { border: 2px solid Highlight; } }

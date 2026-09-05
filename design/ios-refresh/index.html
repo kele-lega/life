@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life · UI 升级验收</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f5f7;color:#242426;font:15px/1.7 system-ui,"Microsoft YaHei",sans-serif}header{max-width:1360px;margin:auto;padding:40px 28px 24px}h1{font-size:30px;letter-spacing:-.04em;margin:0}p{color:#696970;margin:8px 0}nav{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:24px}select,a{color:inherit;font:inherit}select{min-height:44px;padding:8px 14px;border:1px solid #85858e;border-radius:12px;background:white}a{padding:8px;min-height:44px}main{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;max-width:1360px;margin:auto;padding:0 28px 48px;align-items:start}figure{margin:0;min-width:0;background:white;border:1px solid #dedee3;border-radius:18px;overflow:hidden}figcaption{padding:12px 18px;font-weight:600}figure a{display:block;padding:0}img{display:block;width:100%;height:auto;border-top:1px solid #dedee3}select:focus-visible,a:focus-visible{outline:2px solid #ad3c32;outline-offset:4px}@media(max-width:900px){main{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:540px){main{grid-template-columns:1fr;padding-inline:20px}header{padding:28px 20px}}body[data-theme="dark"]{background:#151517;color:#f1f1f3}body[data-theme="dark"] p{color:#aaaab3}body[data-theme="dark"] :is(select,figure){background:#222225;border-color:#81818c}body[data-theme="dark"] img{border-color:#38383e}
+</style>
+<header>
+  <h1>Life · 全站 UI 升级</h1>
+  <p>来自本地生产构建的真实浏览器截图。记录内容为隔离测试数据，不写入个人浏览器。</p>
+  <nav aria-label="截图筛选">
+    <label>主题 <select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+    <label>宽度 <select id="width"><option value="390">390 px</option><option value="430">430 px</option><option value="1440">1440 px</option></select></label>
+    <a href="README.md">改造说明与验证结果</a>
+  </nav>
+</header>
+<main id="gallery" aria-label="关键页面截图"></main>
+<script>
+const screens=[['home','01 首页'],['home-writing','02 快速记录'],['diary','03 日记列表'],['diary-reading','04 日记阅读'],['diary-writing','05 日记编辑'],['timeline','06 时间线'],['calendar','07 日历'],['search','08 搜索'],['life','09 生活地图']];
+const theme=document.querySelector('#theme'),width=document.querySelector('#width'),gallery=document.querySelector('#gallery');
+function render(){document.body.dataset.theme=theme.value;gallery.replaceChildren(...screens.map(([key,title])=>{const figure=document.createElement('figure'),caption=document.createElement('figcaption'),link=document.createElement('a'),img=document.createElement('img');caption.textContent=title;img.src=`after/${key}-${width.value}-${theme.value}.png`;img.alt=`${title}，${width.value} 像素，${theme.value==='light'?'浅色':'深色'}`;img.loading='lazy';link.href=img.src;link.append(img);figure.append(caption,link);return figure}));}
+theme.addEventListener('change',render);width.addEventListener('change',render);render();
+</script>
+</html>

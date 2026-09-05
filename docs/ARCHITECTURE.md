@@ -33,6 +33,8 @@ Original content is created and read locally without a network dependency. Diary
 
 No Redux, GraphQL, microservices, Redis, queues, or separate backend are introduced. React local state handles temporary UI state; Dexie owns persisted state. A state library can be reconsidered only when a concrete cross-page state problem exists.
 
+The homepage exposes product navigation through a client-only `LifePortal` disclosure after recent records. Its open state is ephemeral React state and never enters IndexedDB. The disclosure renders ordinary Next.js links to Timeline, Calendar, Search, Diary, and Life Visualization, so routing remains prefetchable and browser-native. Lab routes remain direct development URLs and are intentionally absent from this product navigation.
+
 ## Source layout
 
 ```text
@@ -86,7 +88,7 @@ LifeEvent table
 
 `life-insights` imports only the LifeEvent repository/model API and never Dexie. The repository uses the existing `[occurredOn+id]` compound index for a half-open natural-date range, checks source validity in bounded 512-event batches, and removes stale events from the statistics-eligible result. Summary and sparse time-series aggregation then operate in memory over that range. They return counts, integer-second duration totals, category aggregates, and calendar bucket boundaries only; there are no chart coordinates, colors, SVG, UI strings, framework state, caches, or new persisted entities.
 
-The Life Visualization phase adds `getLifeEventExploration` to the same read-only boundary. One source-valid range read produces the existing summary/time series plus exact `category + name` aggregates, exact source-kind aggregates, and a bounded newest-event projection for timeline/drill-down. The projection removes source fingerprints and exposes only source type/ID. Its limit is 160 by default and 500 maximum; aggregate totals still cover the complete requested range.
+The Life Visualization phase adds `getLifeEventExploration` to the same read-only boundary. One source-valid range read produces the existing summary/time series plus exact `category + name` aggregates, exact source-kind aggregates, and a bounded newest-event projection for temporal affinity/future drill-down. The projection removes source fingerprints and exposes only source type/ID. Its limit is 160 by default and 500 maximum; aggregate totals still cover the complete requested range.
 
 ### Life Visualization boundary
 
@@ -94,11 +96,74 @@ The `/life` component reads through a Visualization-owned adapter. In production
 
 `features/life-visualization` imports `life-insights` only. It never imports Dexie, the database client, or Moment/Diary/Timeline/Calendar/Search repositories. `/life` is a thin Server Component wrapping a client-owned IndexedDB visualization surface. Existing record routes and homepage navigation remain unchanged.
 
-The Canvas layer owns only deterministic organic geometry, contour texture, temporal flow lines and category tones. Accessible HTML buttons sit over Canvas regions; Lens state, selected region/event, date-range state and responsive layout remain presentation concerns. The map uses four truthful views over current fields: exact activity names, place-category names, fixed categories, and source kinds. It does not infer people or semantic relationships from original text.
+The Canvas layer owns only deterministic organic geometry, contour texture, temporal flow lines and category tones. Accessible HTML buttons sit over Canvas regions; Lens state, active region, date-range state and responsive layout remain presentation concerns. The map uses three truthful views over current fields: exact non-place activity names, exact place names and fixed categories. It does not infer people or semantic relationships from original text, and technical source kinds are not exposed as an observation mode.
 
-The bottom Life Timeline receives a bounded source-valid event projection from `life-insights`; its nodes are not a second timeline repository or a persisted feed. Source links route Diary events to their existing detail route and Moment/Append events to the existing Timeline without adding focus/query semantics. No database table, index, cache, worker, AI call or original-record write is introduced.
+The 30/90/365-day range is presented as sediment depth. A range response increments a presentation-only evolution revision; Canvas interpolates the previous and next region frames for 760ms while HTML hit targets follow the same cubic-bezier transition. Lens changes draw directly. `prefers-reduced-motion` bypasses interpolation. Event frequency maps to point density, accumulated duration maps to radius/contour weight, and place-lens temporal affinity maps to broad trajectory traces. No frame state, geometry or styling is persisted.
+
+There is no bottom LifeEvent rail. The bounded source-valid event projection from `life-insights` is used only to derive temporal affinity and remains available for a future record drill-down. No database table, index, cache, worker, AI call or original-record write is introduced.
 
 Both statistics functions currently materialize the eligible requested range. Development benchmarks through the actual query code and fake-indexeddb cover 1,000/10,000/50,000 records. This is sufficient for a contract and index decision, not a production device latency guarantee. Future visualization must profile representative Chrome/Safari devices and may introduce worker/off-main-thread computation or incremental aggregates only from measured need. No extra index or Dexie migration is justified by Phase 12.6.
+
+## Life Intelligence contract boundary
+
+Phase 14.1 adds a compile-time and in-memory contract under `features/life-intelligence`. It does not add a route, worker, automatic hook, network request, Dexie store, migration or database adapter. Moment, MomentAppend, Diary and the current manual-only LifeEvent schema/repository remain unchanged.
+
+The contract separates four responsibilities:
+
+```text
+LifeEventExtractor -> validated LifeEventProposal
+proposal state machine -> accepted / corrected / rejected / superseded
+review application service -> insert-only LifeEvent materialization plan
+LifeIntelligenceRepository port -> future atomic persistence adapter
+```
+
+Pending and rejected proposals are not LifeEvents. Accepting a proposal plans an `ai` materialization; correcting one plans a `manual` materialization containing the user's corrected fields. Both retain the proposal ID and exact source fingerprint. The current LifeEvent table cannot receive either plan in this phase. A later explicitly approved migration must implement the storage adapter and origin/provenance fields before any plan can be persisted.
+
+The repository port requires an adapter to commit the terminal proposal state and optional LifeEvent insertion atomically, reject event-ID collisions, and never update an existing manual event. Equal proposal retries are identified by job ID plus candidate key and return the first proposal unchanged. The deterministic fake extractor is local-only and conservative: relative periods such as afternoon/evening remain day precision, explicit durations remain durations, and unsupported text returns an empty successful result.
+
+### Life Intelligence lab review
+
+Phase 14.2 adds `/lab/life-extraction` as a direct Server Component route around one client review surface. It has no navigation or homepage entry. The user explicitly starts each extraction; no Moment/Diary save hook, queue, timer, worker or network boundary exists.
+
+```text
+lab text + natural-date context
+  -> deterministic FakeLifeEventExtractor
+  -> runLifeExtraction
+  -> session-only LifeEventProposal records
+  -> Accept / Correct / Reject
+  -> session-only LifeEventMaterialization or no event
+```
+
+`LabMemoryLifeIntelligenceRepository` implements the Phase 14.1 storage port with JavaScript Maps. It does not import Dexie, open IndexedDB or call the current LifeEvent repository. Accept and Correct use the real review application service; terminal-state checks, duplicate-review idempotency and manual-conflict protection therefore remain domain behavior rather than UI simulation. The lab retains one source snapshot for the visible review batch while the input remains editable.
+
+Refreshing or leaving the route discards jobs, proposals and materializations. The page states this limitation before extraction, and browser coverage verifies both reset behavior and the absence of a `life` IndexedDB database in a clean context. Manual-conflict detection is consequently limited to manual materializations created in the same page session. Persisted review recovery and comparison with existing manual LifeEvents require the later approved storage adapter.
+
+### Life Intelligence persistence boundary
+
+Phase 14.3 replaces the Phase 14.2 memory adapter with `DexieLifeIntelligenceRepository` and advances the local database to v6. The migration adds `lifeExtractionJobs` and `lifeEventProposals`, plus one sparse unique `extractionProposalId` index on `lifeEvents`; it has no upgrade transform or automatic data generation. Existing original records and v5 manual LifeEvents are not rewritten.
+
+```text
+explicit scratch/record extraction
+  -> FakeLifeEventExtractor (still local and user-triggered)
+  -> atomic Job + Proposal persistence
+  -> pending Proposal review
+       Accept  -> atomic AI LifeEvent insert + accepted Proposal
+       Correct -> atomic manual LifeEvent insert + corrected Proposal
+       Reject  -> rejected Proposal only
+       Supersede -> superseded Proposal only (contract; no automatic trigger)
+
+final source-valid LifeEvent
+  -> unchanged Life Statistics contract
+  -> unchanged Life Visualization contract
+```
+
+The repository owns two transaction boundaries. Extraction commits one Job and all of its Proposals together after validation. Accept/Correct transactions include Job, Proposal, LifeEvent, and read-only source tables so source fingerprint validity, exact active-manual conflict detection, Event insertion, and Proposal resolution succeed or roll back together. Reject and explicit supersession update only the Proposal table. Database uniqueness on `requestKey`, `[jobId+candidateKey]`, and `extractionProposalId` protects retries and multi-tab races.
+
+Proposal candidates and evidence are immutable. `accepted`, `corrected`, `rejected`, and `superseded` are terminal; accepted-to-corrected is deliberately unsupported. Future editing of an accepted AI Event requires a separate LifeEvent revision design. Direct manual creation remains insert-only and omits `extractionProposalId`, while reviewed corrections are manual Events that retain the Proposal link. No path updates or deletes an existing manual Event.
+
+Job inputs distinguish persisted 64 KiB-capped scratch text from record references containing type, ID, and fingerprint. Record text and provider responses are not copied into the Job. Source status (`scratch`, `current`, `stale`, `missing`) is derived at read/review time and never becomes a Proposal state. Stale/missing sources block Accept/Correct but permit Reject; stored audit records remain intact.
+
+`/lab/life-extraction` restores its latest scratch Job, Proposals, terminal states, and materialized Events from IndexedDB. It tells users that Accept/Correct creates real LifeEvents that can enter Statistics and Life Map. Statistics never imports or reads Job/Proposal storage, and Life Map receives the same presentation-neutral exploration structure with no AI branch. There is still no provider, network call, background worker, save hook, homepage entry, or original-record mutation.
 
 ## Future synchronization constraints
 
@@ -115,3 +180,9 @@ Unit tests cover pure rules and utilities. Database integration tests cover Dexi
 - AI data never overwrites original data.
 - New abstractions must solve an observed duplication or boundary problem.
 - Architecture and data model changes update the corresponding docs and ADR.
+
+## 2026-09-05 presentation refresh
+
+The iOS-style refresh keeps the server/client, repository, schema and statistics boundaries above. `design-system.css` remains the shared token source. A presentation-only `SegmentedControl` owns its selected-surface animation and keyboard tab semantics; Calendar and Life Visualization still own selection state and invoke their existing reads. `EmptyState` only renders a semantic message with a decorative library icon.
+
+Life Map emphasis interpolates Canvas alpha in refs and a bounded animation frame loop, without per-frame React state. System color changes trigger repaint and reduced-motion changes cancel interpolation. Exiting inspector content is inert and hidden from the accessibility tree. A failed subsequent range read retains the prior map with a visible retry message. These changes add no persistent state, caches, dependencies or data operations.

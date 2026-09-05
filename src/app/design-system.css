@@ -1,21 +1,24 @@
 /* Shared presentation tokens. System fonts keep writing available offline. */
 :root {
   color-scheme: light;
-  --app-surface: #faf9f6;
-  --app-paper: #fefdfb;
-  --app-subtle: #f0f1ec;
-  --app-ink: #252621;
-  --app-secondary: #666960;
-  --app-line: #dadcd5;
-  --app-boundary: #85897f;
-  --app-action: #a72f26;
-  --app-action-hover: #90281f;
+  --app-surface: #f5f5f7;
+  --app-paper: #ffffff;
+  --app-subtle: #eaeaee;
+  --app-ink: #242426;
+  --app-secondary: #696970;
+  --app-line: #dedee3;
+  --app-boundary: #85858e;
+  --app-action: #ad3c32;
+  --app-action-hover: #96342b;
+  --app-accent-ink: #ad3c32;
   --app-action-text: #fff;
-  --app-focus: #a72f26;
-  --app-error: #a72f26;
-  --app-highlight: #eee0c2;
-  --font-reading: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
-  --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --app-focus: #ad3c32;
+  --app-error: #ad3c32;
+  --app-highlight: #f7ded4;
+  --app-accent-soft: #f8eeeb;
+  --app-glass: rgb(255 255 255 / 88%);
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-reading: var(--font-ui);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -25,32 +28,40 @@
   --space-12: 48px;
   --space-16: 64px;
   --space-20: 80px;
-  --radius-control: 8px;
-  --radius-paper: 12px;
-  --radius-photo: 6px;
-  --shadow-paper: 0 2px 8px rgb(37 38 33 / 3%);
-  --blur-overlay: 16px;
+  --radius-control: 12px;
+  --radius-paper: 24px;
+  --radius-photo: 14px;
+  --radius-field: 16px;
+  --shadow-paper: 0 2px 4px rgb(35 35 55 / 2%), 0 12px 40px rgb(35 35 55 / 3%);
+  --shadow-overlay: 0 8px 32px rgb(35 35 55 / 12%), 0 1px 3px rgb(35 35 55 / 5%);
+  --blur-overlay: 24px;
+  /* Layers: content 0, local details 5, navigation 20, skip link 100. */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --app-surface: #1c1d1c;
-    --app-paper: #222321;
-    --app-subtle: #2c2e2a;
-    --app-ink: #e7e5df;
-    --app-secondary: #aaa9a3;
-    --app-line: #3a3d39;
-    --app-action: #b34e43;
-    --app-action-hover: #a14338;
-    --app-focus: #e58e80;
-    --app-error: #e58e80;
-    --app-highlight: #514334;
-    --shadow-paper: 0 2px 8px rgb(0 0 0 / 6%);
+    --app-surface: #151517;
+    --app-paper: #222225;
+    --app-subtle: #303035;
+    --app-ink: #f1f1f3;
+    --app-secondary: #aaaab3;
+    --app-line: #38383e;
+    --app-boundary: #81818c;
+    --app-action: #b85046;
+    --app-action-hover: #a5443b;
+    --app-accent-ink: #ef9d92;
+    --app-focus: #ef9d92;
+    --app-error: #ef9d92;
+    --app-highlight: #603b35;
+    --app-accent-soft: #352725;
+    --app-glass: rgb(34 34 37 / 92%);
+    --shadow-paper: 0 2px 8px rgb(0 0 0 / 7%);
+    --shadow-overlay: 0 12px 36px rgb(0 0 0 / 32%);
   }
 }
 
-body { font-family: var(--font-ui); }
+body { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
 ::selection { background: var(--app-line); color: var(--app-ink); }
 :where(button, a, input, textarea) { -webkit-tap-highlight-color: transparent; }
 :where(button, a) { touch-action: manipulation; }
@@ -85,20 +96,26 @@ body { font-family: var(--font-ui); }
 }
 .skip-link:focus { transform: translateY(0); }
 .ui-icon { width: 18px; height: 18px; flex-shrink: 0; }
-.ui-page.ui-page { width: min(1040px, calc(100% - 80px)); min-height: 100dvh; margin: 0 auto; padding: 40px 0 calc(64px + env(safe-area-inset-bottom)); }
-.ui-page-nav { display: flex; align-items: center; gap: 8px 24px; flex-wrap: wrap; margin-bottom: 40px; }
+.ui-page.ui-page { width: min(1040px, calc(100% - 80px)); min-height: 100dvh; margin: 0 auto; padding: 28px 0 calc(72px + env(safe-area-inset-bottom)); }
+.ui-page-nav { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 36px; }
 .ui-page-nav > :first-child { margin-right: auto; }
-.ui-page-nav :is(a, button) { display: inline-flex; align-items: center; gap: 8px; min-width: 44px; min-height: 44px; padding: 8px 0; border: 0; background: transparent; color: var(--app-secondary); font: 400 0.875rem/1.5 var(--font-ui); text-decoration: none; }
-.ui-page-nav :is(a, button):hover { color: var(--app-ink); }
+.ui-page-nav :is(a, button) { display: inline-flex; align-items: center; gap: 8px; min-width: 44px; min-height: 44px; padding: 8px 14px; border: 0; border-radius: 999px; background: var(--app-paper); color: var(--app-secondary); font: 500 0.875rem/1.5 var(--font-ui); text-decoration: none; }
+.ui-page-nav :is(a, button):hover { color: var(--app-ink); background: var(--app-subtle); }
+.ui-page-nav .primary-link { background: var(--app-accent-soft); color: var(--app-accent-ink); }
+.ui-page-nav .ui-nav-label::after { display: none; }
 .ui-status { color: var(--app-secondary); font-size: 0.875rem; line-height: 1.8; }
+.ui-empty { display: grid; justify-items: center; align-content: center; gap: 16px; min-height: 200px; padding: 32px 24px; border: 1px solid var(--app-line); border-radius: var(--radius-paper); background: var(--app-paper); color: var(--app-secondary); text-align: center; }
+.ui-empty p { margin: 0; font: 400 0.9375rem/1.8 var(--font-ui); }
+.ui-empty-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 17px; background: var(--app-surface); }
+.ui-empty-icon svg { width: 24px; height: 24px; }
 .ui-page header > h1, .ui-page header > h2 { margin-top: 0; }
 .ui-page header > p { color: var(--app-secondary); }
 .ui-page [role="alert"] { color: var(--app-error); font-size: 0.875rem; line-height: 1.8; }
 .ui-error { color: var(--app-error); font-size: 0.875rem; line-height: 1.8; }
-.ui-quiet-button { min-width: 44px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--app-boundary); border-radius: var(--radius-control); background: var(--app-surface); color: var(--app-secondary); font-size: 0.875rem; }
+.ui-quiet-button { min-width: 44px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--app-line); border-radius: var(--radius-control); background: var(--app-paper); color: var(--app-ink); font-size: 0.875rem; }
 .ui-quiet-button:hover { background: var(--app-subtle); color: var(--app-ink); }
 @media (max-width: 1023px) { .ui-page.ui-page { width: min(720px, calc(100% - 64px)); } }
-@media (max-width: 767px) { .ui-page.ui-page { width: calc(100% - 48px); padding-top: 20px; } .ui-page-nav { margin-bottom: 28px; gap: 8px 16px; } }
+@media (max-width: 767px) { .ui-page.ui-page { width: calc(100% - 40px); padding-top: 16px; } .ui-page-nav { margin-bottom: 28px; gap: 8px; } .ui-page-nav :is(a, button) { padding-inline: 12px; } }
 @media (max-width: 359px) { .ui-page.ui-page { width: calc(100% - 32px); } }
 .ui-reveal { overflow: clip; margin-inline: -8px; padding-inline: 8px; }
 .ui-reveal > div { padding-block: 8px; }

@@ -1,9 +1,12 @@
 "use client";
 
-import { ClockIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { LifeEventCategory } from "@/features/life-event/model/types";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { motionDuration, motionEase } from "@/components/ui/motion";
 import type { LifeEventExploration } from "@/features/life-insights/model/types";
 import { getLifeVisualizationData } from "../data/life-visualization-provider";
 import type { LifeLens, LifeMapRegion } from "../model/types";
@@ -16,16 +19,16 @@ import {
 import { LifeMapCanvas } from "./life-map-canvas";
 import styles from "./life-visualization.module.css";
 
-const LENSES: { value: LifeLens; label: string; visualLabel: string; description: string }[] = [
-  { value: "activities", label: "活动", visualLabel: "Activities", description: "从活动视角观察生活如何聚合" },
-  { value: "places", label: "地点", visualLabel: "Places", description: "沿着地点重新看见生活的落点" },
-  { value: "themes", label: "主题", visualLabel: "Themes", description: "回到四个稳定主题的长期沉淀" },
+const LENSES: { value: LifeLens; label: string; description: string }[] = [
+  { value: "activities", label: "活动", description: "从日常行动里，看见反复出现的生活力量" },
+  { value: "places", label: "地点", description: "沿着地点之间的往返，看见生活经过的路径" },
+  { value: "themes", label: "主题", description: "退远一些，看见长期投入如何沉积成主题" },
 ];
 
 const RANGE_OPTIONS = [
-  { days: 30, label: "过去 30 天" },
-  { days: 90, label: "过去 90 天" },
-  { days: 365, label: "过去一年" },
+  { days: 30, label: "30 天" },
+  { days: 90, label: "90 天" },
+  { days: 365, label: "一年" },
 ] as const;
 
 function naturalDate(date: Date): string {
@@ -45,8 +48,7 @@ function queryRange(days: number): { startDate: string; endDate: string } {
   return { startDate: naturalDate(start), endDate: naturalDate(end) };
 }
 
-function formatDuration(seconds: number | null): string {
-  if (seconds === null) return "未记录时长";
+function formatDuration(seconds: number): string {
   if (seconds === 0) return "0 分钟";
   const minutes = Math.round(seconds / 60);
   const hours = Math.floor(minutes / 60);
@@ -74,18 +76,72 @@ function categoryTrend(exploration: LifeEventExploration, category: LifeEventCat
   return "在这段时间里平稳延伸";
 }
 
-function DetailPanel({ exploration, topic }: { exploration: LifeEventExploration; topic: LifeMapRegion }) {
+function DetailPanel({
+  exploration,
+  topic,
+  lens,
+  relatedLabels,
+}: {
+  exploration: LifeEventExploration;
+  topic: LifeMapRegion;
+  lens: LifeLens;
+  relatedLabels: string[];
+}) {
+  const themeLabel = lens === "places" ? "地点轨迹" : `生活主题 · ${CATEGORY_LABELS[topic.category]}`;
+  const timeSpan = topic.firstOccurredOn === topic.lastOccurredOn
+    ? `${formatDate(topic.firstOccurredOn)} 留下的一处痕迹`
+    : `从 ${formatDate(topic.firstOccurredOn)} 延伸到 ${formatDate(topic.lastOccurredOn)}`;
+  const related = relatedLabels.length
+    ? `与 ${relatedLabels.join("、")} 在相近的日子里交汇`
+    : "与其他生活方向的联系还在形成";
+
   return (
     <div className={styles.detailPanel}>
-      <p className={styles.panelEyebrow}>{CATEGORY_LABELS[topic.category]}</p>
+      <p className={styles.panelEyebrow}>{themeLabel}</p>
       <h2>{topic.label}</h2>
-      <p className={styles.trend}>{categoryTrend(exploration, topic.category)}</p>
-      <dl className={styles.detailMetrics}>
-        <div><dt>事件</dt><dd>{topic.eventCount} 次</dd></div>
-        <div><dt>累计时间</dt><dd>{formatDuration(topic.totalDurationSeconds)}</dd></div>
-        <div><dt>第一次</dt><dd>{formatDate(topic.firstOccurredOn)}</dd></div>
-        <div><dt>最近一次</dt><dd>{formatDate(topic.lastOccurredOn)}</dd></div>
-      </dl>
+      <p className={styles.detailSpan}>{timeSpan}</p>
+      <div className={styles.detailNarrative}>
+        <div>
+          <p>最近变化</p>
+          <strong>{categoryTrend(exploration, topic.category)}</strong>
+        </div>
+        <div>
+          <p>关联方向</p>
+          <strong>{related}</strong>
+        </div>
+      </div>
+      <p className={styles.detailFootprint}>
+        <span>{topic.eventCount} 次沉积</span>
+        <span>{topic.totalDurationSeconds > 0 ? `${formatDuration(topic.totalDurationSeconds)}投入` : "未标记投入时长"}</span>
+      </p>
+    </div>
+  );
+}
+
+function TimeDepthControl({ value, loading, onChange }: { value: number; loading: boolean; onChange: (days: number) => void }) {
+  const selectedIndex = RANGE_OPTIONS.findIndex((option) => option.days === value);
+  const depth = selectedIndex / Math.max(RANGE_OPTIONS.length - 1, 1);
+  return (
+    <div
+      className={styles.timeDepth}
+      role="group"
+      aria-label="时间沉积深度"
+      aria-busy={loading}
+      style={{ "--time-depth": depth } as CSSProperties}
+    >
+      <span className={styles.timeDepthTrack} aria-hidden="true" />
+      {RANGE_OPTIONS.map((option) => (
+        <button
+          type="button"
+          key={option.days}
+          data-active={option.days === value}
+          aria-pressed={option.days === value}
+          onClick={() => onChange(option.days)}
+        >
+          <span aria-hidden="true" />
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -125,6 +181,16 @@ function PreviewRail({ exploration, onChooseLens }: { exploration: LifeEventExpl
   );
 }
 
+function MapInspector({ region, style, children }: { region: LifeMapRegion; style?: CSSProperties; children: ReactNode }) {
+  const reducedMotion = useReducedMotion();
+  const present = useIsPresent();
+  return <motion.aside className={styles.inspector} style={style}
+    data-side={region.x > 0.55 ? "left" : "right"} data-vertical={region.y > 0.5 ? "above" : "below"}
+    aria-label="生活地图详情" aria-hidden={!present} inert={!present}
+    initial={reducedMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    transition={{ duration: reducedMotion ? 0 : motionDuration.instant, ease: motionEase }}>{children}</motion.aside>;
+}
+
 export function LifeVisualization() {
   const [lens, setLens] = useState<LifeLens>("activities");
   const [rangeDays, setRangeDays] = useState<number>(30);
@@ -134,7 +200,11 @@ export function LifeVisualization() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryRevision, setRetryRevision] = useState(0);
+  const [evolutionRevision, setEvolutionRevision] = useState(0);
+  const [isEvolving, setIsEvolving] = useState(false);
   const requestRef = useRef(0);
+  const appliedRangeRef = useRef<number | null>(null);
+  const evolutionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -145,16 +215,32 @@ export function LifeVisualization() {
       granularity: rangeDays <= 30 ? "day" : rangeDays <= 90 ? "week" : "month",
     }).then((result) => {
       if (current && request === requestRef.current) {
+        const previousRange = appliedRangeRef.current;
         setExploration(result.exploration);
         setDataMode(result.mode);
+        appliedRangeRef.current = rangeDays;
+        if (previousRange !== null && previousRange !== rangeDays) {
+          setEvolutionRevision((value) => value + 1);
+          if (evolutionTimerRef.current) clearTimeout(evolutionTimerRef.current);
+          evolutionTimerRef.current = setTimeout(() => setIsEvolving(false), 820);
+        } else {
+          setIsEvolving(false);
+        }
       }
     }).catch(() => {
-      if (current && request === requestRef.current) setError("生活地图暂时无法读取，请再试一次。");
+      if (current && request === requestRef.current) {
+        setError("生活地图暂时无法读取，请再试一次。");
+        setIsEvolving(false);
+      }
     }).finally(() => {
       if (current && request === requestRef.current) setLoading(false);
     });
     return () => { current = false; };
   }, [rangeDays, retryRevision]);
+
+  useEffect(() => () => {
+    if (evolutionTimerRef.current) clearTimeout(evolutionTimerRef.current);
+  }, []);
 
   const topics = useMemo(() => exploration ? buildLifeMapTopics(exploration, lens) : [], [exploration, lens]);
   const regions = useMemo(() => layoutLifeMapTopics(topics, lens), [lens, topics]);
@@ -163,6 +249,17 @@ export function LifeVisualization() {
     [exploration, lens, topics],
   );
   const activeRegion = regions.find((region) => region.key === activeRegionKey) ?? null;
+  const relatedLabels = useMemo(() => {
+    if (!activeRegion) return [];
+    const byKey = new Map(regions.map((region) => [region.key, region.label]));
+    return connections
+      .filter((connection) => connection.from === activeRegion.key || connection.to === activeRegion.key)
+      .sort((left, right) => right.strength - left.strength)
+      .map((connection) => connection.from === activeRegion.key ? connection.to : connection.from)
+      .map((key) => byKey.get(key))
+      .filter((label): label is string => Boolean(label))
+      .slice(0, 2);
+  }, [activeRegion, connections, regions]);
   const activeLens = LENSES.find((item) => item.value === lens)!;
   const inspectorStyle = activeRegion ? {
     "--inspector-x": `${activeRegion.x * 100}%`,
@@ -171,6 +268,7 @@ export function LifeVisualization() {
 
   function changeLens(nextLens: LifeLens) {
     setActiveRegionKey(null);
+    setIsEvolving(false);
     setLens(nextLens);
   }
 
@@ -179,6 +277,7 @@ export function LifeVisualization() {
     setLoading(true);
     setError(null);
     setActiveRegionKey(null);
+    setIsEvolving(true);
     setRangeDays(days);
   }
 
@@ -190,25 +289,12 @@ export function LifeVisualization() {
   }
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} onKeyDown={(event) => { if (event.key === "Escape") setActiveRegionKey(null); }}>
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand} aria-label="返回 Life 首页">Life OS</Link>
-        <div className={styles.lenses} role="tablist" aria-label="生活观察角度">
-          {LENSES.map((item) => (
-            <button type="button" role="tab" aria-selected={lens === item.value} aria-label={item.label} key={item.value} onClick={() => changeLens(item.value)}>
-              {item.visualLabel}
-            </button>
-          ))}
-        </div>
-        <span className={styles.timeLabel}><ClockIcon aria-hidden="true" />时间分配</span>
+        <SegmentedControl tabs panelId="life-map-panel" className={styles.lenses} label="生活观察角度" options={LENSES} value={lens} onChange={changeLens} />
         <div className={styles.topActions}>
-          {dataMode === "demo" ? <span className={styles.demoBadge}>Demo Data</span> : null}
-          <label className={styles.rangePicker}>
-            <span className="visually-hidden">观察时间范围</span>
-            <select value={rangeDays} onChange={(event) => changeRange(Number(event.target.value))}>
-              {RANGE_OPTIONS.map((item) => <option value={item.days} key={item.days}>{item.label}</option>)}
-            </select>
-          </label>
+          <TimeDepthControl value={rangeDays} loading={loading} onChange={changeRange} />
           <Link className={styles.searchLink} href="/search" aria-label="搜索已有记录"><MagnifyingGlassIcon aria-hidden="true" /></Link>
         </div>
       </header>
@@ -216,13 +302,13 @@ export function LifeVisualization() {
       <div className={styles.content}>
         <header className={styles.intro}>
           <div>
-            <h1>生活视角切换</h1>
-            <p>{activeLens.description}。悬浮一片区域，观察它在这段时间里的轮廓。</p>
+            <div className={styles.introTitle}><h1>生活如何形成</h1>{dataMode === "demo" ? <span className={styles.demoBadge}>Demo Data</span> : null}</div>
+            <p>{activeLens.description}。</p>
           </div>
         </header>
 
-        <div className={styles.landscape} aria-busy={loading}>
-          <section className={styles.mapArea} aria-label="Life Map">
+        <div id="life-map-panel" role="tabpanel" aria-label={`${activeLens.label}生活地图`} className={styles.landscape} aria-busy={loading}>
+          <section className={styles.mapArea} aria-label="Life Map" onMouseLeave={() => setActiveRegionKey(null)}>
             {loading && !exploration ? <p className={styles.mapStatus} role="status">正在让生活轨迹浮现……</p> : null}
             {error && !exploration ? (
               <div className={styles.mapError} role="alert">
@@ -236,29 +322,32 @@ export function LifeVisualization() {
                   regions={regions}
                   connections={connections}
                   timePoints={exploration.timeSeries.points}
+                  lens={lens}
+                  evolutionRevision={evolutionRevision}
+                  isEvolving={isEvolving}
                   activeKey={activeRegionKey}
                   onActiveChange={(region) => setActiveRegionKey(region?.key ?? null)}
                 />
+                <AnimatePresence initial={false}>
                 {activeRegion ? (
-                  <aside
-                    className={styles.inspector}
-                    style={inspectorStyle}
-                    data-side={activeRegion.x > 0.55 ? "left" : "right"}
-                    aria-label="生活地图详情"
-                  >
-                    <DetailPanel exploration={exploration} topic={activeRegion} />
-                  </aside>
+                  <MapInspector key={activeRegion.key} region={activeRegion} style={inspectorStyle}>
+                    <DetailPanel exploration={exploration} topic={activeRegion} lens={lens} relatedLabels={relatedLabels} />
+                  </MapInspector>
                 ) : null}
+                </AnimatePresence>
                 {exploration.summary.totalEvents === 0 ? <p className={styles.mapStatus}>地图还在等待新的足迹。</p> : null}
                 {exploration.summary.totalEvents > 0 && regions.length === 0 ? (
                   <p className={styles.lensEmpty}>这段时间还没有留下{activeLens.label}线索。</p>
                 ) : null}
               </>
             ) : null}
+            {exploration && loading ? <p className={styles.updateStatus} role="status">正在更新这段时间的轨迹……</p> : null}
+            {exploration && error ? <div className={styles.updateError} role="alert"><p>{error}</p><button type="button" className="ui-quiet-button" onClick={retry}>重新读取</button></div> : null}
           </section>
 
           {exploration ? <PreviewRail exploration={exploration} onChooseLens={changeLens} /> : null}
         </div>
+        <p className={styles.mapHint}>轻触、悬停或聚焦一片区域，查看它的来路。</p>
       </div>
     </main>
   );
