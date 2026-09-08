@@ -1,0 +1,156 @@
+[
+  {
+    "theme": "light",
+    "name": "正文 / 页面",
+    "ratio": 14.62,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "正文 / 内容面",
+    "ratio": 15.27,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "辅助文字 / 页面",
+    "ratio": 5.12,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "辅助文字 / 内容面",
+    "ratio": 5.35,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "辅助文字 / 分段底色",
+    "ratio": 4.69,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "主按钮文字",
+    "ratio": 5.95,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "辅助文字 / 导航底色",
+    "ratio": 4.8,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "强调文字 / 页面",
+    "ratio": 5.7,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "强调文字 / 轻强调底色",
+    "ratio": 5.22,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "输入边界",
+    "ratio": 3.6,
+    "minimum": 3,
+    "pass": true
+  },
+  {
+    "theme": "light",
+    "name": "键盘焦点",
+    "ratio": 5.95,
+    "minimum": 3,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "正文 / 页面",
+    "ratio": 15.24,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "正文 / 内容面",
+    "ratio": 13.66,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "辅助文字 / 页面",
+    "ratio": 7.78,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "辅助文字 / 内容面",
+    "ratio": 6.97,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "辅助文字 / 分段底色",
+    "ratio": 6.06,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "主按钮文字",
+    "ratio": 4.91,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "辅助文字 / 导航底色",
+    "ratio": 8.09,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "强调文字 / 页面",
+    "ratio": 8.27,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "强调文字 / 轻强调底色",
+    "ratio": 6.75,
+    "minimum": 4.5,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "输入边界",
+    "ratio": 4.2,
+    "minimum": 3,
+    "pass": true
+  },
+  {
+    "theme": "dark",
+    "name": "键盘焦点",
+    "ratio": 7.41,
+    "minimum": 3,
+    "pass": true
+  }
+]

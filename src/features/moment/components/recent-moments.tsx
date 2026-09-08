@@ -9,9 +9,12 @@ import type { Moment } from "@/features/moment/model/types";
 import { listRecentMoments } from "@/features/moment/repository/moment-repository";
 
 import { MomentAppends } from "./moment-appends";
+import { RecordExtraction } from "@/features/life-intelligence/components/record-extraction";
+import extractionStyles from "@/features/life-intelligence/components/record-extraction.module.css";
 import { RecordImage } from "@/components/ui/record-image";
 import { MotionEntry } from "@/components/ui/motion-entry";
 import { contentTransition, motionStagger } from "@/components/ui/motion";
+import { ReadingPlaceholder } from "@/components/ui/reading-placeholder";
 
 export const RECENT_MOMENT_LIMIT = 20;
 
@@ -197,7 +200,7 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
   return (
     <section className="recent-moments" aria-label="最近记录" aria-busy={isLoading}>
       <h2 className="recent-heading">最近记录</h2>
-      {isLoading && groups.length === 0 ? <p className="recent-status" role="status">正在读取…</p> : null}
+      {isLoading && groups.length === 0 ? <ReadingPlaceholder label="正在读取…" /> : null}
       {!isLoading && !error && groups.length === 0 ? <p className="recent-status recent-empty">还没有留下片段。</p> : null}
       {error ? <div className="recent-error"><p role="alert">{error}</p><button type="button" onClick={() => setRetryRevision((current) => current + 1)}>重新读取</button></div> : null}
       <LayoutGroup>
@@ -227,7 +230,10 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
                   </div>
                 ) : null}
                 {attachmentError ? <p className="attachment-error">图片暂时无法读取。</p> : null}
-                <MomentAppends momentId={moment.id} />
+                <div className={extractionStyles.recentActions}>
+                  <MomentAppends momentId={moment.id} />
+                  <RecordExtraction source={{ type: "moment", id: moment.id }} />
+                </div>
               </MotionEntry>
             ))}
             </AnimatePresence>

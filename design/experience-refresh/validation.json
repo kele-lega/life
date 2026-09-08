@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-06",
+  "scope": "Presentation-only Life experience refactor, after second-pass corrections",
+  "checks": [
+    { "command": "npm run typecheck", "result": "passed" },
+    { "command": "npm run lint", "result": "passed", "warnings": 0 },
+    { "command": "npm test", "result": "passed", "files": 34, "tests": 259 },
+    { "command": "npm run test:e2e", "environment": "development, http://127.0.0.1:3100", "result": "passed", "tests": 51, "failed": 0, "skipped": 0 },
+    { "command": "npm run build", "result": "passed", "routeEntries": 13 },
+    {
+      "command": "npm run test:e2e -- --grep-invert 'development Demo Data|Life Map stays operable at 320px'",
+      "environment": "production, http://127.0.0.1:3180",
+      "result": "passed",
+      "tests": 49,
+      "failed": 0,
+      "note": "The two existing development-demo-dependent map tests passed in the complete development suite. Production intentionally has no automatic Demo Data."
+    },
+    { "command": "node design/experience-refresh/check-contrast.mjs", "result": "passed", "combinations": 22 },
+    { "command": "git diff --check", "result": "passed" }
+  ],
+  "screenshots": {
+    "directory": "after",
+    "count": 60,
+    "states": ["home", "home-writing", "diary", "diary-reading", "diary-writing", "timeline", "calendar", "search", "life", "life-detail"],
+    "widths": [390, 430, 1440],
+    "themes": ["light", "dark"],
+    "source": "Actual production browser render with disposable browser-context fixtures"
+  },
+  "responsiveChecks": { "widths": [320, 390, 430, 768, 1440], "textZoom": "200%", "motionPreferences": ["reduce", "no-preference"] },
+  "limits": ["iOS Safari, physical soft keyboard and VoiceOver have not been tested on a real device.", "Canvas retains the existing main-thread rendering architecture."],
+  "deployment": "No remote deployment performed"
+}

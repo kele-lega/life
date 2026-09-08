@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { Cross2Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -181,14 +181,17 @@ function PreviewRail({ exploration, onChooseLens }: { exploration: LifeEventExpl
   );
 }
 
-function MapInspector({ region, style, children }: { region: LifeMapRegion; style?: CSSProperties; children: ReactNode }) {
+function MapInspector({ region, style, onClose, children }: { region: LifeMapRegion; style?: CSSProperties; onClose: () => void; children: ReactNode }) {
   const reducedMotion = useReducedMotion();
   const present = useIsPresent();
-  return <motion.aside className={styles.inspector} style={style}
+  return <motion.aside id={present ? "life-map-inspector" : undefined} className={styles.inspector} style={style}
     data-side={region.x > 0.55 ? "left" : "right"} data-vertical={region.y > 0.5 ? "above" : "below"}
     aria-label="生活地图详情" aria-hidden={!present} inert={!present}
     initial={reducedMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-    transition={{ duration: reducedMotion ? 0 : motionDuration.instant, ease: motionEase }}>{children}</motion.aside>;
+    transition={{ duration: reducedMotion ? 0 : motionDuration.instant, ease: motionEase }}>
+    <button type="button" className={styles.inspectorClose} aria-label="关闭生活地图详情" onClick={onClose}><Cross2Icon aria-hidden="true" /></button>
+    {children}
+  </motion.aside>;
 }
 
 export function LifeVisualization() {
@@ -205,6 +208,7 @@ export function LifeVisualization() {
   const requestRef = useRef(0);
   const appliedRangeRef = useRef<number | null>(null);
   const evolutionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mapAreaRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let current = true;
@@ -288,27 +292,36 @@ export function LifeVisualization() {
     setRetryRevision((value) => value + 1);
   }
 
-  return (
-    <main className={styles.page} onKeyDown={(event) => { if (event.key === "Escape") setActiveRegionKey(null); }}>
-      <header className={styles.topbar}>
-        <Link href="/" className={styles.brand} aria-label="返回 Life 首页">Life OS</Link>
-        <SegmentedControl tabs panelId="life-map-panel" className={styles.lenses} label="生活观察角度" options={LENSES} value={lens} onChange={changeLens} />
-        <div className={styles.topActions}>
-          <TimeDepthControl value={rangeDays} loading={loading} onChange={changeRange} />
-          <Link className={styles.searchLink} href="/search" aria-label="搜索已有记录"><MagnifyingGlassIcon aria-hidden="true" /></Link>
-        </div>
-      </header>
+  function closeInspector() {
+    // Return keyboard focus before clearing selection so focus itself cannot reopen it.
+    mapAreaRef.current?.querySelector<HTMLButtonElement>('button[data-active="true"]')?.focus({ preventScroll: true });
+    setActiveRegionKey(null);
+  }
 
+  return (
+    <main className={styles.page} onKeyDown={(event) => {
+      if (event.key === "Escape" && activeRegion) {
+        event.preventDefault();
+        closeInspector();
+      }
+    }}>
       <div className={styles.content}>
         <header className={styles.intro}>
           <div>
+            <p className={styles.eyebrow}>生活地图</p>
             <div className={styles.introTitle}><h1>生活如何形成</h1>{dataMode === "demo" ? <span className={styles.demoBadge}>Demo Data</span> : null}</div>
             <p>{activeLens.description}。</p>
           </div>
+          <Link className={styles.searchLink} href="/search" aria-label="搜索已有记录"><MagnifyingGlassIcon aria-hidden="true" /></Link>
         </header>
 
+        <div className={styles.toolbar}>
+          <SegmentedControl tabs panelId="life-map-panel" className={styles.lenses} label="生活观察角度" options={LENSES} value={lens} onChange={changeLens} />
+          <TimeDepthControl value={rangeDays} loading={loading} onChange={changeRange} />
+        </div>
+
         <div id="life-map-panel" role="tabpanel" aria-label={`${activeLens.label}生活地图`} className={styles.landscape} aria-busy={loading}>
-          <section className={styles.mapArea} aria-label="Life Map" onMouseLeave={() => setActiveRegionKey(null)}>
+          <section ref={mapAreaRef} className={styles.mapArea} aria-label="Life Map" onMouseLeave={() => setActiveRegionKey(null)}>
             {loading && !exploration ? <p className={styles.mapStatus} role="status">正在让生活轨迹浮现……</p> : null}
             {error && !exploration ? (
               <div className={styles.mapError} role="alert">
@@ -330,7 +343,7 @@ export function LifeVisualization() {
                 />
                 <AnimatePresence initial={false}>
                 {activeRegion ? (
-                  <MapInspector key={activeRegion.key} region={activeRegion} style={inspectorStyle}>
+                  <MapInspector key={activeRegion.key} region={activeRegion} style={inspectorStyle} onClose={closeInspector}>
                     <DetailPanel exploration={exploration} topic={activeRegion} lens={lens} relatedLabels={relatedLabels} />
                   </MapInspector>
                 ) : null}

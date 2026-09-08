@@ -81,13 +81,15 @@ export function DiaryEditor({ diaryId, initialTitle = "", initialBody = "", onSa
 
   return (
     <main className={`diary-page ui-page ${styles.page}`}>
-      <PageNav label="写作导航"><BackLink href="/diary" onClick={(event) => { if (!event.ctrlKey && !event.metaKey && !canReturnToList()) event.preventDefault(); }}>返回日记</BackLink></PageNav>
+      <PageNav label="写作导航">
+        <BackLink href="/diary" onClick={(event) => { if (!event.ctrlKey && !event.metaKey && !canReturnToList()) event.preventDefault(); }}>返回日记</BackLink>
+        <div className="diary-actions"><button disabled={isSaving} type="button" onClick={cancel}>取消</button><StatefulButton disabled={isSaving} label="保存日记" onAction={save} /></div>
+      </PageNav>
       <section className="diary-editor" aria-label={diaryId ? "编辑日记" : "新建日记"} aria-busy={isSaving}>
-        <h1>{diaryId ? "编辑日记" : "新建日记"}</h1>
+        <h1 className="visually-hidden">{diaryId ? "编辑日记" : "新建日记"}</h1>
         <input aria-label="日记标题（可选）" disabled={isSaving} onChange={(event) => setTitle(event.target.value)} placeholder="标题（可选）" value={title} />
         <WritingTextarea aria-label="日记正文" aria-invalid={!!error} aria-describedby={error ? "diary-save-error" : undefined} autoFocus disabled={isSaving} onChange={(event) => setBody(event.target.value)} placeholder="写下这一段时间……" value={body} />
         {error ? <p id="diary-save-error" role="alert">{error}</p> : null}
-        <div className="diary-actions"><button disabled={isSaving} type="button" onClick={cancel}>取消</button><StatefulButton disabled={isSaving} label="保存日记" onAction={save} /></div>
       </section>
     </main>
   );

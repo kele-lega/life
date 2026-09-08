@@ -106,7 +106,8 @@ describe("TimelinePage", () => {
 
     expect(await screen.findByText("还没有记录。")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "返回首页" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "日记" })).toHaveAttribute("href", "/diary");
+    expect(screen.getByRole("link", { name: "日历" })).toHaveAttribute("href", "/calendar");
+    expect(screen.getByRole("link", { name: "搜索" })).toHaveAttribute("href", "/search");
   });
 
   it("shows Moment children and an untitled Diary without inventing metadata", async () => {

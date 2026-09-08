@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life · 体验重构验收</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fafaf9;color:#232625;font:15px/1.7 system-ui,"Microsoft YaHei",sans-serif}header{max-width:1440px;margin:auto;padding:40px 28px 24px}h1{font-size:30px;letter-spacing:-.04em;margin:0}p{color:#646d67;margin:8px 0}nav{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin-top:24px}select,a{color:inherit;font:inherit}select{min-height:44px;padding:8px 12px;border:1px solid #828980;border-radius:8px;background:white}a{display:inline-block;padding:8px;min-height:44px}main{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;max-width:1440px;margin:auto;padding:0 28px 48px;align-items:start}figure{margin:0;min-width:0}figcaption{padding:12px 0;font-weight:600}figure a{display:block;padding:0}img{display:block;width:100%;height:auto;border:1px solid #e3e5e1;border-radius:6px}select:focus-visible,a:focus-visible{outline:2px solid #9e4b3e;outline-offset:4px}@media(max-width:1000px){main{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){main{grid-template-columns:1fr;padding-inline:20px}header{padding:28px 20px}}body[data-theme="dark"]{background:#171a19;color:#edf0eb}body[data-theme="dark"] p{color:#a6afa8}body[data-theme="dark"] select{background:#202422;border-color:#7b877e}body[data-theme="dark"] img{border-color:#343c37}
+</style>
+<header>
+  <h1>Life · 体验层重构</h1>
+  <p>六个核心页面、日记读写与地图详情。最终画面来自本地生产构建，内容为隔离浏览器中的测试记录。</p>
+  <nav aria-label="截图筛选">
+    <label>版本 <select id="phase"><option value="after">重构后</option><option value="before">重构前</option></select></label>
+    <label>主题 <select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+    <label>宽度 <select id="width"><option value="390">390 px</option><option value="430">430 px</option><option value="1440">1440 px</option></select></label>
+    <a href="README.md">设计取舍与验证结果</a>
+  </nav>
+</header>
+<main id="gallery" aria-label="关键页面截图"></main>
+<script>
+const screens=[['home','01 首页'],['home-writing','02 快速记录'],['diary','03 日记列表'],['diary-reading','04 日记阅读'],['diary-writing','05 日记编辑'],['timeline','06 时间线'],['calendar','07 日历'],['search','08 搜索'],['life','09 生活地图'],['life-detail','10 地图详情']];
+const phase=document.querySelector('#phase'),theme=document.querySelector('#theme'),width=document.querySelector('#width'),gallery=document.querySelector('#gallery');
+function render(){document.body.dataset.theme=theme.value;gallery.replaceChildren(...screens.filter(([key])=>phase.value==='after'||key!=='life-detail').map(([key,title])=>{const figure=document.createElement('figure'),caption=document.createElement('figcaption'),link=document.createElement('a'),img=document.createElement('img');caption.textContent=title;img.src=`${phase.value}/${key}-${width.value}-${theme.value}.png`;img.alt=`${title}，${width.value} 像素，${theme.value==='light'?'浅色':'深色'}`;img.loading='lazy';link.href=img.src;link.append(img);figure.append(caption,link);return figure}));}
+for(const select of [phase,theme,width])select.addEventListener('change',render);render();
+</script>
+</html>

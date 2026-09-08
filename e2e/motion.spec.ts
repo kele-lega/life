@@ -95,7 +95,7 @@ test("home enters once; saving only inserts new rows and preserves images and ap
     document.addEventListener("animationstart", (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      const section = ["home-date", "quick-record", "recent-heading", "home-secondary-nav"].find((name) => target.classList.contains(name));
+      const section = ["home-date", "quick-record", "recent-heading"].find((name) => target.classList.contains(name));
       if (section) starts.push(section);
     });
   });
@@ -103,7 +103,7 @@ test("home enters once; saving only inserts new rows and preserves images and ap
   await expect(page.getByText("还没有留下片段。", { exact: true })).toBeVisible();
   await settle(page);
   const starts = () => page.evaluate(() => (window as Window & { motionStarts: string[] }).motionStarts);
-  expect(await starts()).toEqual(["home-date", "quick-record", "recent-heading", "home-secondary-nav"]);
+  expect(await starts()).toEqual(["home-date", "quick-record", "recent-heading"]);
 
   await page.getByRole("button", { name: "写点什么", exact: true }).click();
   await page.getByRole("textbox", { name: "记录内容" }).fill("原来的记忆");
@@ -142,11 +142,11 @@ test("home enters once; saving only inserts new rows and preserves images and ap
   await expect(old.getByRole("textbox", { name: "追加文字" })).toHaveValue("尚未保存的补充");
   await expect(old).toHaveCSS("opacity", "1");
   await expect(page.getByRole("article").first().locator(":scope > p")).toHaveText("刚刚保存的记忆");
-  expect(await starts()).toHaveLength(4);
+  expect(await starts()).toHaveLength(3);
 
   const width = await photo.evaluate((element) => element.clientWidth);
   await photo.hover();
-  await expect.poll(() => photo.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeCloseTo(1.02, 2);
+  await expect(photo).toHaveCSS("transform", "none");
   expect(await photo.evaluate((element) => element.clientWidth)).toBe(width);
   await page.mouse.move(0, 0);
   await expect(photo).toHaveCSS("transform", "none");
@@ -178,6 +178,7 @@ test("rapidly reversed record and append editors keep focus, input and a single 
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.setViewportSize(viewports[3]);
   await page.goto("/");
+  await expect(page.getByRole("button", { name: "写点什么", exact: true })).toBeVisible();
   await settle(page);
   await rapidToggle(page, ".quick-record", ".write-button", ".record-actions > button:first-child");
   const input = page.getByRole("textbox", { name: "记录内容" });
@@ -189,7 +190,8 @@ test("rapidly reversed record and append editors keep focus, input and a single 
   await page.getByRole("button", { name: "取消", exact: true }).click();
   await expect(input).toHaveValue(draft);
   await input.focus();
-  await expect(input).toHaveCSS("outline-style", "solid");
+  await expect(input).toBeFocused();
+  await expect(input).not.toHaveCSS("box-shadow", "none");
   await expect.poll(() => input.evaluate((element) => element.scrollHeight <= element.clientHeight + 2)).toBe(true);
   await fit(page);
   await page.getByRole("button", { name: "保存", exact: true }).click();
@@ -311,7 +313,7 @@ for (const colorScheme of ["light", "dark"] as const) {
         await expect(page.getByRole("article")).toHaveCount(3);
         await settle(page);
         await fit(page);
-        await expect(page.locator("body")).toHaveCSS("background-color", colorScheme === "dark" ? "rgb(21, 21, 23)" : "rgb(245, 245, 247)");
+        await expect(page.locator("body")).toHaveCSS("background-color", colorScheme === "dark" ? "rgb(23, 26, 25)" : "rgb(250, 250, 249)");
         const suffix = `${viewport.width}-${colorScheme}-${reducedMotion}`;
         await page.screenshot({ path: testInfo.outputPath(`motion-home-${suffix}.png`), fullPage: true });
         if (reducedMotion === "reduce") {
@@ -329,7 +331,7 @@ for (const colorScheme of ["light", "dark"] as const) {
         await fit(page);
         const field = (await input.boundingBox())!;
         const actions = (await page.locator(".record-actions").boundingBox())!;
-        expect(actions.y).toBeGreaterThanOrEqual(field.y + field.height);
+        expect(actions.y + actions.height).toBeLessThanOrEqual(field.y);
         await page.screenshot({ path: testInfo.outputPath(`motion-writing-${suffix}.png`), fullPage: true });
         page.once("dialog", (dialog) => dialog.accept());
         await page.getByRole("button", { name: "取消", exact: true }).click();
@@ -365,8 +367,7 @@ test("page boundaries keep same-route input and native back/forward navigation",
   const errors = watchErrors(page);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await seed(page, 3);
-  await page.getByRole("button", { name: "生活脉络" }).click();
-  await page.getByRole("link", { name: /搜索/ }).click();
+  await page.getByRole("navigation", { name: "浏览生活", exact: true }).getByRole("link", { name: "搜索", exact: true }).click();
   const search = page.getByRole("searchbox");
   await search.fill("片段");
   await search.press("Enter");
@@ -376,7 +377,7 @@ test("page boundaries keep same-route input and native back/forward navigation",
   await page.goBack();
   await expect(search).toHaveValue("片段");
   expect(await input!.evaluate((element) => element.isConnected)).toBe(true);
-  const link = page.getByRole("link", { name: "时间线", exact: true });
+  const link = page.getByRole("navigation", { name: "搜索导航", exact: true }).getByRole("link", { name: "时间线", exact: true });
   await link.focus();
   await expect(link).toHaveCSS("outline-style", "solid");
   await expect(link).toHaveCSS("transform", "none");

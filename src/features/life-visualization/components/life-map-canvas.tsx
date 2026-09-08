@@ -398,12 +398,17 @@ export function LifeMapCanvas({
               data-dimmed={activeKey !== null && activeKey !== region.key}
               onMouseEnter={() => onActiveChange(region)}
               onFocus={() => onActiveChange(region)}
-              onBlur={() => onActiveChange(null)}
+              onBlur={(event) => {
+                const next = event.relatedTarget;
+                if (!(next instanceof Element) || !next.closest("#life-map-inspector")) onActiveChange(null);
+              }}
               onClick={(event) => {
                 event.stopPropagation();
                 onActiveChange(region);
               }}
               aria-label={`${region.label}，${region.eventCount} 次事件`}
+              aria-expanded={activeKey === region.key}
+              aria-controls={activeKey === region.key ? "life-map-inspector" : undefined}
             >
               <span className={styles.regionIcon}>{categoryIcon(region)}</span>
               <span className={styles.regionName}>{region.label}</span>

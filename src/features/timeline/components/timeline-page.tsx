@@ -10,6 +10,7 @@ import { addTimelineObjectUrls, revokeObjectUrls } from "../utils/object-urls";
 import { TimelineItemView } from "./timeline-item-view";
 import { BackLink, PageNav } from "@/components/ui/page-nav";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ReadingPlaceholder } from "@/components/ui/reading-placeholder";
 import { ClockIcon } from "@radix-ui/react-icons";
 import styles from "./timeline-page.module.css";
 
@@ -87,9 +88,9 @@ export function TimelinePage() {
 
   return (
     <main className={`timeline-page ui-page ${styles.page}`}>
-      <PageNav label="时间线导航"><BackLink href="/">返回首页</BackLink><NavLink href="/diary">日记</NavLink></PageNav>
+      <PageNav label="时间线导航"><BackLink href="/">返回首页</BackLink><NavLink href="/calendar">日历</NavLink><NavLink href="/search">搜索</NavLink></PageNav>
       <header className="timeline-header"><h1>时间线</h1><p>按时间回看留下的记录。</p></header>
-      {loading ? <p className="ui-status" role="status">正在读取时间线……</p> : null}
+      {loading ? <ReadingPlaceholder label="正在读取时间线……" /> : null}
       {error ? <p role="alert">{error}</p> : null}
       {error && items.length === 0 ? <button className="ui-quiet-button" type="button" onClick={() => { setLoading(true); setError(null); setRetryRevision((value) => value + 1); }}>重新读取</button> : null}
       {!loading && !error && items.length === 0 ? <EmptyState icon={<ClockIcon />}>还没有记录。</EmptyState> : null}

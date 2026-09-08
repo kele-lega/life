@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { PinBottomIcon } from "@radix-ui/react-icons";
 import { RecordImage } from "@/components/ui/record-image";
+import { RecordExtraction } from "@/features/life-intelligence/components/record-extraction";
 import styles from "./timeline-item-view.module.css";
 import { HighlightedText, searchExcerpt } from "@/components/ui/highlighted-text";
 
@@ -28,7 +30,7 @@ export function TimelineItemView({ item, highlight = "", matchedAppendIds = [] }
         <div className="timeline-content">
           <div className="timeline-kind">随笔</div>
           <p><HighlightedText text={item.moment.originalText} keyword={highlight} /></p>
-          {location ? <div className="timeline-location">{location}</div> : null}
+          {location ? <div className="timeline-location"><PinBottomIcon aria-hidden="true" /><span>{location}</span></div> : null}
           {item.attachments.length > 0 ? (
             <div className="timeline-images" data-single={item.attachments.length === 1 || undefined} aria-label={`${item.moment.originalText}的图片`}>
               {item.attachments.map((attachment) => (
@@ -49,6 +51,7 @@ export function TimelineItemView({ item, highlight = "", matchedAppendIds = [] }
             </div>
           ) : null}
           {item.errors.appends ? <p className="timeline-child-error">追加内容暂时无法读取。</p> : null}
+          <RecordExtraction source={{ type: "moment", id: item.moment.id }} />
         </div>
       ) : (
         <Link className="timeline-content timeline-diary-link" href={`/diary/${item.diary.id}`}>

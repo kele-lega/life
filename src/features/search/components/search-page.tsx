@@ -14,6 +14,7 @@ import type { SearchResult } from "../model/types";
 import { querySearchPage, SEARCH_PAGE_SIZE } from "../query/search-query";
 import { BackLink, PageNav } from "@/components/ui/page-nav";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ReadingPlaceholder } from "@/components/ui/reading-placeholder";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import styles from "./search-page.module.css";
 
@@ -151,15 +152,15 @@ export function SearchPage() {
       <PageNav label="搜索导航">
         <BackLink href="/">返回首页</BackLink>
         <NavLink href="/timeline">时间线</NavLink>
+        <NavLink href="/calendar">日历</NavLink>
       </PageNav>
       <header className="search-header">
         <h1>搜索</h1>
         <p>在过去留下的文字中查找。</p>
       </header>
-      <form className="search-form" onSubmit={(event) => void runSearch(event)}>
-        <label htmlFor="search-keyword">关键词</label>
-        <div>
-          <div className="search-field"><MagnifyingGlassIcon className="ui-icon" aria-hidden="true" />
+      <form className="search-form" role="search" aria-label="搜索记录" onSubmit={(event) => void runSearch(event)}>
+        <label className="visually-hidden" htmlFor="search-keyword">关键词</label>
+        <div className="search-field"><MagnifyingGlassIcon className="ui-icon" aria-hidden="true" />
           <input
             id="search-keyword"
             name="keyword"
@@ -168,11 +169,11 @@ export function SearchPage() {
             type="search"
             value={input}
           />
-          </div>
           <button disabled={loading} type="submit">{loading ? "搜索中…" : "搜索"}</button>
         </div>
       </form>
-      <p className="visually-hidden" role="status" aria-live="polite">{loading ? "搜索中…" : submitted && !error ? `已显示 ${results.length} 条记录。` : ""}</p>
+      <p className="visually-hidden" role="status" aria-live="polite">{!loading && submitted && !error ? `已显示 ${results.length} 条记录。` : ""}</p>
+      {loading ? <ReadingPlaceholder label="搜索中…" /> : null}
       {error ? <p role="alert">{error}</p> : null}
       {!submitted && !loading ? <EmptyState icon={<MagnifyingGlassIcon />}>输入关键词后查看结果。</EmptyState> : null}
       {submitted && !loading && !error && results.length === 0

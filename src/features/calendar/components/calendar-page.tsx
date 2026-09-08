@@ -3,6 +3,7 @@
 import { NavLink } from "@/components/ui/nav-link";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ReadingPlaceholder } from "@/components/ui/reading-placeholder";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
@@ -160,7 +161,7 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
       <PageNav label="历史浏览">
         <BackLink href="/">返回首页</BackLink>
         <NavLink href="/timeline">时间线</NavLink>
-        <NavLink href="/diary">日记</NavLink>
+        <NavLink href="/search">搜索</NavLink>
       </PageNav>
       <header className="calendar-header">
         <h1>日历</h1>
@@ -169,23 +170,24 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
       <div className="calendar-layout">
       <section className="calendar-month" aria-label={monthTitle(visibleMonth)}>
         <div className="calendar-month-nav">
-          <button type="button" aria-label="上一个月" title="上一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, -1))}><ChevronLeftIcon className="ui-icon" aria-hidden="true" /></button>
           <h2>{monthTitle(visibleMonth)}</h2>
-          <button type="button" aria-label="下一个月" title="下一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, 1))}><ChevronRightIcon className="ui-icon" aria-hidden="true" /></button>
+          <div className="calendar-month-actions">
+            <button
+              className="calendar-current-month"
+              aria-label="返回当前月"
+              title="返回当前月"
+              disabled={visibleMonth.year === currentMonth.year && visibleMonth.month === currentMonth.month}
+              type="button"
+              onClick={() => showMonth(currentMonth)}
+            >
+              本月
+            </button>
+            <button type="button" aria-label="上一个月" title="上一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, -1))}><ChevronLeftIcon className="ui-icon" aria-hidden="true" /></button>
+            <button type="button" aria-label="下一个月" title="下一个月" onClick={() => showMonth(shiftLocalMonth(visibleMonth, 1))}><ChevronRightIcon className="ui-icon" aria-hidden="true" /></button>
+          </div>
         </div>
-        <button
-          className="calendar-current-month"
-          aria-label="返回当前月"
-          title="返回当前月"
-          disabled={visibleMonth.year === currentMonth.year && visibleMonth.month === currentMonth.month}
-          type="button"
-          onClick={() => showMonth(currentMonth)}
-        >
-          本月
-        </button>
         {monthError ? <p role="alert">{monthError}</p> : null}
         {monthError ? <button className="ui-quiet-button" type="button" onClick={() => { setMonthLoading(true); setMonthError(null); setMonthRetry((value) => value + 1); }}>重新读取本月</button> : null}
-        <p className="calendar-month-status" role="status">{monthLoading ? "正在读取记录日期…" : monthError ? "" : "有记录的日期下方有圆点。"}</p>
         <div className="calendar-weekdays" aria-hidden="true">
           {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
         </div>
@@ -212,6 +214,7 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
             </button>
           ) : <span aria-hidden="true" className="calendar-day-spacer" key={`spacer-${index}`} />)}
         </div>
+        <p className="calendar-month-status" role="status">{monthLoading ? "正在读取记录日期…" : monthError ? "" : "有记录的日期下方有圆点。"}</p>
       </section>
 
       {selectedDateKey ? (
@@ -220,7 +223,7 @@ export function CalendarPage({ now = new Date() }: { now?: Date }) {
             <h2>{dayTitle(selectedDateKey)}</h2>
             <SegmentedControl className="calendar-filters" label="记录类型" options={FILTERS} value={filter} onChange={setFilter} />
           </div>
-          {dayLoading ? <p className="ui-status" role="status">正在读取这一天的记录……</p> : <p className="visually-hidden" role="status">{`${dayTitle(selectedDateKey)}，已显示 ${filteredItems.length} 条记录。`}</p>}
+          {dayLoading ? <ReadingPlaceholder label="正在读取这一天的记录……" /> : <p className="visually-hidden" role="status">{`${dayTitle(selectedDateKey)}，已显示 ${filteredItems.length} 条记录。`}</p>}
           {dayError ? <p role="alert">{dayError}</p> : null}
           {dayError ? <button className="ui-quiet-button" type="button" onClick={() => { setDayLoading(true); setDayError(null); setDayRetry((value) => value + 1); }}>重新读取当天</button> : null}
           {!dayLoading && !dayError && filteredItems.length === 0 ? (

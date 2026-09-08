@@ -8,7 +8,8 @@ import type { Diary } from "../model/types";
 import { listDiaries } from "../repository/diary-repository";
 import { BackLink, PageNav } from "@/components/ui/page-nav";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ReaderIcon } from "@radix-ui/react-icons";
+import { ReadingPlaceholder } from "@/components/ui/reading-placeholder";
+import { ChevronRightIcon, ReaderIcon } from "@radix-ui/react-icons";
 import styles from "./diary-page.module.css";
 
 function formatDate(timestamp: string): string {
@@ -42,15 +43,18 @@ export function DiaryList() {
     <main className={`diary-page ui-page ${styles.page}`}>
       <PageNav label="日记导航"><BackLink href="/">返回首页</BackLink><NavLink className="primary-link" href="/diary/new">新建日记</NavLink></PageNav>
       <header className="diary-header"><h1>日记</h1><p>记录完整的一段生活。</p></header>
-      {loading ? <p className="ui-status" role="status">正在读取日记……</p> : null}
+      {loading ? <ReadingPlaceholder label="正在读取日记……" /> : null}
       {error ? <div className="ui-error"><p role="alert">{error}</p><button className="ui-quiet-button" type="button" onClick={() => { setLoading(true); setError(null); setRevision((value) => value + 1); }}>重新读取</button></div> : null}
       {diaries.length === 0 && !loading && !error ? <EmptyState icon={<ReaderIcon />}>还没有日记。</EmptyState> : null}
       <div className="diary-list" aria-busy={loading}>
         {diaries.map((diary) => (
           <Link className="diary-entry" href={`/diary/${diary.id}`} key={diary.id}>
             <time dateTime={diary.createdAt}>{formatDate(diary.createdAt)}</time>
-            {diary.title ? <h2>{diary.title}</h2> : null}
-            <p>{preview(diary.body)}</p>
+            <div className="diary-entry-content">
+              {diary.title ? <h2>{diary.title}</h2> : null}
+              <p>{preview(diary.body)}</p>
+            </div>
+            <ChevronRightIcon className="diary-entry-chevron ui-icon" aria-hidden="true" />
           </Link>
         ))}
       </div>

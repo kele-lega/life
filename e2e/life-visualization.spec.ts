@@ -185,6 +185,7 @@ test("Life Map stays operable at 320px and honors reduced motion", async ({ page
 });
 
 test("development Demo Data reveals the complete map without IndexedDB fixtures", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/life");
   await expect(page.getByText("Demo Data", { exact: true })).toBeVisible();
@@ -197,10 +198,20 @@ test("development Demo Data reveals the complete map without IndexedDB fixtures"
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: "design/life-visualization/evolution-depth-30-1280.png" });
   await expectMapTypographyClear(page);
+  // Observe before the click so a fast transition cannot finish between locator polls.
+  await page.locator("[data-evolving]").evaluate((element) => {
+    element.removeAttribute("data-test-observed-evolution");
+    const observer = new MutationObserver(() => {
+      if (element.getAttribute("data-evolving") === "true") {
+        element.setAttribute("data-test-observed-evolution", "true");
+        observer.disconnect();
+      }
+    });
+    observer.observe(element, { attributes: true, attributeFilter: ["data-evolving"] });
+  });
   await page.getByRole("button", { name: "一年" }).click();
   await expect(page.getByRole("button", { name: "一年" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator('[data-evolving="true"]')).toBeVisible();
-  await page.waitForTimeout(900);
+  await expect(page.locator('[data-test-observed-evolution="true"]')).toBeVisible();
   await expect(page.locator('[data-evolving="false"]')).toBeVisible();
   await page.getByRole("button", { name: /阅读，/ }).hover();
   await expect(page.getByRole("complementary", { name: "生活地图详情" }).getByRole("heading", { name: "阅读" })).toBeVisible();

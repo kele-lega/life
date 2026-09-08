@@ -56,7 +56,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     await seedReviewRecords(page);
     const capture = async (name: string, width: number) => {
       const file = `${name}-${width}-${colorScheme}.png`;
-      await page.screenshot({ path: process.env.LIFE_UI_SCREENSHOTS ? path.join(process.env.LIFE_UI_SCREENSHOTS, file) : testInfo.outputPath(file), fullPage: true });
+      await page.screenshot({ path: process.env.LIFE_UI_SCREENSHOTS ? path.join(process.env.LIFE_UI_SCREENSHOTS, file) : testInfo.outputPath(file), fullPage: false });
     };
     for (const width of [1440, 390, 430]) {
       await page.setViewportSize({ width, height: 900 });
@@ -64,9 +64,11 @@ for (const colorScheme of ["light", "dark"] as const) {
         await page.goto(route);
         if (route === "/") await expect(page.getByRole("article").first()).toContainText("傍晚");
         if (route === "/diary") await expect(page.getByRole("heading", { name: "把日子过慢一点" })).toBeVisible();
+        if (route === "/timeline") await expect(page.getByRole("article").first()).toContainText("傍晚");
         if (route === "/calendar") {
           await page.locator('[data-has-records="true"]').last().click();
           await expect(page.getByRole("group", { name: "记录类型" })).toBeVisible();
+          await expect(page.getByRole("article").first()).toContainText("傍晚");
         }
         if (route === "/search") {
           await page.getByRole("searchbox").fill("河边");
@@ -107,6 +109,13 @@ for (const colorScheme of ["light", "dark"] as const) {
       const bounds = await page.getByRole("complementary", { name: "生活地图详情" }).boundingBox();
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      await page.getByRole("complementary", { name: "生活地图详情" }).scrollIntoViewIfNeeded();
+      await capture("life-detail", width);
+      await page.getByRole("button", { name: "关闭生活地图详情", exact: true }).click();
+      await expect(page.getByRole("button", { name: "散步，14 次事件" })).toBeFocused();
+      await expect(page.getByRole("complementary", { name: "生活地图详情" })).toHaveCount(0);
+      await page.getByRole("button", { name: "散步，14 次事件" }).press("Enter");
+      await expect(page.getByRole("complementary", { name: "生活地图详情" })).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(page.getByRole("complementary", { name: "生活地图详情" })).toHaveCount(0);
     }

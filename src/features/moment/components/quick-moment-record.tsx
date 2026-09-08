@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ImageIcon, Pencil2Icon, PlusIcon } from "@radix-ui/react-icons";
+import { Cross2Icon, ImageIcon, PlusIcon } from "@radix-ui/react-icons";
 import { StatefulButton, type StatefulButtonResult } from "@/components/ui/stateful-button";
 import { Reveal } from "@/components/ui/reveal";
 import { WritingTextarea } from "@/components/ui/writing-textarea";
@@ -161,7 +161,13 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
   return (
     <section className="quick-record" data-recording={isRecording}>
       {isRecording ? (
-        <h2 className="record-heading"><label htmlFor={inputId}>写点什么</label><Pencil2Icon className="invite-icon" aria-hidden="true" /></h2>
+        <div className="record-toolbar">
+          <h2 className="record-heading"><label htmlFor={inputId}>写点什么</label></h2>
+          <div className="record-actions">
+            <button disabled={isSaving} type="button" onClick={cancelRecording}>取消</button>
+            <StatefulButton disabled={isSaving} label="保存" onAction={saveRecording} />
+          </div>
+        </div>
       ) : (
         <button ref={triggerRef} className="write-button" type="button" onClick={beginRecording} aria-expanded={false}>
           <span className="write-label">写点什么</span><PlusIcon className="invite-icon" aria-hidden="true" />
@@ -190,16 +196,12 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
             {pendingImages.map(({ file, previewUrl }) => (
               <div className="image-preview" key={previewUrl}>
                 <RecordImage alt={file.name} src={previewUrl} width={96} height={96} />
-                <button aria-label={`移除 ${file.name}`} disabled={isSaving} type="button" onClick={() => removeImage(previewUrl)}>移除</button>
+                <button aria-label={`移除 ${file.name}`} disabled={isSaving} type="button" onClick={() => removeImage(previewUrl)}><Cross2Icon aria-hidden="true" /></button>
               </div>
             ))}
           </div>
         ) : null}
         {error ? <p id={`${inputId}-error`} role="alert">{error}</p> : null}
-        <div className="record-actions">
-          <button disabled={isSaving} type="button" onClick={cancelRecording}>取消</button>
-          <StatefulButton disabled={isSaving} label="保存" onAction={saveRecording} />
-        </div>
       </div>
       </Reveal>
     </section>

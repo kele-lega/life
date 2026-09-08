@@ -12,14 +12,13 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .motion-page { animation: life-page-enter var(--motion-enter) var(--ease-soft) backwards; }
-  .motion-home :is(.home-date, .quick-record, .recent-heading, .home-secondary-nav) {
+  .motion-home :is(.home-date, .quick-record, .recent-heading) {
     animation: life-page-enter var(--motion-enter) var(--ease-soft) backwards;
   }
   .motion-home .quick-record { animation-delay: var(--motion-home-step); }
   .motion-home .recent-heading { animation-delay: calc(2 * var(--motion-home-step)); }
-  .motion-home .home-secondary-nav { animation-delay: calc(3 * var(--motion-home-step)); }
   .ui-content-enter { animation: life-page-enter var(--motion-normal) var(--ease-soft) backwards; }
-  .ui-photo { transition: opacity var(--motion-normal) var(--ease-soft), transform var(--motion-normal) var(--ease-soft); }
+  .ui-photo { transition: opacity var(--motion-normal) var(--ease-soft); }
   :where(button, a) {
     transition: color var(--motion-fast) var(--ease-soft), background-color var(--motion-fast) var(--ease-soft), border-color var(--motion-fast) var(--ease-soft);
   }
@@ -29,9 +28,6 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .ui-nav-link:hover .ui-nav-label::after { transform: scaleX(1); }
-}
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .ui-photo[data-loaded="true"]:hover { transform: scale(1.02); }
 }
 @keyframes life-page-enter {
   from { opacity: 0; transform: translateY(var(--motion-page-y)); }

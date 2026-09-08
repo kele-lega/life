@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type { Diary } from "../model/types";
 import { getDiary } from "../repository/diary-repository";
 import { DiaryEditor } from "./diary-editor";
+import { RecordExtraction } from "@/features/life-intelligence/components/record-extraction";
 import { BackLink, PageNav } from "@/components/ui/page-nav";
+import { ReadingPlaceholder } from "@/components/ui/reading-placeholder";
 import styles from "./diary-page.module.css";
 
 function formatDate(timestamp: string): string {
@@ -42,12 +44,12 @@ export function DiaryDetail({ id }: { id: string }) {
     return () => { current = false; };
   }, [id, revision]);
 
-  if (error || !diary) return <main className={pageClass}><PageNav label="日记导航"><BackLink href="/diary">返回日记</BackLink></PageNav><h1 className="visually-hidden">日记</h1>{error ? <div className="ui-error"><p role="alert">{error}</p><button className="ui-quiet-button" type="button" onClick={() => { setError(null); setRevision((value) => value + 1); }}>重新读取</button></div> : <p className="ui-status" role="status">正在读取日记……</p>}</main>;
+  if (error || !diary) return <main className={pageClass}><PageNav label="日记导航"><BackLink href="/diary">返回日记</BackLink></PageNav><h1 className="visually-hidden">日记</h1>{error ? <div className="ui-error"><p role="alert">{error}</p><button className="ui-quiet-button" type="button" onClick={() => { setError(null); setRevision((value) => value + 1); }}>重新读取</button></div> : <ReadingPlaceholder label="正在读取日记……" />}</main>;
   if (editing) return <DiaryEditor diaryId={diary.id} initialTitle={diary.title} initialBody={diary.body} onSaved={(updated) => { setDiary(updated); restoreFocus.current = true; setEditing(false); }} onCancel={() => { restoreFocus.current = true; setEditing(false); }} />;
 
   return (
     <main className={pageClass}>
-      <PageNav label="日记导航"><BackLink href="/diary">返回日记</BackLink><button ref={editRef} type="button" onClick={() => setEditing(true)}>编辑</button></PageNav>
+      <PageNav label="日记导航"><BackLink href="/diary">返回日记</BackLink><div><RecordExtraction source={{ type: "diary", id: diary.id }} /><button ref={editRef} type="button" onClick={() => setEditing(true)}>编辑</button></div></PageNav>
       <article className="diary-view">
         {diary.title ? <h1>{diary.title}</h1> : <h1 className="visually-hidden">日记</h1>}
         <time dateTime={diary.createdAt}>创建于 {formatDate(diary.createdAt)}</time>

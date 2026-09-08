@@ -1,0 +1,28 @@
+{
+  "date": "2026-09-06",
+  "scope": "Desktop-only edge-reveal sidebar, including pointer-gap correction; mobile behavior unchanged",
+  "checks": [
+    { "command": "npm run typecheck", "result": "passed" },
+    { "command": "npm run lint", "result": "passed", "warnings": 0 },
+    { "command": "npm test", "result": "passed", "files": 34, "tests": 259 },
+    { "command": "npm run test:e2e", "environment": "development, http://127.0.0.1:3100", "result": "passed", "tests": 55, "failed": 0, "skipped": 0 },
+    { "command": "npm run build", "result": "passed", "routeEntries": 13 },
+    { "command": "npm run test:e2e -- e2e/desktop-sidebar.spec.ts", "environment": "production, http://127.0.0.1:3180", "result": "passed", "tests": 4, "failed": 0, "note": "Includes final pointer-gap regression added during the full development run." },
+    { "command": "node design/experience-refresh/capture-sidebar.mjs", "environment": "production", "result": "passed", "screenshots": 4, "recordings": 2 },
+    { "command": "git diff --check", "result": "passed" }
+  ],
+  "interactionCoverage": [
+    "Continuous slide-in position samples and stable reading layout",
+    "Delayed close, quick pointer return, stable screen-edge and inset-gap hovering",
+    "Keyboard open, Escape focus return, inert closed navigation and route selection",
+    "Reduced-motion preference",
+    "Existing Moment, Append and Diary draft protection",
+    "1100/1099/430/390px breakpoints and real Playwright touchscreen taps",
+    "All six core routes in light and dark themes"
+  ],
+  "newDependencies": 0,
+  "dataLayerChanges": false,
+  "unresolvedIssues": [],
+  "limits": ["Physical iOS Safari and VoiceOver are not covered by Chromium emulation; the mobile implementation was not changed in this follow-up."],
+  "deployment": "Local production preview only"
+}

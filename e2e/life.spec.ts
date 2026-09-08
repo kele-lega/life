@@ -11,7 +11,7 @@ async function saveText(page: import("@playwright/test").Page, text: string): Pr
   await openRecorder(page);
   await page.getByRole("textbox", { name: "记录内容" }).fill(text);
   await page.getByRole("button", { name: "保存" }).click();
-  await expect(page.getByText(text, { exact: true })).toBeVisible();
+  await expect(page.getByRole("article").getByText(text, { exact: true })).toBeVisible();
 }
 
 test.describe("real browser local-first baseline", () => {
@@ -33,7 +33,7 @@ test.describe("real browser local-first baseline", () => {
     await page.getByLabel("选择图片").setInputFiles("e2e/fixtures/test-image.svg");
     await expect(page.getByRole("img", { name: "test-image.svg" })).toBeVisible();
     await page.getByRole("button", { name: "保存" }).click();
-    await expect(page.getByRole("img", { name: "test-image.svg" })).toBeVisible();
+    await expect(page.getByRole("article").getByRole("img", { name: "test-image.svg" })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("img", { name: "test-image.svg" })).toBeVisible();
     await expect(page.getByRole("img", { name: "test-image.svg" })).toHaveAttribute("src", /^blob:/);
