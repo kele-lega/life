@@ -1,0 +1,64 @@
+{
+  "date": "2026-09-07T02:21:48.073Z",
+  "base": "http://127.0.0.1:3180",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "source": "moment",
+      "result": "passed",
+      "review": "accepted",
+      "proposals": 1,
+      "originalPreserved": true,
+      "refreshRestoredWithoutAI": true
+    },
+    {
+      "source": "diary",
+      "result": "passed",
+      "review": "corrected",
+      "originalPreserved": true
+    },
+    {
+      "source": "ambiguous-synthetic-moment",
+      "result": "passed",
+      "proposals": 0,
+      "noInventedFacts": true
+    }
+  ],
+  "attempts": [
+    {
+      "case": 1,
+      "attempt": 1,
+      "httpStatus": 200,
+      "elapsedMs": 4554
+    },
+    {
+      "case": 2,
+      "attempt": 1,
+      "httpStatus": 504,
+      "elapsedMs": 30050
+    },
+    {
+      "case": 2,
+      "attempt": 2,
+      "httpStatus": 200,
+      "elapsedMs": 16344
+    },
+    {
+      "case": 3,
+      "attempt": 1,
+      "httpStatus": 200,
+      "elapsedMs": 24138
+    }
+  ],
+  "checks": {
+    "timeoutPreservesOriginalsAndWritesNothing": true,
+    "realRequests": 4,
+    "privatePayloadKeysExcluded": true,
+    "originalRecordsUnmodified": true,
+    "proposalsPersistedLocally": true,
+    "finalEventsReachExistingMap": true
+  },
+  "provider": "openai-compatible:fanrenapi.com",
+  "model": "gpt-5.6-terra",
+  "result": "passed"
+}

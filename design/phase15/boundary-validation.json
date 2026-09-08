@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-07T02:18:39.632Z",
+  "checkedBrowserChunks": 27,
+  "configuredSecretChecked": true,
+  "leakedBrowserChunks": 0,
+  "localEnvironmentGitIgnored": true,
+  "originalDataSchemaModelsAndReviewServiceUnchanged": true,
+  "result": "passed",
+  "unchangedPaths": [
+    "src/lib/db",
+    "src/features/moment/model",
+    "src/features/moment/repository",
+    "src/features/diary/model",
+    "src/features/diary/repository",
+    "src/features/life-event",
+    "src/features/life-intelligence/model",
+    "src/features/life-intelligence/application/review-proposal.ts",
+    "src/features/life-insights"
+  ],
+  "gitVisibleFilesScanned": 1463,
+  "gitVisibleSecretMatches": 0
+}

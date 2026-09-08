@@ -1,6 +1,6 @@
 import { db } from "@/lib/db/client";
 import { assertTimestamp } from "@/lib/time/timestamps";
-import type { LifeEvent, LifeEventSource } from "@/features/life-event/model/types";
+import type { LifeEvent, LifeEventSource, LifeEventSourceRef } from "@/features/life-event/model/types";
 import { assertSource, canonicalJson, normalizeInput } from "@/features/life-event/model/validation";
 import {
   fingerprintLifeEventText,
@@ -9,6 +9,7 @@ import {
 } from "@/features/life-event/repository/source-fingerprint";
 
 import { equalLifeEventCandidates, normalizeLifeEventCandidate } from "../model/candidate";
+import { assertLifeEventExtractorDescriptor } from "../extractor/life-event-extractor";
 import { LifeEventProposalSourceError, ManualLifeEventConflictError } from "../model/errors";
 import { MAX_SCRATCH_INPUT_BYTES } from "../model/extraction-request";
 import { assertProposalTransition } from "../model/proposal-state-machine";
@@ -82,9 +83,7 @@ async function assertJob(job: LifeExtractionJob): Promise<void> {
   if (job.status !== "succeeded" || job.attemptCount !== 1 || job.lastErrorCode !== null || job.completedAt === null) {
     throw new Error("Explicit extraction results must contain one completed successful attempt.");
   }
-  if (job.extractor.provider !== null || job.extractor.model !== null) {
-    throw new Error("Phase 14.3 does not persist real AI provider details.");
-  }
+  assertLifeEventExtractorDescriptor(job.extractor);
   assertTimestamp(job.createdAt);
   assertTimestamp(job.updatedAt);
   assertTimestamp(job.completedAt);
@@ -211,6 +210,16 @@ export class DexieLifeIntelligenceRepository implements LifeIntelligenceReposito
   async getLatestJob(inputKind?: LifeExtractionInput["kind"]): Promise<LifeExtractionJob | undefined> {
     const newest = db.lifeExtractionJobs.orderBy("createdAt").reverse();
     return inputKind ? newest.filter((job) => job.input.kind === inputKind).first() : newest.first();
+  }
+
+  async listJobsBySource(source: LifeEventSourceRef): Promise<readonly LifeExtractionJob[]> {
+    assertSource(source);
+    const jobs = await db.lifeExtractionJobs
+      .where("[input.source.type+input.source.id]")
+      .equals([source.type, source.id])
+      .toArray();
+    return jobs.sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id));
   }
 
   async listProposalsByJob(jobId: string): Promise<readonly LifeEventProposal[]> {

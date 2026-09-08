@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { EntityId } from "@/features/moment/model/types";
+import type { LifeEventSourceRef } from "@/features/life-event/model/types";
 
 import { ManualLifeEventConflictError } from "../model/errors";
 import type {
@@ -73,6 +74,10 @@ class MemoryContractRepository implements LifeIntelligenceRepository {
   async getJob(id: EntityId) { return this.jobs.get(id); }
   async findJobByRequestKey(requestKey: string) { return [...this.jobs.values()].find((value) => value.requestKey === requestKey); }
   async getLatestJob() { return [...this.jobs.values()].at(-1); }
+  async listJobsBySource(source: LifeEventSourceRef) {
+    return [...this.jobs.values()].filter(({ input }) =>
+      input.kind === "record" && input.source.type === source.type && input.source.id === source.id);
+  }
   async listProposalsByJob(jobId: EntityId) { return [...this.proposals.values()].filter((value) => value.jobId === jobId); }
   async commitExtractionResult(input: CommitExtractionResultInput) { return input; }
   async getProposal(id: EntityId) { return this.proposals.get(id); }

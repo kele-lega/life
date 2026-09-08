@@ -1,7 +1,7 @@
 import { createEntityId } from "@/lib/identity/create-entity-id";
 import { nowTimestamp } from "@/lib/time/timestamps";
 
-import type { LifeEventExtractor } from "../extractor/life-event-extractor";
+import { assertLifeEventExtractorDescriptor, type LifeEventExtractor } from "../extractor/life-event-extractor";
 import { normalizeLifeEventCandidate } from "../model/candidate";
 import { prepareLifeExtractionRequest } from "../model/extraction-request";
 import type { LifeEventProposal, LifeExtractionJob, LifeExtractionRequest } from "../model/types";
@@ -30,9 +30,10 @@ export async function runLifeExtraction(
     name: extractor.name,
     version: extractor.version,
     schemaVersion: extractor.schemaVersion,
-    provider: null,
-    model: null,
+    provider: extractor.provider ?? null,
+    model: extractor.model ?? null,
   };
+  assertLifeEventExtractorDescriptor(extractorDescriptor);
   const prepared = await prepareLifeExtractionRequest(request, extractorDescriptor);
   const existing = await repository.findJobByRequestKey(prepared.requestKey);
   if (existing) {

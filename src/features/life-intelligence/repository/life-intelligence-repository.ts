@@ -1,4 +1,5 @@
 import type { EntityId, Timestamp } from "@/features/moment/model/types";
+import type { LifeEventSourceRef } from "@/features/life-event/model/types";
 
 import type {
   LifeEventMaterialization,
@@ -33,6 +34,7 @@ export interface LifeIntelligenceRepository {
   getJob(id: EntityId): Promise<LifeExtractionJob | undefined>;
   findJobByRequestKey(requestKey: string): Promise<LifeExtractionJob | undefined>;
   getLatestJob(inputKind?: LifeExtractionInput["kind"]): Promise<LifeExtractionJob | undefined>;
+  listJobsBySource(source: LifeEventSourceRef): Promise<readonly LifeExtractionJob[]>;
   listProposalsByJob(jobId: EntityId): Promise<readonly LifeEventProposal[]>;
   commitExtractionResult(input: CommitExtractionResultInput): Promise<CommitExtractionResultResult>;
 
