@@ -9,3 +9,4 @@ test-results/
 !.env.example
 playwright-report/
 design/ios-refresh/production-results/
+.scratch/
