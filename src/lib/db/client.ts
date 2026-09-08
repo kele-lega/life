@@ -1,4 +1,5 @@
 import Dexie, { type Table } from "dexie";
+import { bootstrapDatabaseName } from "./bootstrap";
 
 import type { Attachment } from "@/features/attachment/model/types";
 import type { Diary } from "@/features/diary/model/types";
@@ -48,4 +49,6 @@ export class LifeDatabase extends Dexie {
   }
 }
 
-export const db = new LifeDatabase();
+// Fixed for this document. Switching libraries requires a full reload, so a late
+// asynchronous operation can never target another account's database instance.
+export const db = new LifeDatabase(bootstrapDatabaseName());

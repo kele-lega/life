@@ -1,5 +1,12 @@
 # Data Model
 
+## Phase 16A Cloud Foundation (v6 unchanged)
+
+The seven business entities and every v6 index are unchanged. Account ownership is at library level in a separate `life-control` IndexedDB database (its own v1), not added to Moment/Diary/Event rows. It stores library identities and readiness, active context, backup transfer metadata and immutable upload staging. Verified redundant staging is released after cloud completion; original Attachment Blobs remain in their business table.
+
+Portable snapshots preserve all stored rows, soft deletes and review history. Attachment blob bytes move only into the export/backup envelope and are reconstructed on restore; the runtime Attachment model still requires Blob. Cloud PostgreSQL stores account/session/library and immutable backup/file/part/verification metadata. Original record JSON and images are versioned private objects; no live business table is introduced in PostgreSQL. Restored libraries receive new infrastructure library IDs while retaining all business IDs and original fields. See `PHASE16A_ARCHIVE_FORMAT.md` and the three SQL migrations under `infrastructure/cloud`.
+
+
 This document separates the implemented physical schema from future logical models. Dexie v6 contains `Moment`, `MomentAppend`, Moment-owned `Attachment`, `Diary`, `LifeEvent`, `LifeExtractionJob`, and `LifeEventProposal`. Tags and the unrelated generic AI entities below remain design-only. The v2–v5 sections are historical schema snapshots.
 
 ## Phase 12 physical schema: LifeEvent (v5)
@@ -189,7 +196,13 @@ Proposal source status remains a non-persistent read view: `scratch`, `current`,
 
 `/lab/life-extraction` now persists explicit fake-extractor Jobs and reviews. Refresh restores the latest scratch Job, all Proposals, terminal decisions, and materialized Events. Accept/Correct creates real LifeEvents that can affect Statistics and Life Map; the page states this before review. There is no `isLab`, route-dependent data rule, provider call, automatic extraction, worker, or original-record mutation.
 
-### AiMetadata
+### Phase 15 — existing fields enabled for production extraction
+
+No model, store, index or database version changes. A successful record Job now permits a complete non-empty provider/model pair in its existing extractor descriptor; Fake Lab remains null/null. The descriptor participates in the unchanged requestKey algorithm. Direct OpenAI uses `provider: openai`; a user-configured compatible HTTPS gateway uses `provider: openai-compatible:<hostname>`, with `model: gpt-5.6-terra` unchanged. These fields describe the configured request destination/model, not a claim independently verifying a gateway's upstream execution or retention.
+
+Moment record text is exact originalText; Diary text is exact `title + "\n\n" + body`. The underlying fingerprint remains SHA-256 over the original field array, not the joined transport text. Jobs still store only the record reference and fingerprint. Provider quotations are transient parsing inputs, converted into existing Proposal evidenceRanges; no new evidence field or provider response is persisted. Review semantics, provenance links, source eligibility and manual precedence remain those of Phase 14.3.
+
+### AiMetadata (deferred)
 
 A rebuildable result for a source version:
 

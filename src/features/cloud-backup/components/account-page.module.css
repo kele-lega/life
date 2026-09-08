@@ -1,0 +1,27 @@
+.page { max-width: 680px; }
+.header { margin-bottom: 40px; }
+.header h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 600; letter-spacing: -.045em; margin-bottom: 12px; }
+.header p, .section p { color: var(--app-secondary); line-height: 1.8; font-size: .9rem; overflow-wrap: anywhere; }
+.section { padding: 28px 0; border-top: 1px solid var(--app-line); }
+.section h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; align-items: center; }
+.primary, .secondary, .file { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: var(--radius-control); font: 500 .875rem/1.4 var(--font-ui); cursor: pointer; text-decoration: none; transition: background-color 160ms, transform 160ms; }
+.primary { border: 1px solid transparent; background: var(--app-ink); color: var(--app-surface); }
+.secondary, .file { border: 1px solid var(--app-line); background: transparent; color: var(--app-ink); }
+.primary:active, .secondary:active, .file:active { transform: scale(.98); }
+.primary:disabled, .secondary:disabled { opacity: .45; cursor: default; transform: none; }
+.form { display: grid; gap: 12px; max-width: 380px; }
+.form label { color: var(--app-secondary); font-size: .85rem; }
+.input { width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--app-line); border-radius: var(--radius-control); background: var(--app-paper); color: var(--app-ink); font: 400 16px/1.5 var(--font-ui); }
+.status { min-height: 26px; font-size: .875rem; line-height: 1.8; color: var(--app-secondary); overflow-wrap: anywhere; }
+.preview { margin-top: 24px; padding: 20px; background: var(--app-subtle); border-radius: var(--radius-control); }
+.list { padding: 0; margin: 16px 0 0; list-style: none; }
+.item { display: flex; align-items: center; gap: 12px; padding: 16px 0; border-top: 1px solid var(--app-line); }
+.item > div { flex: 1; min-width: 0; }
+.item p { margin: 4px 0; }
+.item small { color: var(--app-secondary); overflow-wrap: anywhere; }
+.count { font-variant-numeric: tabular-nums; }
+.download { color: var(--app-accent-ink); min-height: 44px; display: inline-flex; align-items: center; }
+.note { font-size: .8rem !important; }
+@media (max-width: 600px) { .header { margin-bottom: 28px; } .section { padding: 24px 0; } .item { flex-wrap: wrap; } }
+@media (prefers-reduced-motion: reduce) { .primary, .secondary, .file { transition: none; } }

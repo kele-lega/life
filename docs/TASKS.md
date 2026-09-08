@@ -1,5 +1,18 @@
 # V1 Tasks
 
+## Phase 16A — Life Cloud Foundation (user confirmed 2026-09-07)
+
+Implementation scope: portable .life.zip export and isolated restore first, then email OTP/Account/Session/library binding, then immutable cloud backups. Existing Dexie v6 and seven business entities remain unchanged. No sync or new AI feature.
+
+- Implemented: seven-table/Blob archive, version/manifest/SHA-256 and independent readback-verified restore.
+- Implemented: lightweight account/export/backup surface, explicit binding, fixed database per document, account isolation, multi-tab switch protection.
+- Implemented: server-only OTP/BFF Session, PostgreSQL catalog/RLS/immutable snapshots, private Supabase Storage objects with unique non-reused keys, retry and durable checksum verification.
+- Implemented: local/SQL/HTTP/browser regression coverage and synthetic real-service drill tooling.
+- Final automated regression passed (2026-09-08): typecheck, lint, 350 unit/integration tests, 71 E2E tests, production build. See `PHASE16A_IMPLEMENTATION_REPORT.md`.
+- Acceptance pending: actual configured-provider OTP/PostgreSQL/Supabase Storage/worker/disaster-recovery drill. Do not mark this phase fully accepted from adapter tests alone.
+- Operational details: `PHASE16A_CLOUD_OPERATIONS.md`. Format: `PHASE16A_ARCHIVE_FORMAT.md`. The previous Phase 16 Cloud Sync review is future design only.
+
+
 Each phase has one clear theme and an independently verifiable completion condition. After each phase, run typecheck, lint, tests, and build.
 
 ## Phase 0 - Engineering foundation (this round)
@@ -288,13 +301,24 @@ Implement transactional soft delete and restore, with the 30-day eligibility rul
 
 **Done when:** normal views exclude deleted data, restore retains valid relations and attachments, and boundary cases have integration tests.
 
-## Phase 15 - Offline application shell
+## Phase 15 - Production Life Extraction (2026-09-07)
+
+- [x] Add explicit Moment and saved-Diary extraction entries with local proposal review/restoration.
+- [x] Use the Responses API with `gpt-5.6-terra`, medium reasoning, strict JSON Schema and `store=false`.
+- [x] Keep credentials server-only; allowlist text/date/timezone transport and validate responses before local persistence.
+- [x] Reuse v6 Jobs/Proposals, source fingerprints, provenance, unique request identity and unchanged Phase 14.3 review transactions.
+- [x] Preserve Fake Lab and original record repositories, attachments, statistics and map contracts.
+- [x] Finish synthetic live integration and visual review; typecheck, zero-warning lint, 326 unit/integration tests, 60 E2E, 5 production extraction E2E and production build pass. Gateway timeout/manual retry evidence remains in `design/phase15/`.
+
+No automatic extraction, AI Chat, summaries, sentiment analysis, new entities, tables or schema version. See `PHASE15_PRODUCTION_LIFE_EXTRACTION.md` and ADR-035.
+
+## Offline application shell (deferred, previously scheduled as Phase 15)
 
 Add auditable Service Worker/static-resource caching, update handling, and installability as needed.
 
 **Done when:** after one online load, reopening while offline still permits entering, creating, and browsing records.
 
-## Phase 16 - AI job and server boundary
+## Deferred legacy roadmap — AI job and server boundary (not current Phase 16)
 
 Add local retryable AI job state and a server-only Route Handler boundary, without showing AI results yet.
 

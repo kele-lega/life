@@ -1,4 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { AppShell } from "@/components/ui/app-shell";
+import { LibraryBoundary } from "@/features/cloud-backup/components/library-boundary";
 import { motionCssVariables } from "@/components/ui/motion";
 import "./globals.css";
 import "./stateful-button.css";
@@ -10,12 +12,17 @@ export const metadata: Metadata = {
   description: "Private local-first life records.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width", initialScale: 1, viewportFit: "cover",
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#fafaf9" }, { media: "(prefers-color-scheme: dark)", color: "#171a19" }],
+};
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" style={motionCssVariables}>
       <body>
         <a className="skip-link" href="#main-content">跳到正文</a>
-        <div id="main-content" tabIndex={-1}>{children}</div>
+        <AppShell><LibraryBoundary>{children}</LibraryBoundary></AppShell>
       </body>
     </html>
   );

@@ -2,6 +2,11 @@
 
 ## Scope
 
+Phase 16A (user confirmed 2026-09-07) adds a portable seven-store snapshot adapter, independent local library/control database, email OTP BFF sessions, PostgreSQL backup catalog and private object storage. See `PHASE16A_ARCHIVE_FORMAT.md` and `PHASE16A_CLOUD_OPERATIONS.md`. This explicitly advances the earlier deferred auth/export scope, not the sync roadmap. Existing original repositories remain local; only database selection at document bootstrap changes. `LibraryBoundary` verifies the active library before mounting record routes. Each document keeps a fixed database instance; switching requires an exclusive Web Lock and full document reload, preserving other tabs' drafts.
+
+Cloud data consists of immutable snapshots. Four-MiB object parts use server-authorized, unique per-backup keys and checksums; Supabase Storage does not require S3 VersionId support. Successful upload is separate from durable file/graph verification, with account-scoped PostgreSQL metadata, leases and a recovery worker. `/api/cloud/*` is a server-only boundary; images upload directly to private object storage. No cloud-save hook, synchronization queue, current-record cloud CRUD or AI request is introduced. Export/import uses the same format and does not require an account. Additional `life-control` stores are infrastructure; the seven business stores remain v6.
+
+
 This project is a single-user, web-first, local-first private life record system. The core path is open, record, save, leave. The initial foundation phase intentionally contained no product UI, fake dashboard, Timeline, Calendar, AI, auth, sync, map, or health feature; later phases add only the explicitly scheduled product surfaces.
 
 ## Overview
@@ -20,7 +25,7 @@ Future AI only:
 Browser -> Next.js server route -> cloud model provider
 ```
 
-Original content is created and read locally without a network dependency. Diary persistence is introduced in its own Dexie migration and repository; Diary UI reads and writes only through the client-side repository, while content editing preserves the record identity and creation timestamp. Future AI calls will go through a server-side Route Handler so secrets never enter the client bundle. AI failure must never block or roll back local saving.
+Original content is created and read locally without a network dependency. Diary persistence is introduced in its own Dexie migration and repository; Diary UI reads and writes only through the client-side repository, while content editing preserves the record identity and creation timestamp. Explicit Phase 15 AI calls go through a server-side Route Handler so secrets never enter the client bundle. AI failure must never block or roll back local saving.
 
 ## Technology choices
 
@@ -51,7 +56,7 @@ Features are organized vertically. Components should not scatter raw Dexie queri
 
 ## Runtime boundaries
 
-Dexie and IndexedDB are browser-only and must be initialized from client-safe code. Server components must not import the database instance. The V1 core has no server data dependency. A future AI route validates input and calls the model provider, but is not the source of truth for local records.
+Dexie and IndexedDB are browser-only and must be initialized from client-safe code. Server components must not import the database instance. The V1 core has no server data dependency. The AI route validates input and calls the model provider, but is not the source of truth for local records.
 
 Local-first data operations do not require a network. Application-shell offline startup, installability, and Service Worker caching are separate work and are not implied by IndexedDB availability.
 
@@ -164,6 +169,16 @@ Proposal candidates and evidence are immutable. `accepted`, `corrected`, `reject
 Job inputs distinguish persisted 64 KiB-capped scratch text from record references containing type, ID, and fingerprint. Record text and provider responses are not copied into the Job. Source status (`scratch`, `current`, `stale`, `missing`) is derived at read/review time and never becomes a Proposal state. Stale/missing sources block Accept/Correct but permit Reject; stored audit records remain intact.
 
 `/lab/life-extraction` restores its latest scratch Job, Proposals, terminal states, and materialized Events from IndexedDB. It tells users that Accept/Correct creates real LifeEvents that can enter Statistics and Life Map. Statistics never imports or reads Job/Proposal storage, and Life Map receives the same presentation-neutral exploration structure with no AI branch. There is still no provider, network call, background worker, save hook, homepage entry, or original-record mutation.
+
+## Phase 15 production extraction boundary
+
+Explicit record entries now reuse the Phase 14.3 pipeline. `readRecordExtractionSource` reads one exact Moment/Diary snapshot through its existing repository and uses the unchanged text fingerprint. `RecordExtractionDialog` restores source-scoped Jobs and Proposals from IndexedDB; opening, saving and revisiting never initiate AI work. A user Start action obtains the public Extractor descriptor, invokes `runLifeExtraction`, and reviews candidates through the existing `reviewLifeEventProposal` application service.
+
+`HttpLifeEventExtractor` sends an allowlisted `{text, context, descriptor}` payload to `/api/life-extraction`. Source references/fingerprints, attachments, metadata and unrelated text never cross the network. The Route Handler imports a `server-only` provider adapter and pure protocol validation, never the database-bearing feature barrel. Provider configuration remains server-only. Official direct connections use provider `openai`; explicitly configured HTTPS gateways use `openai-compatible:<hostname>` in the already-existing Job extractor fields. The model remains the user-approved `gpt-5.6-terra`.
+
+The provider uses the Responses API with `reasoning.effort=medium`, strict JSON Schema, `store=false`, no tools, no conversation state and no automatic retries. Exact evidence quotations are converted to existing UTF-16 ranges, and the candidate payload is validated again before insertion. No raw provider response is stored, logged or returned to the browser. A request has bounded input/output, a 30-second timeout and per-process concurrency/rate bounds. Requests outside localhost require an explicitly configured origin plus deployment-managed access protection; origin checks alone are not authentication or a distributed quota.
+
+Dexie stays v6. The only adapter changes admit complete provider/model descriptors and read source-specific Jobs through the existing index. The successful Job + Proposal transaction and terminal Proposal + Event transaction retain their semantics. Processing/errors are ephemeral UI state; there is no persistent worker or automatic recovery. Source changes/deletion block materialization while preserving audit data and allowing rejection. Fake Lab continues using its deterministic extractor and null provider/model.
 
 ## Future synchronization constraints
 
