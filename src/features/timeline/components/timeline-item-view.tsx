@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PinBottomIcon } from "@radix-ui/react-icons";
-import { RecordImage } from "@/components/ui/record-image";
+import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { RecordExtraction } from "@/features/life-intelligence/components/record-extraction";
 import styles from "./timeline-item-view.module.css";
 import { HighlightedText, searchExcerpt } from "@/components/ui/highlighted-text";
@@ -34,7 +34,7 @@ export function TimelineItemView({ item, highlight = "", matchedAppendIds = [] }
           {item.attachments.length > 0 ? (
             <div className="timeline-images" data-single={item.attachments.length === 1 || undefined} aria-label={`${item.moment.originalText}的图片`}>
               {item.attachments.map((attachment) => (
-                <RecordImage alt={attachment.fileName} key={attachment.url} src={attachment.url} />
+                attachment.url ? <PhotoViewer alt={attachment.fileName ?? "图片"} key={attachment.id} src={attachment.url} /> : null
               ))}
             </div>
           ) : null}

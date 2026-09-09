@@ -11,7 +11,7 @@ import { listRecentMoments } from "@/features/moment/repository/moment-repositor
 import { MomentAppends } from "./moment-appends";
 import { RecordExtraction } from "@/features/life-intelligence/components/record-extraction";
 import extractionStyles from "@/features/life-intelligence/components/record-extraction.module.css";
-import { RecordImage } from "@/components/ui/record-image";
+import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { MotionEntry } from "@/components/ui/motion-entry";
 import { contentTransition, motionStagger } from "@/components/ui/motion";
 import { ReadingPlaceholder } from "@/components/ui/reading-placeholder";
@@ -225,7 +225,7 @@ export function RecentMoments({ refreshKey }: RecentMomentsProps) {
                 {images.length > 0 ? (
                   <div className="moment-images" data-single={images.length === 1 || undefined} aria-label={`${moment.originalText}的图片`}>
                     {images.map((image) => (
-                      <RecordImage alt={image.fileName} key={image.attachmentId} src={image.url} />
+                      <PhotoViewer alt={image.fileName} key={image.attachmentId} src={image.url} />
                     ))}
                   </div>
                 ) : null}

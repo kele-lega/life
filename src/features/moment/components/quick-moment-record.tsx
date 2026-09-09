@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Cross2Icon, ImageIcon, PlusIcon } from "@radix-ui/react-icons";
+import { CameraIcon, Cross2Icon, DrawingPinIcon, ImageIcon, PlusIcon } from "@radix-ui/react-icons";
 import { StatefulButton, type StatefulButtonResult } from "@/components/ui/stateful-button";
 import { Reveal } from "@/components/ui/reveal";
 import { WritingTextarea } from "@/components/ui/writing-textarea";
@@ -35,12 +35,15 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
     longitude: null,
   });
   const [isLocating, setIsLocating] = useState(false);
+  const [locationRequested, setLocationRequested] = useState(false);
   const [isEditingPlace, setIsEditingPlace] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const pendingImagesRef = useRef<PendingImage[]>([]);
   const locationAttemptedRef = useRef(false);
   const locationRequestRef = useRef(0);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const writerRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const restoreFocusRef = useRef(false);
 
@@ -50,6 +53,26 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
       triggerRef.current?.focus({ preventScroll: true });
       restoreFocusRef.current = false;
     }
+  }, [isRecording]);
+
+  useEffect(() => {
+    if (!isRecording) return;
+    const writer = writerRef.current;
+    const viewport = window.visualViewport;
+    const updateViewport = () => {
+      if (!writer) return;
+      writer.style.setProperty("--mobile-writer-height", `${viewport?.height ?? window.innerHeight}px`);
+      writer.style.setProperty("--mobile-writer-top", `${viewport?.offsetTop ?? 0}px`);
+    };
+    document.documentElement.classList.add("mobile-writer-open");
+    updateViewport();
+    viewport?.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("scroll", updateViewport);
+    return () => {
+      document.documentElement.classList.remove("mobile-writer-open");
+      viewport?.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("scroll", updateViewport);
+    };
   }, [isRecording]);
 
   useEffect(() => {
@@ -69,8 +92,12 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
   function beginRecording(): void {
     setError(null);
     setIsRecording(true);
+  }
+
+  function requestLocation(): void {
     if (locationAttemptedRef.current) return;
     locationAttemptedRef.current = true;
+    setLocationRequested(true);
     const requestId = ++locationRequestRef.current;
     setIsLocating(true);
     void resolveLocation().then((resolved) => {
@@ -93,11 +120,16 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
     restoreFocusRef.current = true;
     setIsRecording(false);
     locationAttemptedRef.current = false;
+    setLocationRequested(false);
     locationRequestRef.current += 1;
   }
 
   function chooseImages(): void {
     fileInputRef.current?.click();
+  }
+
+  function takePhoto(): void {
+    cameraInputRef.current?.click();
   }
 
   function handleImagesSelected(event: React.ChangeEvent<HTMLInputElement>): void {
@@ -149,6 +181,7 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
         restoreFocusRef.current = true;
         setIsRecording(false);
         locationAttemptedRef.current = false;
+        setLocationRequested(false);
         setIsSaving(false);
       };
     } catch {
@@ -159,7 +192,7 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
   }
 
   return (
-    <section className="quick-record" data-recording={isRecording}>
+    <section ref={writerRef} className="quick-record" data-recording={isRecording}>
       {isRecording ? (
         <div className="record-toolbar">
           <h2 className="record-heading"><label htmlFor={inputId}>写点什么</label></h2>
@@ -179,6 +212,9 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
         <div className="record-tools">
           <div className="location-field">
           <span aria-live="polite">{isLocating ? "正在获取位置" : location.city ?? ""}</span>
+          {!isLocating && !locationRequested ? (
+            <button disabled={isSaving} type="button" onClick={requestLocation}><DrawingPinIcon className="ui-icon" aria-hidden="true" />添加位置</button>
+          ) : null}
           {isEditingPlace ? (
             <label>
               具体地点
@@ -190,6 +226,8 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
           </div>
           <input ref={fileInputRef} accept="image/*" aria-label="选择图片" hidden multiple type="file" onChange={handleImagesSelected} />
           <button className="image-trigger" disabled={isSaving} type="button" onClick={chooseImages}><ImageIcon className="ui-icon" aria-hidden="true" />添加图片</button>
+          <input ref={cameraInputRef} accept="image/*" capture="environment" aria-label="拍摄照片" hidden type="file" onChange={handleImagesSelected} />
+          <button className="camera-trigger" disabled={isSaving} type="button" onClick={takePhoto}><CameraIcon className="ui-icon" aria-hidden="true" />拍摄照片</button>
         </div>
         {pendingImages.length > 0 ? (
           <div className="image-previews" aria-label="待保存图片">

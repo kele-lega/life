@@ -68,7 +68,8 @@
 
 html { scrollbar-gutter: stable; scroll-padding-block: 84px calc(var(--app-nav-height) + env(safe-area-inset-bottom)); }
 @media (max-width: 1099px) { html { scrollbar-gutter: auto; } }
-body { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+body { min-width: 320px; overscroll-behavior-y: none; font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+html.mobile-writer-open, html.mobile-writer-open body { overflow: hidden; }
 ::selection { background: var(--app-line); color: var(--app-ink); }
 :where(button, a, input, textarea) { -webkit-tap-highlight-color: transparent; }
 :where(button, a) { touch-action: manipulation; }
@@ -142,12 +143,38 @@ body { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
   border-radius: var(--radius-photo);
   font: 400 0.8125rem/1.6 var(--font-ui);
 }
+.ui-photo-trigger {
+  position: relative;
+  display: block;
+  min-width: 44px;
+  min-height: 44px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-photo);
+  background: var(--app-subtle);
+  color: var(--app-ink);
+  cursor: zoom-in;
+}
+.ui-photo-trigger > .ui-photo { width: 100%; height: 100%; object-fit: cover; }
+.ui-photo-trigger-icon { position: absolute; right: 8px; bottom: 8px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgb(0 0 0 / 48%); color: #fff; opacity: 0; transform: scale(.92); }
+.ui-photo-trigger-icon svg { width: 15px; height: 15px; }
+.ui-photo-trigger:hover .ui-photo-trigger-icon, .ui-photo-trigger:focus-visible .ui-photo-trigger-icon { opacity: 1; transform: scale(1); }
+.ui-photo-viewer-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgb(0 0 0 / 72%); }
+.ui-photo-viewer-dialog { position: relative; display: grid; place-items: center; width: min(100%, 960px); height: min(100%, 900px); }
+.ui-photo-viewer-image { display: block; max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--radius-photo); box-shadow: 0 18px 60px rgb(0 0 0 / 30%); }
+.ui-photo-viewer-close { position: absolute; z-index: 1; top: max(-8px, env(safe-area-inset-top)); right: max(-8px, env(safe-area-inset-right)); display: grid; place-items: center; width: 44px; height: 44px; padding: 10px; border: 1px solid rgb(255 255 255 / 24%); border-radius: 50%; background: rgb(0 0 0 / 48%); color: #fff; }
+.ui-photo-viewer-close svg { width: 18px; height: 18px; }
 
 .ui-reading-placeholder { padding-block: 32px; color: var(--app-secondary); }
 .ui-reading-placeholder > div { display: grid; gap: 14px; }
 .ui-reading-placeholder i { display: block; height: 10px; max-width: 520px; background: var(--app-line); border-radius: 3px; }
 .ui-reading-placeholder i:first-child { width: 22%; height: 8px; margin-bottom: 12px; }
 .ui-reading-placeholder i:last-child { width: 65%; }
+.library-boot { display: grid; align-content: center; justify-items: center; gap: 14px; text-align: center; }
+.library-boot > p { margin: 0; color: var(--app-secondary); }
+.library-boot-mark { color: var(--app-ink); font: 650 1.75rem/1.2 var(--font-ui); letter-spacing: -.045em; }
+.library-boot-mark span { color: var(--app-accent-ink); }
 
 button.stateful-button.stateful-button {
   position: relative;
@@ -179,3 +206,16 @@ button.stateful-button.stateful-button {
 @media (forced-colors: active) {
   :where(button, input, textarea):focus-visible { outline-color: Highlight; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .ui-photo-trigger-icon { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-photo-trigger-icon { transition: opacity var(--motion-fast) var(--ease-soft), transform var(--motion-fast) var(--ease-soft); }
+  .ui-photo-viewer-backdrop { animation: photo-viewer-in var(--motion-fast) var(--ease-soft); }
+  .ui-photo-viewer-image { animation: photo-image-in var(--motion-normal) var(--ease-soft); }
+  .library-boot-mark { animation: library-breathe 1.4s ease-in-out infinite alternate; }
+}
+@media (hover: none) { .ui-photo-trigger-icon { opacity: 1; transform: none; } }
+@keyframes photo-viewer-in { from { opacity: 0; } }
+@keyframes photo-image-in { from { opacity: 0; transform: scale(.985); } }
+@keyframes library-breathe { to { opacity: .58; } }

@@ -40,6 +40,8 @@ describe("QuickMomentRecord", () => {
     expect(screen.getByLabelText("写点什么")).toBe(screen.getByRole("textbox", { name: "记录内容" }));
     expect(screen.getByRole("textbox", { name: "记录内容" })).toHaveFocus();
     expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "添加位置" })).toBeInTheDocument();
+    expect(resolveLocationMock).not.toHaveBeenCalled();
   });
 
   it("saves the exact user text and returns to the initial state", async () => {
@@ -278,6 +280,7 @@ describe("QuickMomentRecord", () => {
     resolveLocationMock.mockReturnValue(new Promise(() => undefined));
     render(<QuickMomentRecord />);
     await user.click(screen.getByRole("button", { name: "写点什么" }));
+    await user.click(screen.getByRole("button", { name: "添加位置" }));
     await user.type(screen.getByRole("textbox", { name: "记录内容" }), "继续输入");
     expect(resolveLocationMock).toHaveBeenCalledTimes(1);
   });
@@ -291,6 +294,7 @@ describe("QuickMomentRecord", () => {
     render(<QuickMomentRecord />);
 
     await user.click(screen.getByRole("button", { name: "写点什么" }));
+    await user.click(screen.getByRole("button", { name: "添加位置" }));
     expect(screen.getByText("正在获取位置")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: "记录内容" }), "定位不会阻塞输入");
     resolveLocation({ city: "上海", placeName: null, latitude: 31.2, longitude: 121.4 });
@@ -323,6 +327,7 @@ describe("QuickMomentRecord", () => {
     createMomentMock.mockResolvedValue({ id: "moment-1" });
     render(<QuickMomentRecord />);
     await user.click(screen.getByRole("button", { name: "写点什么" }));
+    await user.click(screen.getByRole("button", { name: "添加位置" }));
     await user.type(screen.getByRole("textbox", { name: "记录内容" }), "离线也保存");
     const image = new File(["png"], "offline.png", { type: "image/png" });
     fireEvent.change(screen.getByLabelText("选择图片"), { target: { files: [image] } });

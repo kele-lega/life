@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/ui/app-shell";
+import { PwaRegister } from "@/components/ui/pwa-register";
 import { LibraryBoundary } from "@/features/cloud-backup/components/library-boundary";
 import { motionCssVariables } from "@/components/ui/motion";
 import "./globals.css";
@@ -10,6 +11,8 @@ import "./motion.css";
 export const metadata: Metadata = {
   title: "Life",
   description: "Private local-first life records.",
+  applicationName: "Life",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Life" },
 };
 
 export const viewport: Viewport = {
@@ -21,6 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="zh-CN" style={motionCssVariables}>
       <body>
+        <PwaRegister />
         <a className="skip-link" href="#main-content">跳到正文</a>
         <AppShell><LibraryBoundary>{children}</LibraryBoundary></AppShell>
       </body>

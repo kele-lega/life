@@ -27,7 +27,7 @@ export function LibraryBoundary({ children }: { children: ReactNode }) {
     return () => { active = false; window.clearTimeout(timeout); };
   }, []);
   if (status === "ready") return <><CloudAuthCallback />{children}</>;
-  return <main className="ui-page"><p role={status === "error" ? "alert" : "status"}>
+  return <main className="ui-page library-boot"><span className="library-boot-mark" aria-hidden="true">Life<span>.</span></span><p role={status === "error" ? "alert" : "status"}>
     {status === "error" ? "暂时无法打开本机生活库。原始数据未被清除，请刷新重试。" : "正在打开本机生活库…"}
   </p>{status === "error" && <button className="ui-quiet-button" onClick={() => window.location.reload()}>重新打开</button>}</main>;
 }

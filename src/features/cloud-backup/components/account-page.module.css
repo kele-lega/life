@@ -23,5 +23,13 @@
 .count { font-variant-numeric: tabular-nums; }
 .download { color: var(--app-accent-ink); min-height: 44px; display: inline-flex; align-items: center; }
 .note { font-size: .8rem !important; }
-@media (max-width: 600px) { .header { margin-bottom: 28px; } .section { padding: 24px 0; } .item { flex-wrap: wrap; } }
+@media (max-width: 600px) {
+  .header { margin-bottom: 28px; }
+  .section { padding: 24px 0; }
+  .actions { display: grid; grid-template-columns: 1fr; }
+  .actions > :is(button, a), .section > button, .item > button { width: 100%; }
+  .item { align-items: stretch; flex-direction: column; }
+  .preview { margin-inline: -8px; padding: 18px; }
+  .download { width: 100%; overflow-wrap: anywhere; }
+}
 @media (prefers-reduced-motion: reduce) { .primary, .secondary, .file { transition: none; } }

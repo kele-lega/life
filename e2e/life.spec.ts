@@ -77,6 +77,7 @@ test.describe("real browser local-first baseline", () => {
     });
     await page.goto("/");
     await openRecorder(page);
+    await page.getByRole("button", { name: "添加位置", exact: true }).click();
     await expect(page.getByText("上海")).toBeVisible();
     await page.getByRole("textbox", { name: "记录内容" }).fill("带城市");
     await page.getByRole("button", { name: "保存" }).click();

@@ -9,8 +9,10 @@
 .entry :global(.timeline-content) > p, .entry :global(.timeline-append) p { max-width: 38em; margin: 0; font: 400 1.0625rem/1.9 var(--font-reading); white-space: pre-wrap; overflow-wrap: anywhere; }
 .entry :global(.timeline-images) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
 .entry :global(.timeline-images) img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-photo); }
+.entry :global(.timeline-images) :global(.ui-photo-trigger) { width: 100%; aspect-ratio: 1; }
 .entry :global(.timeline-images)[data-single] { grid-template-columns: minmax(0, 440px); }
 .entry :global(.timeline-images)[data-single] img { aspect-ratio: auto; max-height: 420px; object-fit: contain; object-position: left center; background: transparent; }
+.entry :global(.timeline-images)[data-single] :global(.ui-photo-trigger) { aspect-ratio: auto; max-height: 420px; justify-self: start; }
 .entry :global(.timeline-appends) { margin-top: 24px; padding: 0 0 0 16px; border-left: 2px solid var(--app-line); }
 .entry :global(.timeline-append) { margin-top: 12px; }
 .entry :global(.timeline-append) time { display: block; margin-bottom: 6px; color: var(--app-secondary); font: 400 0.75rem/1.6 var(--font-ui); }

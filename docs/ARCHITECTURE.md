@@ -184,6 +184,24 @@ Dexie stays v6. The only adapter changes admit complete provider/model descripto
 
 All main entities use application-generated UUIDs, UTC timestamps, and `createdAt`, `updatedAt`, and `deletedAt`. Tombstones prevent deleted records from silently returning on another device. Moment original text is immutable and append content is independent, reducing merge conflicts. No account ID, device ID, sync cursor, or conflict engine is added before a real sync protocol is designed.
 
+## Phase 17A mobile and PWA boundary
+
+The phone experience continues to use the same Next.js client components, repositories and Dexie v6 database as desktop. `AppShell` owns only primary navigation. Quick Moment, Append and Diary writers continue to own drafts, validation, local transactions and cancellation. On narrow screens the Quick Moment surface is presented as a viewport-bound writer; `visualViewport` updates presentation CSS variables only and never enters a repository or persisted record.
+
+```text
+installed/open browser shell
+  -> Service Worker serves cached public route/build shell when unavailable
+  -> LibraryBoundary opens the selected local Dexie library
+  -> existing Repository reads and writes seven business tables
+
+Moment media action
+  -> browser gallery or capture input
+  -> File/Blob preview
+  -> unchanged createMomentWithAttachments transaction
+```
+
+The Service Worker excludes every `/api/*` request. Cloud account, OTP, backup, provider extraction and signed-object traffic therefore retain their network/error semantics and are never made to look successful by an application cache. Records and Attachment Blobs remain in IndexedDB; the cache is disposable and contains only route/build responses. Capacitor, native plugins, SQLite and background execution remain future phases.
+
 ## Test strategy
 
 Unit tests cover pure rules and utilities. Database integration tests cover Dexie schema, migrations, transactions, indexes, and soft deletion. Component tests cover user behavior. Playwright is deferred until a real product flow exists. The current real-browser baseline covers the core flow; future stages should extend it only when their browser behavior warrants it. Every feature stage must pass `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.

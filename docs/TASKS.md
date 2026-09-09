@@ -324,11 +324,24 @@ Add local retryable AI job state and a server-only Route Handler boundary, witho
 
 **Done when:** local save succeeds before any AI request; offline jobs wait; AI failures never affect originals; secrets stay out of the client bundle.
 
-## Phase 17 - AI structure and display
+## Deferred legacy roadmap - AI structure and display (formerly Phase 17)
 
 Implement versioned AiMetadata for extracted people, places, activities, topics, categories, and AI tags, with collapsed detail display and search integration.
 
 **Done when:** derived data is separate and rebuildable, stale source versions invalidate results, and failures are retryable.
+
+## Phase 17A - Mobile PWA experience (2026-09-09 confirmed scope)
+
+- [x] Present Quick Moment as a safe-area-aware full-screen phone writer driven by `100dvh` and `visualViewport`.
+- [x] Keep the four existing mobile destinations, improve press feedback and preserve 44px minimum actions.
+- [x] Make geolocation explicitly user-triggered and expose separate browser gallery and camera-capture inputs.
+- [x] Add a local-Blob full-screen image viewer with Escape/close behavior and trigger-focus restoration.
+- [x] Add the install manifest, Apple standalone metadata, persistent-storage request and an API-excluding offline application shell.
+- [x] Adapt account export/restore actions for 390/430px single-column use.
+- [x] Verify local Moment, image, Append and Diary writes while offline and read them back without changing Dexie or repositories.
+- [x] Complete the final repository quality gate and production screenshot pass.
+
+**Done when:** 390px and 430px light/dark/reduced-motion views have no horizontal overflow, mobile writing retains visible actions around the viewport, the installed shell is available after one online load, offline local writes survive readback, and all repository gates pass. Capacitor, Swift, SQLite, notifications, automatic AI and bidirectional sync remain excluded.
 
 ## Phase 18 - Temporary AI arrangement
 
