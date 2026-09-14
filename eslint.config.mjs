@@ -4,7 +4,7 @@ import eslintConfigTypescript from "eslint-config-next/typescript";
 const config = [
   ...eslintConfig,
   ...eslintConfigTypescript,
-  { ignores: [".netlify/**"] },
+  { ignores: [".netlify/**", "android/**", "out/**", ".next-native/**", ".native-exclude/**"] },
 ];
 
 export default config;

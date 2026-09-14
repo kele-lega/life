@@ -1,5 +1,18 @@
 # V1 Tasks
 
+## Phase 21 - Life Mobile App / Android First (2026-09-14 confirmed)
+
+- [x] Keep Web/PWA on the existing Next.js Node runtime; do not set production `server.url`.
+- [x] Add Capacitor 8 Android shell with permanent ID `app.kelelega.life`.
+- [x] Verify native static export by excluding `/api` and `/diary/[id]`; fail the build if those routes remain.
+- [x] Reuse Moment, Diary, Timeline, Calendar, Search, Life Map, repositories and Dexie v6.
+- [x] Map native diary detail to `/diary/open/?id=` through `diaryHref()`; keep web `/diary/[id]`.
+- [x] Leave AI/Cloud server calls fail-open; keep CORS/CSRF/Cookie boundaries.
+- [x] Handle StatusBar, Keyboard (`visualViewport`), Safe Area (non-overlay system bars) and Android back as existing cancel/Escape.
+- [x] Prove Dexie/Blob persistence on the static export without a Next server.
+
+**Done when:** the APK project exists, native static export contains core pages and no `/api`, local recording/recall works offline in that shell, and web quality gates still pass. Camera/Photos/Location/Haptics, Cloud Sync and SQLite remain excluded.
+
 ## Phase 16A — Life Cloud Foundation (user confirmed 2026-09-07)
 
 Implementation scope: portable .life.zip export and isolated restore first, then email OTP/Account/Session/library binding, then immutable cloud backups. Existing Dexie v6 and seven business entities remain unchanged. No sync or new AI feature.

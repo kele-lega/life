@@ -19,6 +19,7 @@ function watchErrors(page: Page) {
     // Next Link prefetches destination CSS before navigation. Chrome reports unused preloads;
     // those advisories are distinct from failed resources, hydration and React warnings.
     if (message.type() === "warning" && /^The resource https?:\/\/[^\s]+\/_next\/static\/chunks\/[^\s]+\.css was preloaded using link preload but not used within a few seconds from the window's load event\. Please make sure it has an appropriate `as` value and it is preloaded intentionally\.$/.test(message.text())) return;
+    if (/^A preload for 'https?:\/\/[^']+\/_next\/static\/chunks\/[^']+\.css' is found, but is not used because it is a cross-world service worker resource mismatch\.$/.test(message.text())) return;
     errors.push(message.text());
   });
   return errors;

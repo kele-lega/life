@@ -7,6 +7,7 @@ import { HighlightedText, searchExcerpt } from "@/components/ui/highlighted-text
 
 import type { TimelineItem } from "../model/types";
 import { formatTimelineTime } from "../utils/local-date";
+import { diaryHref } from "@/lib/runtime/diary-href";
 
 function diaryPreview(body: string): string {
   const compact = body.replace(/\s+/g, " ").trim();
@@ -54,7 +55,7 @@ export function TimelineItemView({ item, highlight = "", matchedAppendIds = [] }
           <RecordExtraction source={{ type: "moment", id: item.moment.id }} />
         </div>
       ) : (
-        <Link className="timeline-content timeline-diary-link" href={`/diary/${item.diary.id}`}>
+        <Link className="timeline-content timeline-diary-link" href={diaryHref(item.diary.id)}>
           <div className="timeline-kind">日记</div>
           {item.diary.title ? <h3><HighlightedText text={item.diary.title} keyword={highlight} /></h3> : null}
           <p><HighlightedText text={highlight ? searchExcerpt(item.diary.body, highlight) : diaryPreview(item.diary.body)} keyword={highlight} /></p>

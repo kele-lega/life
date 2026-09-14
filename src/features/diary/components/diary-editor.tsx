@@ -8,6 +8,7 @@ import { WritingTextarea } from "@/components/ui/writing-textarea";
 import styles from "./diary-page.module.css";
 
 import { createDiary, updateDiaryContent } from "../repository/diary-repository";
+import { diaryHref } from "@/lib/runtime/diary-href";
 
 interface DiaryEditorProps {
   diaryId?: string;
@@ -44,7 +45,7 @@ export function DiaryEditor({ diaryId, initialTitle = "", initialBody = "", onSa
     }
     if (diaryId && title === initialTitle && body === initialBody) {
       if (onCancel) onCancel();
-      else router.push(`/diary/${diaryId}`);
+      else router.push(diaryHref(diaryId));
       return false;
     }
     submitting.current = true;
@@ -57,7 +58,7 @@ export function DiaryEditor({ diaryId, initialTitle = "", initialBody = "", onSa
       persisted.current = true;
       return () => {
         if (onSaved) onSaved(diary);
-        else router.push(`/diary/${diary.id}`);
+        else router.push(diaryHref(diary.id));
       };
     } catch {
       setError("保存失败，请重试。正文仍然保留。");

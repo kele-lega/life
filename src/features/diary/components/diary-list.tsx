@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { Diary } from "../model/types";
 import { listDiaries } from "../repository/diary-repository";
 import { BackLink, PageNav } from "@/components/ui/page-nav";
+import { diaryHref } from "@/lib/runtime/diary-href";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ReadingPlaceholder } from "@/components/ui/reading-placeholder";
 import { ChevronRightIcon, ReaderIcon } from "@radix-ui/react-icons";
@@ -48,7 +49,7 @@ export function DiaryList() {
       {diaries.length === 0 && !loading && !error ? <EmptyState icon={<ReaderIcon />}>还没有日记。</EmptyState> : null}
       <div className="diary-list" aria-busy={loading}>
         {diaries.map((diary) => (
-          <Link className="diary-entry" href={`/diary/${diary.id}`} key={diary.id}>
+          <Link className="diary-entry" href={diaryHref(diary.id)} key={diary.id}>
             <time dateTime={diary.createdAt}>{formatDate(diary.createdAt)}</time>
             <div className="diary-entry-content">
               {diary.title ? <h2>{diary.title}</h2> : null}

@@ -2,9 +2,9 @@
 
 一个以“打开、记录、保存、离开”为核心的私人生活记录系统。当前已完成随笔、图片、追加、日记、时间线、日历和普通关键词搜索，以及对应的 UI 品质改造。
 
-数据保存在当前浏览器的 IndexedDB。Moment 原文提交后不可编辑，补充内容通过追加保存；日记可以编辑。没有账号、云同步、AI、统计或社交功能。
+数据保存在当前浏览器或 Android App 的 IndexedDB。Moment 原文提交后不可编辑，补充内容通过追加保存；日记可以编辑。网页可部署到自建服务器；邮箱 OTP 只用于可选的手动云备份，不是双向同步。
 
-正式网址：[Life](https://life-kelelega.netlify.app)。当前已部署到 Netlify；实际访问权限和线上验收进度见 [部署状态](docs/DEPLOYMENT.md)。
+正式网址：[Life](https://life-kelelega.netlify.app)。Netlify 状态见 [部署状态](docs/DEPLOYMENT.md)；自建云主机见 [云服务器部署](docs/SERVER_DEPLOYMENT.md)。
 
 ## 技术栈
 
@@ -28,6 +28,22 @@ npm run dev
 
 打开 <http://localhost:3000>。
 
+## Android App（Phase 21）
+
+永久 application/bundle ID：`app.kelelega.life`。生产 APK 使用本地静态资源，禁止 `server.url` 套现网。
+
+```powershell
+npm run native:web
+npm run native:sync
+npm run native:open
+```
+
+`native:web` 会实际排除 `/api` 与 `/diary/[id]` 后再做 static export。Web/PWA 构建命令不变。APK 产物与 `android/local.properties` 已被 Git 忽略。
+
+## 云服务器部署
+
+把网页部署到自己的 Linux 主机（Node 24 + nginx + HTTPS）见 [云服务器部署](docs/SERVER_DEPLOYMENT.md)。服务器只托管应用与可选的 AI/云备份 API；个人记录默认仍在设备本地。账号数据用 `.life.zip` 或账户页手动云备份保存，不要自建同步库。
+
 ## 质量检查
 
 ```powershell
@@ -50,13 +66,14 @@ src/
   test/           测试环境配置与测试工具
   types/          跨模块共享类型
 docs/             产品、架构、数据模型、任务与决策文档
+android/          Capacitor Android 工程（不含 APK 与 SDK 路径）
 ```
 
 功能代码应优先放在对应的 `features/<feature>` 内；只有确实跨功能复用的代码才提升到 `components`、`lib` 或 `types`。
 
 ## 环境变量
 
-当前核心功能没有必填环境变量，构建不需要 `.env.local`。`.env.example` 中的 AI_PROVIDER、AI_API_KEY、AI_MODEL 只是未来服务端接入的空占位，本轮不配置、不读取、不启用 AI。任何私钥都不得使用 `NEXT_PUBLIC_` 前缀。`.env*`（模板除外）和 `.vercel/` 已被 Git 忽略。
+核心记录功能没有必填环境变量。可选 AI 提取与 Cloud Foundation 的密钥只放服务端 `.env.local`，模板见 `.env.example`。任何私钥都不得使用 `NEXT_PUBLIC_` 前缀。`.env*`（模板除外）、`.vercel/`、`.netlify/` 和 APK 构建产物已被 Git 忽略。
 
 城市定位使用现有的同源 `/api/location/reverse` 路由，向 Nominatim 做尽力查询。它依赖浏览器定位权限和外部服务可用性；拒绝定位、断网或查询失败都不应阻塞本地保存。
 
@@ -135,7 +152,7 @@ npx vercel deploy --prod
 
 ### 数据与域名
 
-IndexedDB 以浏览器和 origin 隔离。`localhost`、预览地址和正式域名里的记录互不迁移；正式使用请固定一个域名。部署只上传应用代码，不上传个人记录。当前没有云备份或导出 UI，清除浏览器站点数据会移除本地记录。
+IndexedDB 以浏览器/WebView 和 origin 隔离。`localhost`、预览地址、正式域名和 Android App（`https://localhost`）里的记录互不迁移；正式网页请固定一个域名。部署只上传应用代码，不上传个人记录。换设备请用 `/account` 导出 `.life.zip` 或手动云备份。清除站点数据会移除该 origin 的本地记录。
 
 已有页面加载后可以在离线情况下进行本地操作；未实现 Service Worker，不能保证断网后的首次打开或完全关闭后的离线重开。这个 UI 阶段没有新增完整离线应用壳。
 
@@ -154,3 +171,7 @@ IndexedDB 以浏览器和 origin 隔离。`localhost`、预览地址和正式域
 - [数据模型](docs/DATA_MODEL.md)
 - [V1 任务拆分](docs/TASKS.md)
 - [架构决策](docs/DECISIONS.md)
+- [部署状态](docs/DEPLOYMENT.md)
+- [云服务器部署](docs/SERVER_DEPLOYMENT.md)
+- [Cloud Foundation 操作](docs/PHASE16A_CLOUD_OPERATIONS.md)
+- [Android App Shell](docs/PHASE21_ANDROID_APP_SHELL.md)

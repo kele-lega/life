@@ -1,5 +1,16 @@
 # Architecture Decision Records
 
+## ADR-039: Android First uses a bundled static web runtime, not a live site wrapper
+
+- **Status:** Accepted (2026-09-14 explicit Phase 21 / Android First).
+- **Decision:** Ship Capacitor Android with the same React client, Dexie v6 repositories and seven business tables. The APK serves a verified static export at `https://localhost`. Production builds must not set `server.url` to the hosted website. The permanent application/bundle ID is `app.kelelega.life` for Android and future iOS.
+- **Export:** `npm run native:web` temporarily moves `src/app/api` and `src/app/diary/[id]` out of the App Router, runs `output: "export"`, then restores those files. The command fails if `/api`, `/diary/[id]` or other request-bound routes remain. Web/PWA keeps the existing Next.js Node build.
+- **Diary:** Web keeps `/diary/[id]`. Native static pages use `/diary/open/?id=` through `diaryHref()`. `DiaryDetail` is unchanged.
+- **APIs:** Native origin is not the Cloud/AI CSRF origin. Extraction, reverse geocoding and cloud OTP stay fail-open. `.life.zip` export/restore remains local. CORS, cookies and origin checks are not relaxed.
+- **Shell:** StatusBar does not overlay the WebView. Keyboard resize is none so the existing `visualViewport` writer remains. Android back maps onto existing cancel/Escape/history using Capacitor `canGoBack`, then `minimizeApp()`. Service Worker is not registered in the native web build.
+- **Limits:** Camera, Photos, Location plugins, Haptics, SQLite, Cloud Sync and iOS Xcode are out of this phase. Native IndexedDB is origin-isolated from the browser PWA; move data with `.life.zip`.
+- **Evidence:** `scripts/build-native-web.mjs` proves `LIFE_NATIVE=1` fails on the unexcluded tree, then exports core pages with `/api` and `/diary/[id]` absent. `e2e/phase21-native-static.spec.ts` records Moment/image/Append/Diary against `out/` without a Next server.
+
 ## ADR-037: Supabase Storage snapshots use unique immutable object keys
 
 - **Status:** Accepted (2026-09-08 explicit Phase 16A.5 provider correction). Supersedes ADR-036 only where it implied version-pinned object storage.

@@ -18,11 +18,20 @@
     "cloud:migrate": "tsx --env-file=.env.local scripts/cloud-migrate.ts",
     "cloud:verify": "tsx --env-file=.env.local scripts/cloud-worker.ts",
     "cloud:otp": "tsx --env-file=.env.local scripts/cloud-drill.ts --otp",
-    "cloud:drill": "tsx --env-file=.env.local scripts/cloud-drill.ts"
+    "cloud:drill": "tsx --env-file=.env.local scripts/cloud-drill.ts",
+    "native:web": "node scripts/build-native-web.mjs",
+    "native:sync": "npm run native:web && cap sync android",
+    "native:open": "cap open android",
+    "test:native-static": "npm run native:web && playwright test --config playwright.native.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
     "@aws-sdk/s3-request-presigner": "^3.1127.0",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/status-bar": "^8.0.3",
     "@radix-ui/react-icons": "^1.3.2",
     "@supabase/supabase-js": "^2.115.0",
     "dexie": "^4.4.5",
@@ -35,6 +44,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.3",

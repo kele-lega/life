@@ -10,3 +10,15 @@ test-results/
 playwright-report/
 design/ios-refresh/production-results/
 .scratch/
+
+out/
+.next-native/
+.native-exclude/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+android/app/src/main/assets/public/
+android/capacitor-cordova-android-plugins/
+
+.next-web-keep/

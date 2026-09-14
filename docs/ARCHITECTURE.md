@@ -202,6 +202,25 @@ Moment media action
 
 The Service Worker excludes every `/api/*` request. Cloud account, OTP, backup, provider extraction and signed-object traffic therefore retain their network/error semantics and are never made to look successful by an application cache. Records and Attachment Blobs remain in IndexedDB; the cache is disposable and contains only route/build responses. Capacitor, native plugins, SQLite and background execution remain future phases.
 
+
+## Phase 21 Android First
+
+The phone App reuses the same Next.js client components, repositories and Dexie v6 database. Capacitor is an Android shell around a verified static export. It is not a second Life implementation and not a WebView pointed at production.
+
+```text
+Android WebView https://localhost
+  -> bundled static routes from `out/`
+  -> LibraryBoundary opens the selected local Dexie library
+  -> existing Repository reads and writes seven business tables
+
+Optional hosted APIs remain on the Next.js origin
+  -> native fetch to `/api/*` has no local server
+  -> existing offline/unconfigured UI paths apply
+  -> no CORS/CSRF/Cookie change
+```
+
+`npm run native:web` is the only supported native frontend build. It excludes Route Handlers and `/diary/[id]`, writes `/diary/open`, and restores the web tree. `CAPACITOR_DEV_SERVER_URL` may point a debug APK at a LAN `next dev` server; production APKs must omit it. Camera, Photos, Location, Haptics, SQLite and bidirectional sync remain later phases.
+
 ## Test strategy
 
 Unit tests cover pure rules and utilities. Database integration tests cover Dexie schema, migrations, transactions, indexes, and soft deletion. Component tests cover user behavior. Playwright is deferred until a real product flow exists. The current real-browser baseline covers the core flow; future stages should extend it only when their browser behavior warrants it. Every feature stage must pass `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
