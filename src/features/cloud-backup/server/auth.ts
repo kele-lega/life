@@ -22,7 +22,7 @@ export function supabaseEmailAuth(config: CloudConfig): EmailAuth {
   });
   return {
     async start(email) {
-      const { error } = await client().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      const { error } = await client().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: config.origin } });
       if (error) throw new BackupError("otp_unavailable", "验证码暂时无法发送，请稍后重试。");
     },
     async verify(email, token) {

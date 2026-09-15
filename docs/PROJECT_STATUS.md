@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 16B.1 Durable Cloud Replication is implemented: Dexie v7 sidecar outbox, single-writer PostgreSQL replica, Native Bearer transport, blob SHA-256 verification, writer fencing and isolated-library restore. Phase 16B.2 live pull / multi-device merge is not started. Dexie business tables remain v6-compatible; 16A Backup format stays `dexieVersion` 6. See `docs/PHASE16B1_IMPLEMENTATION_REPORT.md`.
+Phase 16B.1.5 Real Cloud + Android Acceptance is complete against the isolated test project and emulator `life-api36`: local-first Dexie v7 outbox, real Bearer replica drill, SHA-256 blob verify, writer fence, isolated restore, and Android push to production replica. Phase 16B.2 live pull / multi-device merge is not started. Dexie business tables remain v6-compatible; 16A Backup format stays `dexieVersion` 6. See `docs/PHASE16B1_IMPLEMENTATION_REPORT.md`.
 
 Phase 14.3 Life Intelligence Persistence is implemented in Dexie v6. The database now stores explicit `lifeExtractionJobs` and `lifeEventProposals`, and `lifeEvents` has a sparse unique Proposal provenance index. Migration performs no transform or backfill: existing original records, attachment bytes, tombstones, indexes, and ordinary manual LifeEvents remain unchanged, and no intelligence records are fabricated.
 

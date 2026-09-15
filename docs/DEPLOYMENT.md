@@ -36,3 +36,10 @@
 本机部署注意：Windows 下先停止 `next dev` 和 `next start`，避免适配器移动 `.next` 时出现目录占用。本机 npm 11.17 经 npx 调用 CLI 时对子安装错误传递脚本配置，直接调用已安装的官方 CLI 后适配成功；未关闭 npm 安全设置。
 
 记录仍在浏览器本地，同一用户不同域名中的 IndexedDB 不共享。上线不会把 localhost 的记录自动迁移至正式域名。
+
+## Phase 16B.1.5 (2026-09-16)
+
+- Official origin remains https://life-kelelega.netlify.app
+- Netlify build command is now `npx next build --webpack` (see `netlify.toml`). Do not revert to default Turbopack for this Next 16 server bundle.
+- Android APK bakes `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life-kelelega.netlify.app` at `native:web` time and talks to that host over Bearer. Web/PWA still uses same-origin `/api/replica`.
+- Replica and 16A backup stay separate. See `docs/PHASE16B15_REAL_CLOUD_ANDROID_ACCEPTANCE.md`.

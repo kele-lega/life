@@ -1,5 +1,18 @@
 # V1 Tasks
 
+## Phase 16B.1.5 - Real Cloud + Android Acceptance (2026-09-15)
+
+- [x] Commit and push Phase 16B.1 (`f8e78925`).
+- [x] Apply `004-replica.sql` on the isolated test Supabase project.
+- [x] Verify restricted app/worker PostgreSQL privileges against replica tables.
+- [x] Real Supabase Auth / Bearer replica drill with synthetic data.
+- [x] SHA-256 blob upload/finalize against real Storage.
+- [x] Fault injection: retry, duplicate mutation, expired token, old writer fence, isolated restore/promote.
+- [x] Bake `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life-kelelega.netlify.app` into the Android APK.
+- [x] Install the APK on emulator `life-api36` and prove local save -> Dexie v7 outbox -> production replica.
+
+Use only the configured test email and synthetic records. Do not open the personal `life` working library. Phase 16B.2 remains excluded.
+
 ## Phase 16B.1 - Durable Cloud Replication (2026-09-15 confirmed)
 
 - [x] Dexie v7 sidecar outbox in the same LifeDatabase; seven business tables unchanged.

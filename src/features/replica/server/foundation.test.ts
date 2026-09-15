@@ -157,6 +157,21 @@ describe("Phase 16B.1 replica API", () => {
     expect(blocked.status).toBe(403);
   });
 
+  it("rejects expired or garbage Bearer tokens with 401 without trusting accountId", async () => {
+    const snapshot = await replica("snapshot", undefined, { Origin: "https://localhost", Authorization: `Bearer ${"x".repeat(40)}` });
+    expect(snapshot.status).toBe(401);
+    expect((await snapshot.json()).code).toBe("unauthorized");
+    const mutated = await replica("mutations", {
+      writerId,
+      epoch: 1,
+      mutationId: "55555555-5555-4555-8555-555555555555",
+      createdAt: "2026-09-15T00:00:00.000Z",
+      payloadSha256: "a".repeat(64),
+      ops: [],
+    }, { Origin: "https://localhost", Authorization: `Bearer ${"x".repeat(40)}`, "X-Life-Account": accountId });
+    expect(mutated.status).toBe(401);
+  });
+
   it("accepts native OTP auth with no Origin header because CapacitorHttp is not a browser", async () => {
     const started = await handler(new Request(`${config.origin}/api/replica/auth/email/start`, {
       method: "POST",
@@ -171,6 +186,15 @@ describe("Phase 16B.1 replica API", () => {
     }));
     expect(verified.status).toBe(200);
     expect((await verified.json()).accessToken).toEqual(accessToken);
+  });
+
+  it("exchanges a provider magic-link access token for replica Bearer session", async () => {
+    auth.verifyAccessToken.mockImplementationOnce(async () => ({ subject: "native@example.test", email: "native@example.test" }));
+    const callback = await replica("auth/email/callback", { accessToken }, { Origin: "https://localhost" });
+    expect(callback.status).toBe(200);
+    expect((await callback.json()).accessToken).toEqual(accessToken);
+    const blocked = await replica("auth/email/callback", { accessToken: "y".repeat(128) }, { Origin: "https://localhost" });
+    expect(blocked.status).toBe(401);
   });
 
   it("fences the old writer after promote and preserves local-unrelated 16A cookie CSRF", async () => {

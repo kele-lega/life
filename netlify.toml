@@ -1,6 +1,8 @@
 [build]
-  command = "npm run build"
+  command = "npx next build --webpack"
   publish = ".next"
+
+# Next 16 Turbopack emits hashed pg/@aws-sdk aliases that Netlify cannot resolve.
 
 [build.environment]
   NODE_VERSION = "24"

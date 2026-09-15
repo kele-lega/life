@@ -95,3 +95,10 @@ Replica 是日常自动增量可靠副本，不是 16A 不可变完整快照，�
 - 本地保存永远先写入 Dexie。未配置云、断网或 replica API 失败不得回滚本机记录。
 - 灾难恢复写入新的隔离生活库；成为写者时提升 writer epoch，旧设备后续上传返回 `409 fenced`。旧设备仍可离线查看本机数据。
 - Development 与 Production 必须用不同 `CLOUD_OBJECT_ENV` 和数据库。测试只用合成数据。
+
+## 7. Phase 16B.1.5 Netlify TLS and webpack
+
+- Netlify production build must use `npx next build --webpack`. Next 16 Turbopack emits hashed `pg` / `@aws-sdk/client-s3` aliases that the Netlify function zip cannot resolve.
+- Remote Postgres verifies the bundled Supabase Root 2021 CA (`src/features/cloud-backup/server/provider-ca.ts` and `infrastructure/cloud/prod-ca-2021.crt`). Do not set `sslmode=verify-full` together with a custom `ssl` object, and do not disable certificate verification. A host path like `sslrootcert=D:\...` will not exist on Netlify.
+- Expired or garbage Bearer tokens on `/api/replica/*` must return `401 unauthorized`. Do not whitelist `https://localhost`. Native CapacitorHttp may send `Origin: https://localhost` with a Bearer token; CSRF origin checks are skipped only when a Bearer token is present.
+- Replica drill scripts: `npm run cloud:replica-accept`, `npm run cloud:replica-otp`, `npm run cloud:replica-drill`. Never commit `.env.local`, OTP, or access tokens.

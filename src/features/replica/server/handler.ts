@@ -99,7 +99,7 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
       const native = origin === "https://localhost";
       const bearer = readBearer(request);
       if (method === "POST" && !bearer) {
-        const nativeAuth = ["auth/email/start", "auth/email/verify", "auth/refresh"].includes(path);
+        const nativeAuth = ["auth/email/start", "auth/email/verify", "auth/email/callback", "auth/refresh"].includes(path);
         if (native || (!origin && nativeAuth && !readCookieToken(request, config))) {
           ensureReplica(nativeAuth, "origin_rejected");
         } else {
@@ -108,14 +108,31 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
       }
       const body = method === "POST" ? await readBody(request) : {};
 
-      if (["auth/email/start", "auth/email/verify"].includes(path) && method === "POST") {
-        ensureReplica(typeof body.email === "string" && body.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email), "invalid_email");
-        const email = body.email.trim();
-        await accounts.limit(`replica-email:${digest(email.toLowerCase())}:${path}`, path.endsWith("start") ? 5 : 10, 3600);
+      if (["auth/email/start", "auth/email/verify", "auth/email/callback"].includes(path) && method === "POST") {
+        const isCallback = path.endsWith("callback");
+        const email = isCallback ? "" : (() => {
+          ensureReplica(typeof body.email === "string" && body.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email), "invalid_email");
+          return body.email.trim();
+        })();
+        if (!isCallback) await accounts.limit(`replica-email:${digest(email.toLowerCase())}:${path}`, path.endsWith("start") ? 5 : 10, 3600);
         await accounts.limit(`replica-global:${path}`, path.endsWith("start") ? 100 : 200, 60);
         if (path.endsWith("start")) { await auth.start(email); return json({ ok: true }); }
-        ensureReplica(typeof body.token === "string" && /^[0-9]{6,10}$/.test(body.token), "otp_invalid");
-        const verified = await auth.verify(email, body.token);
+        const verified = isCallback
+          ? await (async () => {
+            const accessToken = body.accessToken;
+            ensureReplica(typeof accessToken === "string" && accessToken.length >= 100 && accessToken.length <= 8192 && !/\s/.test(accessToken), "otp_invalid");
+            try {
+              const identity = await auth.verifyAccessToken(accessToken);
+              return { ...identity, accessToken };
+            } catch (error) {
+              if (error instanceof ReplicaError) throw error;
+              throw new ReplicaError("unauthorized", "\u4e91\u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u3002\u672c\u673a\u8bb0\u5f55\u4ecd\u53ef\u4f7f\u7528\u3002");
+            }
+          })()
+          : await (async () => {
+            ensureReplica(typeof body.token === "string" && /^[0-9]{6,10}$/.test(body.token), "otp_invalid");
+            return auth.verify(email, body.token);
+          })();
         const account = await accounts.ensureAccount(verified.subject, verified.email);
         return json({
           account,
@@ -135,8 +152,13 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
       const cookieToken = bearer ? null : readCookieToken(request, config);
       const account = bearer
         ? await (async () => {
-          const identity = await auth.verifyAccessToken(bearer);
-          return accounts.ensureAccount(identity.subject, identity.email);
+          try {
+            const identity = await auth.verifyAccessToken(bearer);
+            return accounts.ensureAccount(identity.subject, identity.email);
+          } catch (error) {
+            if (error instanceof ReplicaError) throw error;
+            throw new ReplicaError("unauthorized", "\u4e91\u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u3002\u672c\u673a\u8bb0\u5f55\u4ecd\u53ef\u4f7f\u7528\u3002");
+          }
         })()
         : cookieToken ? await accounts.session(digest(cookieToken)) : null;
 
