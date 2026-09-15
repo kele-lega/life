@@ -6,13 +6,20 @@ import { s3Objects } from "./objects";
 import { BackupService } from "./service";
 import { supabaseEmailAuth } from "./auth";
 import { assertApplicationRole } from "./role";
+import { ReplicaStore } from "@/features/replica/server/store";
+import { ReplicaService } from "@/features/replica/server/service";
 
 let runtime: ReturnType<typeof createRuntime> | undefined;
 let workerRuntime: ReturnType<typeof createRuntime> | undefined;
 function createRuntime(config: CloudConfig) {
-  const store = new CloudStore(postgresDatabase(config.databaseUrl));
+  const sql = postgresDatabase(config.databaseUrl);
+  const store = new CloudStore(sql);
   const objects = s3Objects(config);
-  return { config, store, service: new BackupService(store, objects), auth: supabaseEmailAuth(config) };
+  const replicaStore = new ReplicaStore(sql);
+  return {
+    config, store, service: new BackupService(store, objects), auth: supabaseEmailAuth(config),
+    replicaStore, replicaService: new ReplicaService(replicaStore, objects, config),
+  };
 }
 export function cloudRuntime() { return runtime ??= createRuntime(cloudConfig()); }
 let checkedRole: Promise<void> | undefined;

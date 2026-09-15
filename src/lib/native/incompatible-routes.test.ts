@@ -17,6 +17,8 @@ describe("native static export exclusions", () => {
       "src/app/api/cloud/[...path]/route.ts",
       "src/app/api/life-extraction/route.ts",
       "src/app/api/location/reverse/route.ts",
+      "src/app/api/replica/[...path]",
+      "src/app/api/replica/[...path]/route.ts",
       "src/app/diary/[id]",
     ]);
   });

@@ -2,6 +2,8 @@
 
 ## Current phase
 
+Phase 16B.1 Durable Cloud Replication is implemented: Dexie v7 sidecar outbox, single-writer PostgreSQL replica, Native Bearer transport, blob SHA-256 verification, writer fencing and isolated-library restore. Phase 16B.2 live pull / multi-device merge is not started. Dexie business tables remain v6-compatible; 16A Backup format stays `dexieVersion` 6. See `docs/PHASE16B1_IMPLEMENTATION_REPORT.md`.
+
 Phase 14.3 Life Intelligence Persistence is implemented in Dexie v6. The database now stores explicit `lifeExtractionJobs` and `lifeEventProposals`, and `lifeEvents` has a sparse unique Proposal provenance index. Migration performs no transform or backfill: existing original records, attachment bytes, tombstones, indexes, and ordinary manual LifeEvents remain unchanged, and no intelligence records are fabricated.
 
 The persistent repository commits each explicit Job with all candidates atomically and uses unique request, candidate, and materialization identities for retries. Accept creates one AI-origin real LifeEvent; Correct creates one manual-origin real LifeEvent; Reject and Supersede create none. Accepted, corrected, rejected, and superseded are terminal, including a deliberate prohibition on accepted-to-corrected. Accept/Correct revalidate record source fingerprints and active manual conflicts inside the same transaction as Event insertion and Proposal resolution.

@@ -1,5 +1,15 @@
 # Architecture Decision Records
 
+## ADR-040: Durable cloud replica is a single-writer outbox, not a second working database
+
+- **Status:** Accepted (2026-09-15 explicit Phase 16B.1 implementation).
+- **Decision:** Keep Dexie as the live working database. Add Dexie v7 sidecar stores (`replicaMutations`, `replicaState`, `replicaBlobs`) in the same `LifeDatabase` so each business write and its outbox mutation commit in one IndexedDB transaction. The seven business tables and their v6 indexes stay byte-compatible. Cloud replica is a single-writer incremental copy of Moment, MomentAppend, Attachment metadata, Diary, LifeEvent, Job and Proposal, plus SHA-256-verified blobs.
+- **Transport:** Web continues to use `/api/cloud` Cookie/CORS/CSRF. Native uses a baked `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN` HTTPS host, Supabase access token and Bearer authentication. `https://localhost` is not added to the Web origin allowlist. The server derives account from the verified token or session hash and never trusts a client-supplied accountId.
+- **Replica vs Backup:** Replica tables, object prefix `{env}/replica/...` and lifecycle are separate from Phase 16A Backup. Replica is automatic durable incremental copy. Backup remains a user-triggered immutable complete snapshot whose archive `dexieVersion` stays 6. Neither replaces the other.
+- **Recovery:** Disaster restore writes a new isolated library, then promote raises the writer epoch and fences the previous writer (`409 fenced`). 16B.1 does not live-pull into the current working library, merge concurrent editors, introduce E2EE, or make PostgreSQL the primary store.
+- **Local-first:** Local save never waits on the network. Outbox/push failure cannot roll back an already committed local record.
+
+
 ## ADR-039: Android First uses a bundled static web runtime, not a live site wrapper
 
 - **Status:** Accepted (2026-09-14 explicit Phase 21 / Android First).
@@ -33,7 +43,7 @@
 - **Isolation:** A library is anonymous or bound to one Account. Login/binding never auto-upload. Each document retains one fixed database instance; an exclusive Web Lock prevents account/library switching while other tabs are open. Successful switch uses a full document reload. Logout retains the bound library and selects a separate anonymous library; expired cloud sessions do not block offline records.
 - **Restore:** Validate format, checksums, counts, existing unique keys and review links before activation. Write a new independent v6 database, reconstruct Blob, then read back and compare. Never clear the original database, replay review commands, normalize originals or regenerate IDs/fingerprints. Pre-existing stale/deleted history is preserved.
 - **Cloud:** Supabase email OTP verification maps a stable provider subject to an internal Account. BFF cookies are opaque HttpOnly/Secure/SameSite sessions; only hashes persist. Server-only API validates session/account/origin and uses a restricted PostgreSQL role with RLS. PostgreSQL stores snapshot catalogs; private object storage holds JSON/image bytes in pinned 4 MiB parts. Complete snapshots are immutable at SQL level. Workers only verify explicitly requested snapshots, with durable leases/checkpoints, and do not capture new records or call AI.
-- **Boundaries:** Cloud backup is not E2EE; object/DB disaster backups need independent operational verification. Current archive size and browser Web Locks requirements are explicit. API configuration absent or invalid leaves export/restore local. No push/pull protocol, live cloud CRUD, conflict resolution, automatic extraction or other AI functionality is authorized.
+- **Boundaries:** Cloud backup is not E2EE; object/DB disaster backups need independent operational verification. Current archive size and browser Web Locks requirements are explicit. API configuration absent or invalid leaves export/restore local. Automatic extraction or other AI functionality is not authorized. Phase 16B.1 (ADR-040) later adds a durable replica outbox and replica SQL tables; PostgreSQL is still not the working database, and 16B.1 does not live-pull into the current library.
 - **Evidence:** Archive/control tests, actual SQL/RLS tests using PGlite with an in-memory object adapter, and `e2e/cloud-foundation.spec.ts`. These are not proof of real SMTP/IAM/CORS/production worker operation; actual-provider acceptance requires configured credentials and synthetic-data drills documented in `PHASE16A_CLOUD_OPERATIONS.md`.
 
 

@@ -203,9 +203,23 @@ Moment media action
 The Service Worker excludes every `/api/*` request. Cloud account, OTP, backup, provider extraction and signed-object traffic therefore retain their network/error semantics and are never made to look successful by an application cache. Records and Attachment Blobs remain in IndexedDB; the cache is disposable and contains only route/build responses. Capacitor, native plugins, SQLite and background execution remain future phases.
 
 
+
+## Phase 16B.1 Durable Cloud Replication
+
+Local Dexie remains the working store. A v7 sidecar outbox records mutations in the same IndexedDB transaction as the business write. A background fail-open pusher copies after-images to PostgreSQL replica tables and private objects under `{env}/replica/{account}/{attachmentId}/{uuid}`. Blobs are marked replicated only after the server re-reads and verifies SHA-256.
+
+```text
+Dexie working library
+  -> same-transaction replicaMutations / replicaBlobs
+  -> HTTPS /api/replica (Web cookie or Native Bearer)
+  -> PostgreSQL replica + verified objects
+```
+
+Native apps call a baked HTTPS API origin. They do not use `https://localhost` as a Cloud CSRF origin. Disaster restore writes a new isolated library and fences the previous writer. Phase 16A Backup stays a separate immutable snapshot path.
+
 ## Phase 21 Android First
 
-The phone App reuses the same Next.js client components, repositories and Dexie v6 database. Capacitor is an Android shell around a verified static export. It is not a second Life implementation and not a WebView pointed at production.
+The phone App reuses the same Next.js client components, repositories and Dexie working database (v7 sidecar for replica only). Capacitor is an Android shell around a verified static export. It is not a second Life implementation and not a WebView pointed at production.
 
 ```text
 Android WebView https://localhost

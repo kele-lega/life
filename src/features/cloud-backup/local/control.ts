@@ -43,6 +43,20 @@ export async function registerRestoredLibrary(databaseName: string, manifest: Ba
   return library;
 }
 
+export async function registerReplicaRestoredLibrary(databaseName: string, accountId: string, commitSeq: number, storage = control): Promise<LocalLibrary> {
+  const library: LocalLibrary = {
+    id: crypto.randomUUID(),
+    databaseName,
+    accountId,
+    createdAt: new Date().toISOString(),
+    capturedAt: new Date().toISOString(),
+    restoredFrom: `replica:${commitSeq}`,
+    ready: true,
+  };
+  await storage.libraries.add(library);
+  return library;
+}
+
 export async function activateLibrary(id: string, storage = control): Promise<LocalLibrary> {
   return storage.transaction("rw", storage.settings, storage.libraries, async () => {
     const context = await storage.settings.get("context");

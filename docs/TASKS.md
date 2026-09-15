@@ -1,5 +1,20 @@
 # V1 Tasks
 
+## Phase 16B.1 - Durable Cloud Replication (2026-09-15 confirmed)
+
+- [x] Dexie v7 sidecar outbox in the same LifeDatabase; seven business tables unchanged.
+- [x] Business writes and outbox enqueue share one IndexedDB transaction.
+- [x] PostgreSQL replica schema, RLS, mutation log and SHA-256-verified object prefix `{env}/replica/`.
+- [x] Web Cookie/CORS/CSRF unchanged; Native Bearer + HTTPS API origin.
+- [x] Incremental replica of seven entities, blobs, tombstones; fail-open local save.
+- [x] Writer fencing and isolated-library disaster restore.
+- [x] Phase 16A Backup format remains dexieVersion 6 and does not read outbox tables.
+
+**Done when:** v6 to v7 migration is lossless; local save never waits on the network; mutations are idempotent; blobs replicate only after server SHA-256; old writers are fenced; restore cannot overwrite the working library; 16A Backup is unchanged. Phase 16B.2 live pull / multi-device merge remains excluded.
+
+See `docs/PHASE16B1_IMPLEMENTATION_REPORT.md`. Automated gates passed on 2026-09-15: typecheck, lint, 383 unit tests, 76 E2E tests, production build, and native static export.
+
+
 ## Phase 21 - Life Mobile App / Android First (2026-09-14 confirmed)
 
 - [x] Keep Web/PWA on the existing Next.js Node runtime; do not set production `server.url`.

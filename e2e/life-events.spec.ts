@@ -76,8 +76,8 @@ test("real Chromium upgrades v4 originals and image Blob when opening the lab", 
     database.close();
     return { moment, append, diary, bytes, version, stores };
   });
-  expect(result.version).toBe(60);
-  expect(result.stores).toEqual(expect.arrayContaining(["lifeEvents", "lifeExtractionJobs", "lifeEventProposals"]));
+  expect(result.version).toBe(70);
+  expect(result.stores).toEqual(expect.arrayContaining(["lifeEvents", "lifeExtractionJobs", "lifeEventProposals", "replicaMutations", "replicaState", "replicaBlobs"]));
   expect(result.moment).toMatchObject({ originalText: "  原文\n不变  ", updatedAt: "2026-09-01T10:00:00.000Z" });
   expect(result.append).toMatchObject({ momentId: "m", text: "补充" });
   expect(result.diary).toMatchObject({ title: "", body: "日记原文" });

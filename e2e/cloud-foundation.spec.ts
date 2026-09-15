@@ -18,6 +18,7 @@ async function readLibrary(page: Page, name = "life") {
     const database = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const result: Record<string, unknown[]> = {};
     for (const name of Array.from(database.objectStoreNames)) {
+      if (["replicaMutations", "replicaState", "replicaBlobs"].includes(name)) continue;
       const get = database.transaction(name).objectStore(name).getAll();
       const rows = await new Promise<Record<string, unknown>[]>((resolve, reject) => { get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
       result[name] = await Promise.all(rows.map(async (row) => row.blob instanceof Blob ? { ...row, blob: { type: row.blob.type, bytes: Array.from(new Uint8Array(await row.blob.arrayBuffer())) } } : row));

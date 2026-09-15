@@ -38,11 +38,12 @@ const store = new CloudStore(database);
 const objects = new MemoryObjects();
 const service = new BackupService(store, objects);
 const local = new LifeDatabase(`test-server-backup-${crypto.randomUUID()}`);
-const config: CloudConfig = { databaseUrl: "unused", authUrl: "https://auth.invalid", authKey: "synthetic", origin: "https://life.example", bucket: "synthetic", region: "us-east-1", accessKeyId: "synthetic", secretAccessKey: "synthetic", accountQuotaBytes: 10_000_000 };
+const config: CloudConfig = { databaseUrl: "unused", authUrl: "https://auth.invalid", authKey: "synthetic", origin: "https://life.example", bucket: "synthetic", region: "us-east-1", accessKeyId: "synthetic", secretAccessKey: "synthetic", accountQuotaBytes: 10_000_000, objectEnv: "dev" };
 const auth = {
   start: vi.fn(async () => {}),
-  verify: vi.fn(async (email: string, token: string) => { if (token !== "123456") throw new Error("synthetic provider error containing private tokens"); return { subject: email, email }; }),
+  verify: vi.fn(async (email: string, token: string) => { if (token !== "123456") throw new Error("synthetic provider error containing private tokens"); return { subject: email, email, accessToken: "synthetic-access-token-".padEnd(128, "x"), refreshToken: "synthetic-refresh-token-".padEnd(64, "y"), expiresAt: 2_000_000_000 }; }),
   verifyAccessToken: vi.fn(async (accessToken: string) => { if (accessToken !== "synthetic-access-token-".padEnd(128, "x")) throw new Error("synthetic provider error"); return { subject: "access-subject", email: "access@example.test" }; }),
+  refresh: vi.fn(async (refreshToken: string) => { if (!refreshToken.startsWith("synthetic-refresh-token-")) throw new Error("synthetic provider error"); return { subject: "access-subject", email: "access@example.test", accessToken: "synthetic-access-token-".padEnd(128, "x"), refreshToken, expiresAt: 2_000_000_000 }; }),
 };
 const handler = createCloudHandler({ config, store, service, auth });
 let archive: BackupArchive;

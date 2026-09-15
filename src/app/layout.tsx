@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/ui/app-shell";
 import { PwaRegister } from "@/components/ui/pwa-register";
 import { NativeRuntime } from "@/components/ui/native-runtime";
+import { ReplicaRuntime } from "@/features/replica/components/replica-runtime";
 import { LibraryBoundary } from "@/features/cloud-backup/components/library-boundary";
 import { motionCssVariables } from "@/components/ui/motion";
 import "./globals.css";
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <PwaRegister />
         <NativeRuntime />
+        <ReplicaRuntime />
         <a className="skip-link" href="#main-content">跳到正文</a>
         <AppShell><LibraryBoundary>{children}</LibraryBoundary></AppShell>
       </body>

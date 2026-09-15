@@ -1,4 +1,5 @@
 import { db } from "@/lib/db/client";
+import { enqueueReplicaMutation, replicaAttachmentRecord, replicaWrites } from "@/features/replica/local/outbox";
 import { createEntityId } from "@/lib/identity/create-entity-id";
 import { nowTimestamp } from "@/lib/time/timestamps";
 
@@ -25,7 +26,11 @@ export async function createAttachment(input: CreateAttachmentInput): Promise<At
     updatedAt: createdAt,
     deletedAt: null,
   };
-  await db.attachments.add(attachment);
+  const record = await replicaAttachmentRecord(attachment);
+  await db.transaction("rw", replicaWrites(db, db.attachments), async () => {
+    await db.attachments.add(attachment);
+    await enqueueReplicaMutation(db, [{ entity: "attachment", op: "upsert", id: attachment.id, record }]);
+  });
   return attachment;
 }
 
@@ -71,6 +76,10 @@ export async function softDeleteAttachment(id: string, deletedAt = nowTimestamp(
     throw new Error(`Attachment not found: ${id}`);
   }
   const deleted: Attachment = { ...attachment, deletedAt, updatedAt: deletedAt };
-  await db.attachments.put(deleted);
+  const record = await replicaAttachmentRecord(deleted);
+  await db.transaction("rw", replicaWrites(db, db.attachments), async () => {
+    await db.attachments.put(deleted);
+    await enqueueReplicaMutation(db, [{ entity: "attachment", op: "upsert", id: deleted.id, record }]);
+  });
   return deleted;
 }

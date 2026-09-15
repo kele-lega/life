@@ -30,6 +30,13 @@ export class CloudStore {
       return { id: account.id, email: account.email };
     });
   }
+  async ensureAccount(subject: string, email: string): Promise<Account> {
+    const result = await this.sql.query<{ id: string; email: string; status: string }>(`INSERT INTO life_cloud.accounts(id,auth_provider,auth_subject,email) VALUES($1,'supabase',$2,$3)
+      ON CONFLICT(auth_provider,auth_subject) DO UPDATE SET email=EXCLUDED.email RETURNING id,email,status`, [randomUUID(), subject, email]);
+    const account = result.rows[0];
+    if (account.status !== "active") throw new BackupError("unauthorized");
+    return { id: account.id, email: account.email };
+  }
   async session(tokenHash: string): Promise<Account | null> {
     const result = await this.sql.query<Account>(`SELECT a.id,a.email FROM life_cloud.sessions s JOIN life_cloud.accounts a ON a.id=s.account_id
       WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND a.status='active'`, [tokenHash]);

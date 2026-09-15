@@ -21,8 +21,10 @@ describe("Life portable backups", () => {
     const result = await restoreArchive(parsed);
     const restored = new LifeDatabase(result.databaseName); databases.push(restored);
     expect(restored.name).not.toBe(original.name);
-    expect(restored.verno).toBe(6);
-    expect(restored.tables.map(({ name }) => name).sort()).toEqual([...TABLE_NAMES].sort());
+    expect(restored.verno).toBe(7);
+    expect(TABLE_NAMES.every((name) => restored.tables.some((table) => table.name === name))).toBe(true);
+    expect(restored.tables.map(({ name }) => name)).toEqual(expect.arrayContaining(["replicaMutations", "replicaState", "replicaBlobs"]));
+    expect(await restored.replicaMutations.count()).toBe(0);
     for (const name of TABLE_NAMES) {
       const source = await original.table(name).toArray();
       const copy = await restored.table(name).toArray();
@@ -34,6 +36,38 @@ describe("Life portable backups", () => {
     expect(image.deletedAt).not.toBeNull();
     expect((await restored.lifeEvents.get("manual-one"))).not.toHaveProperty("extractionProposalId");
     expect((await verifyArchive(await captureArchive(original, "library-test"))).records).toEqual(before.records);
+  });
+
+  it("captures only the seven business tables and leaves replica sidecar data out of the archive", async () => {
+    const original = newDatabase();
+    await original.moments.add({
+      id: "sidecar-moment",
+      originalText: "not a replica mutation",
+      isFavorite: false,
+      location: null,
+      createdAt: "2026-09-15T00:00:00.000Z",
+      updatedAt: "2026-09-15T00:00:00.000Z",
+      deletedAt: null,
+    });
+    await original.replicaMutations.add({
+      mutationId: "11111111-1111-4111-8111-111111111111",
+      status: "pending",
+      payloadSha256: "a".repeat(64),
+      payload: { mutationId: "11111111-1111-4111-8111-111111111111", createdAt: "2026-09-15T00:00:00.000Z", ops: [] },
+      createdAt: "2026-09-15T00:00:00.000Z",
+      nextRetryAt: "2026-09-15T00:00:00.000Z",
+      attemptCount: 0,
+      lastError: null,
+      ackedCommitSeq: null,
+    });
+    const archive = await captureArchive(original, "sidecar");
+    expect(archive.manifest.dexieVersion).toBe(6);
+    expect(archive.manifest.files.filter((file) => file.table).map((file) => file.table)).toEqual([...TABLE_NAMES]);
+    const zip = await packArchive(archive);
+    const restored = await restoreArchive(await unpackArchive(zip));
+    const copy = new LifeDatabase(restored.databaseName); databases.push(copy);
+    expect(await copy.replicaMutations.count()).toBe(0);
+    expect((await copy.moments.get("sidecar-moment"))?.originalText).toBe("not a replica mutation");
   });
 
   it("supports an empty v6 library", async () => {

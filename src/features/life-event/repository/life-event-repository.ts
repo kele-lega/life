@@ -1,13 +1,15 @@
 import Dexie from "dexie";
 
 import { db } from "@/lib/db/client";
+import { enqueueReplicaMutation, replicaWrites } from "@/features/replica/local/outbox";
+import { replicaRecord } from "@/features/replica/shared/protocol";
 import { createEntityId } from "@/lib/identity/create-entity-id";
 import { nowTimestamp } from "@/lib/time/timestamps";
 import type { CreateManualLifeEventInput, LifeEvent, LifeEventCursor, LifeEventPage, LifeEventSourceRef, LifeEventView } from "../model/types";
 import { assertDate, assertSource, canonicalJson, normalizeInput } from "../model/validation";
 import { lifeEventSourceKey, readLifeEventSourceFingerprints } from "./source-fingerprint";
 
-const tables = () => [db.lifeEvents, db.moments, db.momentAppends, db.diaries];
+const tables = () => replicaWrites(db, db.lifeEvents, db.moments, db.momentAppends, db.diaries);
 const SCAN_BATCH_SIZE = 64;
 
 function payload(event: LifeEvent) {
@@ -52,6 +54,14 @@ export async function createManualLifeEvents(inputs: readonly CreateManualLifeEv
     });
     // Do not catch BulkError in this transaction: partial writes must roll back.
     await db.lifeEvents.bulkAdd(toAdd);
+    if (toAdd.length) {
+      await enqueueReplicaMutation(db, toAdd.map((event) => ({
+        entity: "lifeEvent" as const,
+        op: "upsert" as const,
+        id: event.id,
+        record: replicaRecord(event),
+      })));
+    }
     return result;
   });
 }

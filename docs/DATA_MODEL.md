@@ -1,13 +1,26 @@
 # Data Model
 
+## Dexie v7 replica sidecar (Phase 16B.1)
+
+Live Dexie `verno` is 7. The seven business tables and every v6 index remain unchanged. v7 only adds infrastructure stores in the same database:
+
+- `replicaMutations`: durable outbox keyed by `mutationId`, indexed by `status, nextRetryAt, createdAt`.
+- `replicaState`: single row `current` for writerId, epoch, fence and backfill.
+- `replicaBlobs`: attachment upload progress keyed by `attachmentId`.
+
+Business rows never gain sync fields. Attachment outbox payloads store metadata plus `sha256`/`byteLength` and never clone the Blob. Phase 16A portable archives still declare `dexieVersion: 6` and capture only the seven business tables.
+
+PostgreSQL replica tables (`replica_*`) are a single-writer copy with an immutable mutation log. They are not the working store and are isolated from `backups` / `backup_files` / `backup_parts`.
+
+
 ## Phase 16A Cloud Foundation (v6 unchanged)
 
 The seven business entities and every v6 index are unchanged. Account ownership is at library level in a separate `life-control` IndexedDB database (its own v1), not added to Moment/Diary/Event rows. It stores library identities and readiness, active context, backup transfer metadata and immutable upload staging. Verified redundant staging is released after cloud completion; original Attachment Blobs remain in their business table.
 
-Portable snapshots preserve all stored rows, soft deletes and review history. Attachment blob bytes move only into the export/backup envelope and are reconstructed on restore; the runtime Attachment model still requires Blob. Cloud PostgreSQL stores account/session/library and immutable backup/file/part/verification metadata. Original record JSON and images are versioned private objects; no live business table is introduced in PostgreSQL. Restored libraries receive new infrastructure library IDs while retaining all business IDs and original fields. See `PHASE16A_ARCHIVE_FORMAT.md` and the three SQL migrations under `infrastructure/cloud`.
+Portable snapshots preserve all stored rows, soft deletes and review history. Attachment blob bytes move only into the export/backup envelope and are reconstructed on restore; the runtime Attachment model still requires Blob. Cloud PostgreSQL stores account/session/library and immutable backup/file/part/verification metadata. Original record JSON and images are versioned private objects; no live business table is introduced in PostgreSQL. Restored libraries receive new infrastructure library IDs while retaining all business IDs and original fields. See `PHASE16A_ARCHIVE_FORMAT.md` and SQL migrations `001`–`004` under `infrastructure/cloud`.
 
 
-This document separates the implemented physical schema from future logical models. Dexie v6 contains `Moment`, `MomentAppend`, Moment-owned `Attachment`, `Diary`, `LifeEvent`, `LifeExtractionJob`, and `LifeEventProposal`. Tags and the unrelated generic AI entities below remain design-only. The v2–v5 sections are historical schema snapshots.
+This document separates the implemented physical schema from future logical models. The live schema is Dexie v7 with a replica sidecar; the business model remains the Dexie v6 seven entities: `Moment`, `MomentAppend`, Moment-owned `Attachment`, `Diary`, `LifeEvent`, `LifeExtractionJob`, and `LifeEventProposal`. Tags and the unrelated generic AI entities below remain design-only. The v2–v5 sections are historical schema snapshots.
 
 ## Phase 12 physical schema: LifeEvent (v5)
 

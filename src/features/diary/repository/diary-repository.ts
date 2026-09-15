@@ -1,4 +1,6 @@
 import { db } from "@/lib/db/client";
+import { enqueueReplicaMutation, replicaWrites } from "@/features/replica/local/outbox";
+import { replicaRecord } from "@/features/replica/shared/protocol";
 import { createEntityId } from "@/lib/identity/create-entity-id";
 import { nowTimestamp } from "@/lib/time/timestamps";
 
@@ -37,7 +39,10 @@ export async function createDiary(input: CreateDiaryInput): Promise<Diary> {
     updatedAt: createdAt,
     deletedAt: null,
   };
-  await db.diaries.add(diary);
+  await db.transaction("rw", replicaWrites(db, db.diaries), async () => {
+    await db.diaries.add(diary);
+    await enqueueReplicaMutation(db, [{ entity: "diary", op: "upsert", id: diary.id, record: replicaRecord(diary) }]);
+  });
   return diary;
 }
 
@@ -61,7 +66,10 @@ export async function updateDiaryContent(
     body: input.body,
     updatedAt,
   };
-  await db.diaries.put(updated);
+  await db.transaction("rw", replicaWrites(db, db.diaries), async () => {
+    await db.diaries.put(updated);
+    await enqueueReplicaMutation(db, [{ entity: "diary", op: "upsert", id: updated.id, record: replicaRecord(updated) }]);
+  });
   return updated;
 }
 

@@ -6,6 +6,18 @@ import type { Diary } from "@/features/diary/model/types";
 import type { LifeEvent } from "@/features/life-event/model/types";
 import type { LifeEventProposal, LifeExtractionJob } from "@/features/life-intelligence/model/types";
 import type { Moment, MomentAppend } from "@/features/moment/model/types";
+import type { ReplicaBlobRow, ReplicaMutationRow, ReplicaStateRow } from "@/features/replica/local/types";
+
+export const BUSINESS_TABLE_NAMES = [
+  "moments",
+  "momentAppends",
+  "attachments",
+  "diaries",
+  "lifeEvents",
+  "lifeExtractionJobs",
+  "lifeEventProposals",
+] as const;
+export const SIDECAR_TABLE_NAMES = ["replicaMutations", "replicaState", "replicaBlobs"] as const;
 
 export class LifeDatabase extends Dexie {
   moments!: Table<Moment, string>;
@@ -15,6 +27,9 @@ export class LifeDatabase extends Dexie {
   lifeEvents!: Table<LifeEvent, string>;
   lifeExtractionJobs!: Table<LifeExtractionJob, string>;
   lifeEventProposals!: Table<LifeEventProposal, string>;
+  replicaMutations!: Table<ReplicaMutationRow, string>;
+  replicaState!: Table<ReplicaStateRow, string>;
+  replicaBlobs!: Table<ReplicaBlobRow, string>;
 
   constructor(name = "life") {
     super(name);
@@ -45,6 +60,12 @@ export class LifeDatabase extends Dexie {
       lifeEvents: "id, [occurredOn+id], [source.type+source.id], &extractionProposalId",
       lifeExtractionJobs: "id, &requestKey, createdAt, [input.source.type+input.source.id]",
       lifeEventProposals: "id, jobId, &[jobId+candidateKey]",
+    });
+    // v7 adds replica sidecar stores only. Business tables and indexes stay v6.
+    this.version(7).stores({
+      replicaMutations: "mutationId, status, nextRetryAt, createdAt",
+      replicaState: "id",
+      replicaBlobs: "attachmentId, status, sha256",
     });
   }
 }

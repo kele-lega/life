@@ -54,7 +54,7 @@ describe("Dexie v5 to v6 migration performance", () => {
       const migrationStarted = performance.now();
       await upgraded.open();
       const migrationMilliseconds = Number((performance.now() - migrationStarted).toFixed(2));
-      expect(upgraded.verno).toBe(6);
+      expect(upgraded.verno).toBe(7);
       await expect(upgraded.lifeEvents.count()).resolves.toBe(50_000);
       await expect(upgraded.lifeExtractionJobs.count()).resolves.toBe(0);
       await expect(upgraded.lifeEventProposals.count()).resolves.toBe(0);

@@ -71,7 +71,7 @@ describe("record extraction persistence with provider descriptors", () => {
     expect(jobs.map(({ id }) => id)).toEqual(["job-c", "job-b", "job-a"]);
     await expect(repository.listJobsBySource({ type: "moment", id: moment.id })).resolves.toHaveLength(1);
     await expect(repository.listJobsBySource({ type: "diary", id: "missing" })).resolves.toEqual([]);
-    expect(db.verno).toBe(6);
+    expect(db.verno).toBe(7);
   });
 
   it.each([

@@ -3,7 +3,7 @@ import { BackupError } from "../shared/format";
 export interface CloudConfig {
   databaseUrl: string; authUrl: string; authKey: string; origin: string;
   region: string; bucket: string; accessKeyId: string; secretAccessKey: string;
-  endpoint?: string; accountQuotaBytes: number;
+  endpoint?: string; accountQuotaBytes: number; objectEnv: "prod" | "staging" | "dev";
 }
 const names = ["CLOUD_DATABASE_URL", "CLOUD_AUTH_URL", "CLOUD_AUTH_KEY", "CLOUD_APP_ORIGIN", "CLOUD_S3_REGION", "CLOUD_S3_BUCKET", "CLOUD_S3_ACCESS_KEY_ID", "CLOUD_S3_SECRET_ACCESS_KEY", "CLOUD_S3_ENDPOINT"] as const;
 export function cloudConfigured(env: NodeJS.ProcessEnv = process.env): boolean { return names.every((name) => !!env[name]?.trim()); }
@@ -16,5 +16,6 @@ export function cloudConfig(env: NodeJS.ProcessEnv = process.env): CloudConfig {
   if (env.CLOUD_S3_ENDPOINT && new URL(env.CLOUD_S3_ENDPOINT).protocol !== "https:") throw new BackupError("cloud_configuration");
   const quota = Number(env.CLOUD_ACCOUNT_QUOTA_BYTES ?? 5 * 1024 * 1024 * 1024);
   if (!Number.isSafeInteger(quota) || quota <= 0) throw new BackupError("cloud_configuration");
-  return { databaseUrl: env.CLOUD_DATABASE_URL!, authUrl: auth.origin, authKey: env.CLOUD_AUTH_KEY!, origin: origin.origin, region: env.CLOUD_S3_REGION!, bucket: env.CLOUD_S3_BUCKET!, accessKeyId: env.CLOUD_S3_ACCESS_KEY_ID!, secretAccessKey: env.CLOUD_S3_SECRET_ACCESS_KEY!, endpoint: env.CLOUD_S3_ENDPOINT, accountQuotaBytes: quota };
+  const objectEnv = env.CLOUD_OBJECT_ENV === "prod" || env.CLOUD_OBJECT_ENV === "staging" ? env.CLOUD_OBJECT_ENV : "dev";
+  return { databaseUrl: env.CLOUD_DATABASE_URL!, authUrl: auth.origin, authKey: env.CLOUD_AUTH_KEY!, origin: origin.origin, region: env.CLOUD_S3_REGION!, bucket: env.CLOUD_S3_BUCKET!, accessKeyId: env.CLOUD_S3_ACCESS_KEY_ID!, secretAccessKey: env.CLOUD_S3_SECRET_ACCESS_KEY!, endpoint: env.CLOUD_S3_ENDPOINT, accountQuotaBytes: quota, objectEnv };
 }

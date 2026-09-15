@@ -72,13 +72,15 @@ AI_ALLOWED_ORIGIN=https://life.example.com
 
 `AI_ALLOWED_ORIGIN` 必须与浏览器地址栏源完全一致。
 
-若启用账户 OTP 与手动云备份，再填写 Cloud Foundation 变量，并按 `docs/PHASE16A_CLOUD_OPERATIONS.md` 完成 Supabase / PostgreSQL / Storage。其中：
+若启用账户 OTP、手动云备份或 16B.1 可靠云副本，再填写 Cloud Foundation 变量，并按 `docs/PHASE16A_CLOUD_OPERATIONS.md` 完成 Supabase / PostgreSQL / Storage。其中：
 
 ```bash
 CLOUD_APP_ORIGIN=https://life.example.com
+CLOUD_OBJECT_ENV=prod
+NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life.example.com
 ```
 
-必须是精确 Origin：HTTPS、无路径、无尾斜杠。绑定账户不会自动上传；断网或 Session 过期不得阻止本地保存。
+`CLOUD_APP_ORIGIN` 必须是精确 Origin：HTTPS、无路径、无尾斜杠。`NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN` 只给 Android APK 在 `native:web` 时烘焙；Web/PWA 走同源 `/api/replica`，不要把 `https://localhost` 加入 CORS/CSRF 白名单。`npm run cloud:migrate` 现包含 `004-replica.sql`。绑定账户不会自动改写本机记录；断网或 Session 过期不得阻止本地保存。Replica 是增量可靠副本，不能替代 16A 手动不可变备份。
 
 ## 5. 构建并试运行
 

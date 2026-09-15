@@ -32,6 +32,15 @@ const schemas = {
     diaries: "id, createdAt, updatedAt, deletedAt, isFavorite",
     lifeEvents: "id, [occurredOn+id], [source.type+source.id]",
   },
+  6: {
+    moments: "id, createdAt, updatedAt, deletedAt, isFavorite",
+    momentAppends: "id, momentId, createdAt, updatedAt, deletedAt",
+    attachments: "id, [ownerType+ownerId], ownerId, createdAt, updatedAt, deletedAt",
+    diaries: "id, createdAt, updatedAt, deletedAt, isFavorite",
+    lifeEvents: "id, [occurredOn+id], [source.type+source.id], &extractionProposalId",
+    lifeExtractionJobs: "id, &requestKey, createdAt, [input.source.type+input.source.id]",
+    lifeEventProposals: "id, jobId, &[jobId+candidateKey]",
+  },
 } as const;
 
 const timestamp = "2026-09-01T10:00:00.000Z";
@@ -62,11 +71,11 @@ afterEach(async () => {
 });
 
 describe("LifeDatabase", () => {
-  it("opens with the Dexie v6 persistence schema", async () => {
+  it("opens with the Dexie v7 replica sidecar schema", async () => {
     await db.open();
 
     expect(db.name).toBe("life");
-    expect(db.verno).toBe(6);
+    expect(db.verno).toBe(7);
     expect(db.tables.map((table) => table.name)).toEqual([
       "moments",
       "momentAppends",
@@ -75,6 +84,9 @@ describe("LifeDatabase", () => {
       "lifeEvents",
       "lifeExtractionJobs",
       "lifeEventProposals",
+      "replicaMutations",
+      "replicaState",
+      "replicaBlobs",
     ]);
     expect(db.lifeEvents.schema.idxByName.extractionProposalId).toMatchObject({ unique: true });
     expect(db.lifeExtractionJobs.schema.idxByName.requestKey).toMatchObject({ unique: true });
@@ -84,7 +96,7 @@ describe("LifeDatabase", () => {
     });
   });
 
-  it.each([1, 2, 3, 4] as const)("upgrades v%s directly to v6 without fabricating intelligence data", async (version) => {
+  it.each([1, 2, 3, 4] as const)("upgrades v%s directly to v7 without fabricating intelligence or replica data", async (version) => {
     const databaseName = `life-v${version}-direct-v6-test`;
     const legacy = new Dexie(databaseName);
     legacy.version(version).stores(schemas[version]);
@@ -135,7 +147,7 @@ describe("LifeDatabase", () => {
       legacy.close();
 
       await upgraded.open();
-      expect(upgraded.verno).toBe(6);
+      expect(upgraded.verno).toBe(7);
       if (version >= 2) {
         await expect(upgraded.moments.get("legacy-moment")).resolves.toMatchObject({ originalText: "Created before Life Intelligence existed" });
         await expect(upgraded.momentAppends.get("legacy-append")).resolves.toMatchObject({ text: "原始追加" });
@@ -148,6 +160,7 @@ describe("LifeDatabase", () => {
       await expect(upgraded.lifeEvents.toArray()).resolves.toEqual([]);
       await expect(upgraded.lifeExtractionJobs.toArray()).resolves.toEqual([]);
       await expect(upgraded.lifeEventProposals.toArray()).resolves.toEqual([]);
+      await expect(upgraded.replicaMutations.toArray()).resolves.toEqual([]);
     } finally {
       legacy.close();
       upgraded.close();
@@ -155,7 +168,7 @@ describe("LifeDatabase", () => {
     }
   });
 
-  it("upgrades v5 to v6 without changing originals, tombstones, indexes or Blob bytes", async () => {
+  it("upgrades v5 to v7 without changing originals, tombstones, indexes or Blob bytes", async () => {
     const name = "life-v5-intelligence-migration-test";
     const legacy = new Dexie(name);
     legacy.version(5).stores(schemas[5]);
@@ -190,11 +203,70 @@ describe("LifeDatabase", () => {
       expect(storedEvent).toEqual(event);
       expect(Object.prototype.hasOwnProperty.call(storedEvent, "extractionProposalId")).toBe(false);
       expect(upgraded.tables
-        .filter((table) => !["lifeEvents", "lifeExtractionJobs", "lifeEventProposals"].includes(table.name))
+        .filter((table) => !["lifeEvents", "lifeExtractionJobs", "lifeEventProposals", "replicaMutations", "replicaState", "replicaBlobs"].includes(table.name))
         .map((table) => [table.name, table.schema.indexes.map((index) => index.src)]))
         .toEqual(originalIndexes);
       await expect(upgraded.lifeExtractionJobs.toArray()).resolves.toEqual([]);
       await expect(upgraded.lifeEventProposals.toArray()).resolves.toEqual([]);
+      await expect(upgraded.replicaMutations.toArray()).resolves.toEqual([]);
+      await expect(upgraded.replicaBlobs.toArray()).resolves.toEqual([]);
+    } finally {
+      legacy.close();
+      upgraded.close();
+      await Dexie.delete(name);
+    }
+  });
+
+  it("upgrades v6 to v7 without changing originals, Blobs, tombstones or intelligence rows", async () => {
+    const name = "life-v6-replica-sidecar-migration-test";
+    const legacy = new Dexie(name);
+    legacy.version(6).stores(schemas[6]);
+    const upgraded = new LifeDatabase(name);
+    try {
+      await legacy.open();
+      const moment: Moment = { ...lifecycle, id: "v6-m", originalText: "keep original", location: null, isFavorite: false };
+      const append = { ...lifecycle, id: "v6-a", momentId: moment.id, text: "append", deletedAt: timestamp };
+      const diary = { ...lifecycle, id: "v6-d", title: "", body: "diary body", location: null, isFavorite: false };
+      const bytes = new Uint8Array([7, 8, 9, 10]);
+      const blob = new NodeBlob([bytes], { type: "image/png" });
+      const attachment = {
+        ...lifecycle,
+        id: "v6-image",
+        ownerType: "moment",
+        ownerId: moment.id,
+        kind: "image",
+        blob,
+        fileName: "keep.png",
+        mimeType: blob.type,
+        size: blob.size,
+        width: null,
+        height: null,
+      };
+      const event = lifeEvent("50000000-0000-4000-8000-000000000006", { deletedAt: timestamp });
+      await legacy.table("moments").add(moment);
+      await legacy.table("momentAppends").add(append);
+      await legacy.table("diaries").add(diary);
+      await legacy.table("attachments").add(attachment);
+      await legacy.table("lifeEvents").add(event);
+      const originalIndexes = legacy.tables.map((table) => [table.name, table.schema.indexes.map((index) => index.src)]);
+      legacy.close();
+
+      await upgraded.open();
+      expect(upgraded.verno).toBe(7);
+      await expect(upgraded.moments.toArray()).resolves.toEqual([moment]);
+      await expect(upgraded.momentAppends.toArray()).resolves.toEqual([append]);
+      await expect(upgraded.diaries.toArray()).resolves.toEqual([diary]);
+      const storedAttachment = (await upgraded.attachments.get(attachment.id)) as Attachment;
+      expect(storedAttachment).toEqual({ ...attachment, blob: storedAttachment.blob });
+      expect(new Uint8Array(await storedAttachment.blob.arrayBuffer())).toEqual(bytes);
+      await expect(upgraded.lifeEvents.get(event.id)).resolves.toEqual(event);
+      expect(upgraded.tables
+        .filter((table) => !["replicaMutations", "replicaState", "replicaBlobs"].includes(table.name))
+        .map((table) => [table.name, table.schema.indexes.map((index) => index.src)]))
+        .toEqual(originalIndexes);
+      await expect(upgraded.replicaMutations.toArray()).resolves.toEqual([]);
+      await expect(upgraded.replicaState.toArray()).resolves.toEqual([]);
+      await expect(upgraded.replicaBlobs.toArray()).resolves.toEqual([]);
     } finally {
       legacy.close();
       upgraded.close();

@@ -10,7 +10,7 @@ async function main() {
   if (!["localhost", "127.0.0.1"].includes(address.hostname)) address.searchParams.set("sslmode", "verify-full");
   const pool = new Pool({ connectionString: address.toString(), max: 1 });
   try {
-    for (const file of ["001-foundation.sql", "002-roles.sql", "003-immutable-snapshots.sql"]) {
+    for (const file of ["001-foundation.sql", "002-roles.sql", "003-immutable-snapshots.sql", "004-replica.sql"]) {
       await pool.query(await readFile(resolve("infrastructure/cloud", file), "utf8"));
       console.log(`Applied ${file}`);
     }

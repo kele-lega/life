@@ -1,4 +1,6 @@
 import { db } from "@/lib/db/client";
+import { enqueueReplicaMutation, replicaWrites } from "@/features/replica/local/outbox";
+import { replicaRecord } from "@/features/replica/shared/protocol";
 import { assertTimestamp } from "@/lib/time/timestamps";
 import type { LifeEvent, LifeEventSource, LifeEventSourceRef } from "@/features/life-event/model/types";
 import { assertSource, canonicalJson, normalizeInput } from "@/features/life-event/model/validation";
@@ -28,15 +30,16 @@ import type {
   LifeIntelligenceRepository,
 } from "./life-intelligence-repository";
 
-const extractionTables = () => [db.lifeExtractionJobs, db.lifeEventProposals];
-const materializationTables = () => [
+const extractionTables = () => replicaWrites(db, db.lifeExtractionJobs, db.lifeEventProposals);
+const materializationTables = () => replicaWrites(
+  db,
   db.lifeExtractionJobs,
   db.lifeEventProposals,
   db.lifeEvents,
   db.moments,
   db.momentAppends,
   db.diaries,
-];
+);
 
 function sameRequest(left: LifeExtractionJob, right: LifeExtractionJob): boolean {
   return canonicalJson({ input: left.input, context: left.context, extractor: left.extractor }) ===
@@ -256,6 +259,15 @@ export class DexieLifeIntelligenceRepository implements LifeIntelligenceReposito
       if (existingProposals.some(Boolean)) throw new Error("LifeEvent proposal ID already exists.");
       await db.lifeExtractionJobs.add(input.job);
       await db.lifeEventProposals.bulkAdd(proposals);
+      await enqueueReplicaMutation(db, [
+        { entity: "lifeExtractionJob", op: "upsert", id: input.job.id, record: replicaRecord(input.job) },
+        ...proposals.map((proposal) => ({
+          entity: "lifeEventProposal" as const,
+          op: "upsert" as const,
+          id: proposal.id,
+          record: replicaRecord(proposal),
+        })),
+      ]);
       return { job: input.job, proposals };
     });
   }
@@ -286,13 +298,14 @@ export class DexieLifeIntelligenceRepository implements LifeIntelligenceReposito
     if (input.proposal.reviewedAt !== null) assertTimestamp(input.proposal.reviewedAt);
 
     if (requestedStatus === "rejected") {
-      return db.transaction("rw", db.lifeEventProposals, async () => {
+      return db.transaction("rw", replicaWrites(db, db.lifeEventProposals), async () => {
         const current = await db.lifeEventProposals.get(input.proposal.id);
         if (!current) throw new Error("LifeEvent proposal does not exist.");
         if (current.status !== "pending") return idempotentTerminalResult(current, input.proposal);
         assertEventMatchesReview(current, input.proposal, input.lifeEvent, null);
         const resolved = { ...current, status: "rejected" as const, updatedAt: input.proposal.updatedAt, reviewedAt: input.proposal.reviewedAt };
         await db.lifeEventProposals.put(resolved);
+        await enqueueReplicaMutation(db, [{ entity: "lifeEventProposal", op: "upsert", id: resolved.id, record: replicaRecord(resolved) }]);
         return { proposal: resolved, lifeEvent: null };
       });
     }
@@ -323,19 +336,24 @@ export class DexieLifeIntelligenceRepository implements LifeIntelligenceReposito
         reviewedAt: input.proposal.reviewedAt,
       };
       await db.lifeEventProposals.put(resolved);
+      await enqueueReplicaMutation(db, [
+        { entity: "lifeEventProposal", op: "upsert", id: resolved.id, record: replicaRecord(resolved) },
+        { entity: "lifeEvent", op: "upsert", id: event.id, record: replicaRecord(event) },
+      ]);
       return { proposal: resolved, lifeEvent: event };
     });
   }
 
   async supersedePendingProposal(proposalId: string, updatedAt: string): Promise<LifeEventProposal> {
     assertTimestamp(updatedAt);
-    return db.transaction("rw", db.lifeEventProposals, async () => {
+    return db.transaction("rw", replicaWrites(db, db.lifeEventProposals), async () => {
       const proposal = await db.lifeEventProposals.get(proposalId);
       if (!proposal) throw new Error("LifeEvent proposal does not exist.");
       assertProposalTransition(proposal.status, "superseded");
       if (proposal.status === "superseded") return proposal;
       const superseded: LifeEventProposal = { ...proposal, status: "superseded", updatedAt };
       await db.lifeEventProposals.put(superseded);
+      await enqueueReplicaMutation(db, [{ entity: "lifeEventProposal", op: "upsert", id: superseded.id, record: replicaRecord(superseded) }]);
       return superseded;
     });
   }

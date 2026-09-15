@@ -1,4 +1,6 @@
 import { db } from "@/lib/db/client";
+import { enqueueReplicaMutation, replicaAttachmentRecord, replicaWrites } from "@/features/replica/local/outbox";
+import { replicaRecord } from "@/features/replica/shared/protocol";
 import { createEntityId } from "@/lib/identity/create-entity-id";
 import { nowTimestamp } from "@/lib/time/timestamps";
 
@@ -61,7 +63,10 @@ export async function createMoment(input: CreateMomentInput): Promise<Moment> {
     updatedAt: createdAt,
     deletedAt: null,
   };
-  await db.moments.add(moment);
+  await db.transaction("rw", replicaWrites(db, db.moments), async () => {
+    await db.moments.add(moment);
+    await enqueueReplicaMutation(db, [{ entity: "moment", op: "upsert", id: moment.id, record: replicaRecord(moment) }]);
+  });
   return moment;
 }
 
@@ -87,10 +92,23 @@ export async function createMomentWithAttachments(
   const attachments = input.attachments.map((attachment) =>
     toAttachment(attachment, moment.id, createdAt),
   );
+  const attachmentOps: Array<{ entity: "attachment"; op: "upsert"; id: string; record: Record<string, unknown> }> = [];
+  for (const attachment of attachments) {
+    attachmentOps.push({
+      entity: "attachment" as const,
+      op: "upsert" as const,
+      id: attachment.id,
+      record: await replicaAttachmentRecord(attachment),
+    });
+  }
 
-  await db.transaction("rw", db.moments, db.attachments, async () => {
+  await db.transaction("rw", replicaWrites(db, db.moments, db.attachments), async () => {
     await db.moments.add(moment);
     await db.attachments.bulkAdd(attachments);
+    await enqueueReplicaMutation(db, [
+      { entity: "moment", op: "upsert", id: moment.id, record: replicaRecord(moment) },
+      ...attachmentOps,
+    ]);
   });
   return moment;
 }
@@ -243,7 +261,10 @@ export async function updateMomentMetadata(
     ...(input.location === undefined ? {} : { location: input.location }),
     updatedAt: nowTimestamp(),
   };
-  await db.moments.put(updated);
+  await db.transaction("rw", replicaWrites(db, db.moments), async () => {
+    await db.moments.put(updated);
+    await enqueueReplicaMutation(db, [{ entity: "moment", op: "upsert", id: updated.id, record: replicaRecord(updated) }]);
+  });
   return updated;
 }
 
@@ -254,13 +275,27 @@ export async function softDeleteMoment(id: string, deletedAt = nowTimestamp()): 
     throw new Error(`Moment not found: ${id}`);
   }
   const deleted: Moment = { ...moment, deletedAt, updatedAt: deletedAt };
-  await db.transaction("rw", db.moments, db.momentAppends, db.attachments, async () => {
+  const appends = (await db.momentAppends.where("momentId").equals(id).toArray()).map((append) => ({
+    ...append,
+    deletedAt,
+    updatedAt: deletedAt,
+  }));
+  const attachments = (await db.attachments.where("[ownerType+ownerId]").equals(["moment", id]).toArray()).map((attachment) => ({
+    ...attachment,
+    deletedAt,
+    updatedAt: deletedAt,
+  }));
+  const attachmentRecords: Record<string, unknown>[] = [];
+  for (const attachment of attachments) attachmentRecords.push(await replicaAttachmentRecord(attachment));
+  await db.transaction("rw", replicaWrites(db, db.moments, db.momentAppends, db.attachments), async () => {
     await db.moments.put(deleted);
-    await db.momentAppends.where("momentId").equals(id).modify({ deletedAt, updatedAt: deletedAt });
-    await db.attachments
-      .where("[ownerType+ownerId]")
-      .equals(["moment", id])
-      .modify({ deletedAt, updatedAt: deletedAt });
+    if (appends.length) await db.momentAppends.bulkPut(appends);
+    if (attachments.length) await db.attachments.bulkPut(attachments);
+    await enqueueReplicaMutation(db, [
+      { entity: "moment" as const, op: "upsert" as const, id: deleted.id, record: replicaRecord(deleted) },
+      ...appends.map((append) => ({ entity: "momentAppend" as const, op: "upsert" as const, id: append.id, record: replicaRecord(append) })),
+      ...attachmentRecords.map((record, index) => ({ entity: "attachment" as const, op: "upsert" as const, id: attachments[index]!.id, record })),
+    ]);
   });
   return deleted;
 }
@@ -271,20 +306,27 @@ export async function restoreMoment(id: string): Promise<Moment> {
     throw new Error(`Moment not found: ${id}`);
   }
   const restored: Moment = { ...moment, deletedAt: null, updatedAt: nowTimestamp() };
-  await db.transaction("rw", db.moments, db.momentAppends, db.attachments, async () => {
+  const appends = moment.deletedAt === null
+    ? []
+    : (await db.momentAppends.where("momentId").equals(id).toArray())
+      .filter((append) => append.deletedAt === moment.deletedAt)
+      .map((append) => ({ ...append, deletedAt: null, updatedAt: restored.updatedAt }));
+  const attachments = moment.deletedAt === null
+    ? []
+    : (await db.attachments.where("[ownerType+ownerId]").equals(["moment", id]).toArray())
+      .filter((attachment) => attachment.deletedAt === moment.deletedAt)
+      .map((attachment) => ({ ...attachment, deletedAt: null, updatedAt: restored.updatedAt }));
+  const attachmentRecords: Record<string, unknown>[] = [];
+  for (const attachment of attachments) attachmentRecords.push(await replicaAttachmentRecord(attachment));
+  await db.transaction("rw", replicaWrites(db, db.moments, db.momentAppends, db.attachments), async () => {
     await db.moments.put(restored);
-    if (moment.deletedAt !== null) {
-      await db.momentAppends
-        .where("momentId")
-        .equals(id)
-        .filter((append) => append.deletedAt === moment.deletedAt)
-        .modify({ deletedAt: null, updatedAt: restored.updatedAt });
-      await db.attachments
-        .where("[ownerType+ownerId]")
-        .equals(["moment", id])
-        .filter((attachment) => attachment.deletedAt === moment.deletedAt)
-        .modify({ deletedAt: null, updatedAt: restored.updatedAt });
-    }
+    if (appends.length) await db.momentAppends.bulkPut(appends);
+    if (attachments.length) await db.attachments.bulkPut(attachments);
+    await enqueueReplicaMutation(db, [
+      { entity: "moment" as const, op: "upsert" as const, id: restored.id, record: replicaRecord(restored) },
+      ...appends.map((append) => ({ entity: "momentAppend" as const, op: "upsert" as const, id: append.id, record: replicaRecord(append) })),
+      ...attachmentRecords.map((record, index) => ({ entity: "attachment" as const, op: "upsert" as const, id: attachments[index]!.id, record })),
+    ]);
   });
   return restored;
 }
@@ -308,7 +350,10 @@ export async function createMomentAppend(
     updatedAt: createdAt,
     deletedAt: null,
   };
-  await db.momentAppends.add(append);
+  await db.transaction("rw", replicaWrites(db, db.moments, db.momentAppends), async () => {
+    await db.momentAppends.add(append);
+    await enqueueReplicaMutation(db, [{ entity: "momentAppend", op: "upsert", id: append.id, record: replicaRecord(append) }]);
+  });
   return append;
 }
 
@@ -337,6 +382,9 @@ export async function softDeleteMomentAppend(
     throw new Error(`MomentAppend not found: ${id}`);
   }
   const deleted: MomentAppend = { ...append, deletedAt, updatedAt: deletedAt };
-  await db.momentAppends.put(deleted);
+  await db.transaction("rw", replicaWrites(db, db.momentAppends), async () => {
+    await db.momentAppends.put(deleted);
+    await enqueueReplicaMutation(db, [{ entity: "momentAppend", op: "upsert", id: deleted.id, record: replicaRecord(deleted) }]);
+  });
   return deleted;
 }

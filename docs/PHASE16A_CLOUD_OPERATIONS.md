@@ -23,7 +23,7 @@ Only then should `CLOUD_DATABASE_URL` and `CLOUD_WORKER_DATABASE_URL` be configu
 
 1. 建立 Supabase 项目并启用邮箱登录。生产可使用自定义 SMTP 和包含 `{{ .Token }}` 的模板发送数字 OTP；如果使用 Supabase 托管默认模板，它会发送一次性 Magic Link，Life 会在配置的回调 Origin 消费短期 access token 并换发同一类 HttpOnly Life Session。生产使用可投递的 SMTP，不依赖测试邮件限额。
 2. 创建 PostgreSQL 迁移用连接。将其放入 `.env.local` 的 `CLOUD_MIGRATION_DATABASE_URL`，执行 `npm run cloud:migrate`。应用构建、请求和登录不会自动执行 DDL。
-3. 三份 migration 仅创建 `life_cloud` schema 的基础设施表、RLS/角色和不可变快照保护。为两个独立 LOGIN 建立强随机密码，通过供应商密钥管理配置，分别授予 `life_cloud_app` 和 `life_cloud_worker`。应用 LOGIN 不得属于 worker/owner 角色，也不得拥有 SUPERUSER 或 BYPASSRLS。
+3. 四份 migration 创建 `life_cloud` schema 的基础设施表、RLS/角色、不可变快照保护和 16B.1 replica 表。`004-replica.sql` 只增加 `replica_*` 表与对象前缀，不改 backup 表。为两个独立 LOGIN 建立强随机密码，通过供应商密钥管理配置，分别授予 `life_cloud_app` 和 `life_cloud_worker`。应用 LOGIN 不得属于 worker/owner 角色，也不得拥有 SUPERUSER 或 BYPASSRLS。
 4. `CLOUD_DATABASE_URL` 使用受限应用 LOGIN；`CLOUD_WORKER_DATABASE_URL` 使用 worker LOGIN。云 API 会拒绝 owner/超级用户/worker 凭据。远端连接要求 `sslmode=verify-full`，需要时配置供应商 CA，不禁用证书验证。
 5. 配置 `CLOUD_AUTH_URL`（Supabase 项目 URL）、`CLOUD_AUTH_KEY`、`CLOUD_APP_ORIGIN`。Origin 必须精确匹配，例如本地 `http://127.0.0.1:3100`，生产使用 HTTPS，不能携带路径或尾部斜杠。
 6. 在 Supabase Storage 控制台建立私有 `life-test` bucket，保持对象私有并配置静态加密。配置 `CLOUD_S3_REGION`、`CLOUD_S3_BUCKET`、`CLOUD_S3_ACCESS_KEY_ID`、`CLOUD_S3_SECRET_ACCESS_KEY` 和 Supabase S3-compatible `CLOUD_S3_ENDPOINT`。Supabase S3 兼容层不提供 bucket Versioning；应用不请求或校验版本 ID，也不需要 `GetBucketVersioning`、`GetObjectVersion` 或版本删除权限。
@@ -84,3 +84,14 @@ Only then should `CLOUD_DATABASE_URL` and `CLOUD_WORKER_DATABASE_URL` be configu
 6. 不进行未经确认的永久清理。删除本机记录不会移除旧快照中当时存在的内容。
 
 基础设施供应商、凭据与独立备份域未配置前，上述真实灾备验收必须明确标为未执行，而不是沿用自动化测试的通过状态。
+
+## 6. Phase 16B.1 Durable Replica
+
+Replica 是日常自动增量可靠副本，不是 16A 不可变完整快照，也不能互相替代。
+
+- `npm run cloud:migrate` 现在包含 `004-replica.sql`。PostgreSQL replica 表、mutation log 与 `{CLOUD_OBJECT_ENV}/replica/{account}/...` 对象前缀必须与 backup 对象分开。
+- Web 使用同源 `/api/replica` 与现有 Cookie/CORS/CSRF。不要把 `https://localhost` 加入 Web 白名单。
+- Android Native 使用烘焙的 `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN`（精确 HTTPS Origin）和 Bearer access token。服务端只从验证后的 token/session 确定 account。
+- 本地保存永远先写入 Dexie。未配置云、断网或 replica API 失败不得回滚本机记录。
+- 灾难恢复写入新的隔离生活库；成为写者时提升 writer epoch，旧设备后续上传返回 `409 fenced`。旧设备仍可离线查看本机数据。
+- Development 与 Production 必须用不同 `CLOUD_OBJECT_ENV` 和数据库。测试只用合成数据。
