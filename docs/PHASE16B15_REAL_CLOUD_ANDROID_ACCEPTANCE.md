@@ -23,7 +23,7 @@ Web Cookie / CORS / CSRF is unchanged. `https://localhost` is not on the Web all
 | --- | --- | --- |
 | `GET /api/replica/account` no auth | 200 `{configured:true,account:null}` | 200 `{configured:true,account:null}` |
 | `POST /api/replica/mutations` `Origin: https://localhost` no Bearer | 403 `origin_rejected` | 403 `origin_rejected` |
-| Garbage Bearer snapshot / mutations + `X-Life-Account` | 401 `unauthorized` | 400 `otp_invalid` until webpack+401 deploy |
+| Garbage Bearer snapshot / mutations + `X-Life-Account` | 401 `unauthorized` | 401 `unauthorized` |
 
 The handler maps expired/garbage Bearer `verifyAccessToken` failures to `401 unauthorized` and still ignores client `accountId`. Native magic-link access tokens can be exchanged at `POST /api/replica/auth/email/callback`. Unit tests: `src/features/replica/server/foundation.test.ts` (10/10).
 
@@ -70,7 +70,7 @@ Android talks to the baked HTTPS origin over Bearer. Web CSRF/Cookie boundaries 
 
 `netlify.toml` build command is `npx next build --webpack`. Next 16 Turbopack hashed `pg` / `@aws-sdk/client-s3` aliases are not resolvable in the Netlify function zip. `CLOUD_APP_ORIGIN` on Netlify is `https://life-kelelega.netlify.app`. `CLOUD_OBJECT_ENV=dev` for this test project.
 
-The 401 Bearer mapping and magic-link callback are not in the currently serving production deploy until this commit is built.
+Production deploy `6aa99014a14b701a41789301` now serves the webpack server bundle, 401 Bearer mapping, and magic-link callback. Valid test Bearer snapshot after deploy: 19 synthetic moments, 11 verified objects.
 
 ## Phase 16A Backup
 
