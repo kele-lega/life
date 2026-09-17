@@ -3,21 +3,14 @@ import { randomBytes } from "node:crypto";
 import { BackupError, encodeJson, ensure, LIMITS, object, validateManifest } from "../shared/format";
 import { CloudStore, digest, manifestOf } from "./store";
 import { BackupService } from "./service";
-import type { EmailAuth } from "./auth";
+import { authProvider, type EmailAuth } from "./auth";
 import type { CloudConfig } from "./config";
+import { readCookieToken, sessionCookie } from "./session";
 
 export interface HandlerDependencies { config: CloudConfig; store: CloudStore; service: BackupService; auth: EmailAuth }
 const uuid = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 const json = (value: unknown, status = 200, extra: HeadersInit = {}) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store, private", "Vary": "Cookie", "X-Content-Type-Options": "nosniff", ...extra } });
 
-function cookieName(config: CloudConfig) { return config.origin.startsWith("https:") ? "__Host-life_session" : "life_session_local"; }
-function readToken(request: Request, config: CloudConfig): string | null {
-  const token = request.headers.get("cookie")?.split(";").map((item) => item.trim()).find((item) => item.startsWith(`${cookieName(config)}=`))?.slice(cookieName(config).length + 1);
-  return token && /^[a-f0-9]{64}$/.test(token) ? token : null;
-}
-function sessionCookie(config: CloudConfig, token: string, clear = false) {
-  return `${cookieName(config)}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : 30 * 86400}${config.origin.startsWith("https:") ? "; Secure" : ""}`;
-}
 async function readBody(request: Request): Promise<Record<string, unknown>> {
   if (!request.headers.get("content-type")?.startsWith("application/json")) throw new BackupError("invalid_request");
   const reader = request.body?.getReader(); ensure(reader, "invalid_request");
@@ -37,10 +30,13 @@ export function createCloudHandler({ config, store, service, auth }: HandlerDepe
       // A fixed configured origin is the CSRF boundary, not the attacker-controlled Host header.
       if (method === "POST") ensure(request.headers.get("origin") === config.origin && request.headers.get("sec-fetch-site") !== "cross-site", "origin_rejected");
       const body = method === "POST" ? await readBody(request) : {};
-      const token = readToken(request, config);
+      const token = readCookieToken(request, config);
       if (path === "auth/logout" && method === "POST") {
         if (token) await store.revoke(digest(token));
         return json({ ok: true }, 200, { "Set-Cookie": sessionCookie(config, "", true) });
+      }
+      if (config.authMode === "test-password" && ["auth/email/start", "auth/email/verify", "auth/email/callback", "auth/refresh"].includes(path)) {
+        throw new BackupError("auth_mode_disabled", "此登录方式未启用。");
       }
       if (["auth/email/start", "auth/email/verify", "auth/email/callback"].includes(path) && method === "POST") {
         const isCallback = path.endsWith("callback");
@@ -65,8 +61,8 @@ export function createCloudHandler({ config, store, service, auth }: HandlerDepe
         if (token) await store.revoke(digest(token));
         return json({ account }, 200, { "Set-Cookie": sessionCookie(config, nextToken) });
       }
-      const account = token ? await store.session(digest(token)) : null;
-      if (path === "account" && method === "GET") return json({ configured: true, account });
+      const account = token ? await store.session(digest(token), authProvider(config)) : null;
+      if (path === "account" && method === "GET") return json({ configured: true, authMode: config.authMode ?? "supabase", account });
       if (!account) throw new BackupError("unauthorized", "云会话已过期，请重新登录。本机记录仍可使用。");
       if (request.headers.get("x-life-account") !== account.id) throw new BackupError("account_changed", "云账户已变化，请重新登录后重试。");
       if (path === "libraries/bind" && method === "POST") {

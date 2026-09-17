@@ -1,6 +1,9 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import { BackupError, object as assertObject } from "@/features/cloud-backup/shared/format";
-import type { EmailAuth } from "@/features/cloud-backup/server/auth";
+import { authProvider, type EmailAuth } from "@/features/cloud-backup/server/auth";
+import { isOpaqueToken, readCookieToken, SESSION_SECONDS, sessionCookie } from "@/features/cloud-backup/server/session";
+import { PASSWORD_MAX_BYTES } from "@/features/cloud-backup/server/password";
 import type { CloudConfig } from "@/features/cloud-backup/server/config";
 import type { CloudStore } from "@/features/cloud-backup/server/store";
 import { digest } from "@/features/cloud-backup/server/store";
@@ -28,15 +31,6 @@ const json = (value: unknown, status = 200, extra: HeadersInit = {}) => new Resp
   status,
   headers: { "Content-Type": "application/json", "Cache-Control": "no-store, private", "X-Content-Type-Options": "nosniff", ...extra },
 });
-
-function cookieName(config: CloudConfig) {
-  return config.origin.startsWith("https:") ? "__Host-life_session" : "life_session_local";
-}
-
-function readCookieToken(request: Request, config: CloudConfig): string | null {
-  const token = request.headers.get("cookie")?.split(";").map((item) => item.trim()).find((item) => item.startsWith(`${cookieName(config)}=`))?.slice(cookieName(config).length + 1);
-  return token && /^[a-f0-9]{64}$/.test(token) ? token : null;
-}
 
 function readBearer(request: Request): string | null {
   const header = request.headers.get("authorization");
@@ -72,7 +66,7 @@ function statusOf(code: string): number {
   if (code === "unauthorized") return 401;
   if (code === "origin_rejected" || code === "account_changed") return 403;
   if (code === "not_found") return 404;
-  if (["fenced", "mutation_conflict", "blob_pending", "writer_exists", "original_text_immutable", "created_at_immutable", "proposal_terminal", "writer_unregistered"].includes(code)) return 409;
+  if (["fenced", "snapshot_stale", "mutation_conflict", "blob_pending", "writer_exists", "original_text_immutable", "created_at_immutable", "proposal_terminal", "writer_unregistered"].includes(code)) return 409;
   if (code === "rate_limit") return 429;
   if (code === "cloud_unavailable" || code === "cloud_unconfigured" || code === "migration_required") return 503;
   return 400;
@@ -98,15 +92,36 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
       const origin = request.headers.get("origin");
       const native = origin === "https://localhost";
       const bearer = readBearer(request);
-      if (method === "POST" && !bearer) {
-        const nativeAuth = ["auth/email/start", "auth/email/verify", "auth/email/callback", "auth/refresh"].includes(path);
-        if (native || (!origin && nativeAuth && !readCookieToken(request, config))) {
-          ensureReplica(nativeAuth, "origin_rejected");
-        } else {
+      const authMode = config.authMode ?? "supabase";
+      const provider = authProvider(config);
+      const authEndpoint = ["auth/password/login", "auth/email/start", "auth/email/verify", "auth/email/callback", "auth/refresh"].includes(path);
+      const nativeAuth = (native || !origin) && !request.headers.get("cookie");
+      // A native request can never read or exchange a browser's ambient cookie.
+      if (native && request.headers.get("cookie")) throw new ReplicaError("origin_rejected");
+      if (request.headers.has("authorization") && !bearer) throw new ReplicaError("unauthorized");
+      if (method === "POST" && (!bearer || authEndpoint)) {
+        if (!(authEndpoint && nativeAuth)) {
           ensureReplica(origin === config.origin && request.headers.get("sec-fetch-site") !== "cross-site", "origin_rejected");
         }
       }
       const body = method === "POST" ? await readBody(request) : {};
+
+      if (path === "auth/password/login" && method === "POST") {
+        ensureReplica(authMode === "test-password" && auth.verifyPassword, "auth_mode_disabled");
+        ensureReplica(typeof body.username === "string" && body.username.length <= 254 && typeof body.password === "string" && Buffer.byteLength(body.password, "utf8") <= PASSWORD_MAX_BYTES, "unauthorized", "用户名或密码错误。");
+        const username = body.username.trim().toLowerCase();
+        await accounts.limit("password-login:global", 100, 60);
+        await accounts.limit(`password-login:user:${digest(username)}`, 10, 300);
+        const verified = await auth.verifyPassword(username, body.password);
+        const token = randomBytes(32).toString("hex");
+        const expiresAt = Math.floor(Date.now() / 1000) + SESSION_SECONDS;
+        const account = await accounts.createSession(verified.subject, verified.email, digest(token), provider, new Date(expiresAt * 1000));
+        if (nativeAuth) return json({ account, authMode, accessToken: token, expiresAt });
+        const previous = readCookieToken(request, config);
+        if (previous) await accounts.revoke(digest(previous));
+        return json({ account, authMode }, 200, { "Set-Cookie": sessionCookie(config, token) });
+      }
+      if (authMode === "test-password" && authEndpoint) throw new ReplicaError("auth_mode_disabled", "此登录方式未启用。");
 
       if (["auth/email/start", "auth/email/verify", "auth/email/callback"].includes(path) && method === "POST") {
         const isCallback = path.endsWith("callback");
@@ -116,7 +131,7 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
         })();
         if (!isCallback) await accounts.limit(`replica-email:${digest(email.toLowerCase())}:${path}`, path.endsWith("start") ? 5 : 10, 3600);
         await accounts.limit(`replica-global:${path}`, path.endsWith("start") ? 100 : 200, 60);
-        if (path.endsWith("start")) { await auth.start(email); return json({ ok: true }); }
+        if (path.endsWith("start")) { await auth.start(email, { emailRedirectTo: false }); return json({ ok: true }); }
         const verified = isCallback
           ? await (async () => {
             const accessToken = body.accessToken;
@@ -150,22 +165,31 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
       }
 
       const cookieToken = bearer ? null : readCookieToken(request, config);
-      const account = bearer
-        ? await (async () => {
-          try {
-            const identity = await auth.verifyAccessToken(bearer);
-            return accounts.ensureAccount(identity.subject, identity.email);
-          } catch (error) {
-            if (error instanceof ReplicaError) throw error;
-            throw new ReplicaError("unauthorized", "\u4e91\u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u3002\u672c\u673a\u8bb0\u5f55\u4ecd\u53ef\u4f7f\u7528\u3002");
-          }
-        })()
-        : cookieToken ? await accounts.session(digest(cookieToken)) : null;
+      const opaqueToken = bearer && isOpaqueToken(bearer) ? bearer : cookieToken;
+      const account = opaqueToken
+        ? await accounts.session(digest(opaqueToken), provider)
+        : bearer
+          ? await (async () => {
+            if (authMode === "test-password") throw new ReplicaError("unauthorized");
+            try {
+              const identity = await auth.verifyAccessToken(bearer);
+              return await accounts.ensureAccount(identity.subject, identity.email);
+            } catch {
+              throw new ReplicaError("unauthorized", "\u4e91\u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u3002\u672c\u673a\u8bb0\u5f55\u4ecd\u53ef\u4f7f\u7528\u3002");
+            }
+          })()
+          : null;
 
-      if (path === "account" && method === "GET") return json({ configured: true, account });
+      if (bearer && !account) throw new ReplicaError("unauthorized", "\u4e91\u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u3002\u672c\u673a\u8bb0\u5f55\u4ecd\u53ef\u4f7f\u7528\u3002");
+      if (path === "account" && method === "GET") return json({ configured: true, authMode, account });
       if (!account) throw new ReplicaError("unauthorized", "\u4e91\u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u3002\u672c\u673a\u8bb0\u5f55\u4ecd\u53ef\u4f7f\u7528\u3002");
       const claimed = request.headers.get("x-life-account");
       if (claimed && claimed !== account.id) throw new ReplicaError("account_changed", "\u4e91\u8d26\u6237\u5df2\u53d8\u5316\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u540e\u91cd\u8bd5\u3002");
+      if (path === "auth/logout" && method === "POST") {
+        ensureReplica(opaqueToken, "auth_mode_disabled");
+        await accounts.revoke(digest(opaqueToken));
+        return json({ ok: true }, 200, bearer ? {} : { "Set-Cookie": sessionCookie(config, "", true) });
+      }
       if (!bearer && claimed !== account.id) throw new ReplicaError("account_changed", "\u4e91\u8d26\u6237\u5df2\u53d8\u5316\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u540e\u91cd\u8bd5\u3002");
 
       if (path === "writers/register" && method === "POST") {
@@ -182,13 +206,14 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
         const installationId = body.installationId === undefined || body.installationId === null ? null : body.installationId;
         ensureReplica(libraryId === null || isUuid(libraryId), "invalid_request");
         ensureReplica(installationId === null || isUuid(installationId), "invalid_request");
-        return json(await store.promoteWriter(account.id, body.writerId, libraryId, installationId));
+        ensureReplica(body.expectedCommitSeq === undefined || (Number.isSafeInteger(body.expectedCommitSeq) && Number(body.expectedCommitSeq) >= 0), "invalid_request");
+        return json(await store.promoteWriter(account.id, body.writerId, libraryId, installationId, body.expectedCommitSeq as number | undefined));
       }
       if (path === "mutations" && method === "POST") {
         ensureReplica(isUuid(body.writerId) && isUuid(body.mutationId) && Number.isInteger(body.epoch), "invalid_request");
-        ensureReplica(typeof body.createdAt === "string" && typeof body.payloadSha256 === "string", "invalid_request");
+        ensureReplica(typeof body.createdAt === "string" && isHash(body.payloadSha256), "invalid_request");
         const ops = parseOps(body.ops);
-        const receipt = await store.applyMutation(account.id, body.writerId, Number(body.epoch), body.mutationId, body.createdAt, ops);
+        const receipt = await store.applyMutation(account.id, body.writerId, Number(body.epoch), body.mutationId, body.createdAt, ops, body.payloadSha256);
         return json(receipt);
       }
       if (path === "attachments/uploads" && method === "POST") {
@@ -203,6 +228,7 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
         ensureReplica(typeof body.attachmentId === "string" && isHash(body.sha256), "invalid_request");
         return json(await service.download(account.id, body.attachmentId, body.sha256));
       }
+      if (path === "status" && method === "GET") return json(await store.status(account.id));
       if (path === "snapshot" && method === "GET") return json(await store.snapshot(account.id));
       throw new ReplicaError("not_found");
     } catch (error) {

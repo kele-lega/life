@@ -4,7 +4,7 @@
 
 Phase 16A (user confirmed 2026-09-07) adds a portable seven-store snapshot adapter, independent local library/control database, email OTP BFF sessions, PostgreSQL backup catalog and private object storage. See `PHASE16A_ARCHIVE_FORMAT.md` and `PHASE16A_CLOUD_OPERATIONS.md`. This explicitly advances the earlier deferred auth/export scope, not the sync roadmap. Existing original repositories remain local; only database selection at document bootstrap changes. `LibraryBoundary` verifies the active library before mounting record routes. Each document keeps a fixed database instance; switching requires an exclusive Web Lock and full document reload, preserving other tabs' drafts.
 
-Cloud data consists of immutable snapshots. Four-MiB object parts use server-authorized, unique per-backup keys and checksums; Supabase Storage does not require S3 VersionId support. Successful upload is separate from durable file/graph verification, with account-scoped PostgreSQL metadata, leases and a recovery worker. `/api/cloud/*` is a server-only boundary; images upload directly to private object storage. No cloud-save hook, synchronization queue, current-record cloud CRUD or AI request is introduced. Export/import uses the same format and does not require an account. Additional `life-control` stores are infrastructure; the seven business stores remain v6.
+Cloud data consists of immutable snapshots. Four-MiB object parts use server-authorized, unique per-backup keys and checksums; Supabase Storage does not require S3 VersionId support. Successful upload is separate from durable file/graph verification, with account-scoped PostgreSQL metadata, leases and a recovery worker. `/api/cloud/*` is a server-only boundary; images upload directly to private object storage. Phase 16A itself introduced no cloud-save hook, synchronization queue, current-record cloud CRUD or AI request. Export/import uses the same format and does not require an account. Additional `life-control` stores are infrastructure; the seven business stores remain v6. Later Phase 16B.1 and the 2026-09-17 Account roundtrip add a durable Replica outbox and explicit isolated restore without making PostgreSQL the working store.
 
 
 This project is a single-user, web-first, local-first private life record system. The core path is open, record, save, leave. The initial foundation phase intentionally contained no product UI, fake dashboard, Timeline, Calendar, AI, auth, sync, map, or health feature; later phases add only the explicitly scheduled product surfaces.
@@ -233,7 +233,52 @@ Optional hosted APIs remain on the Next.js origin
   -> no CORS/CSRF/Cookie change
 ```
 
-`npm run native:web` is the only supported native frontend build. It excludes Route Handlers and `/diary/[id]`, writes `/diary/open`, and restores the web tree. `CAPACITOR_DEV_SERVER_URL` may point a debug APK at a LAN `next dev` server; production APKs must omit it. Camera, Photos, Location, Haptics, SQLite and bidirectional sync remain later phases.
+`npm run native:web` is the only supported native frontend build. It excludes Route Handlers and `/diary/[id]`, writes `/diary/open`, and restores the web tree. `CAPACITOR_DEV_SERVER_URL` may point a debug APK at a LAN `next dev` server; production APKs must omit it. SQLite and bidirectional sync remain later phases.
+
+## Phase 22 Android Native Essentials
+
+Pages never import Capacitor plugins. Native camera, photos, location and haptics live under `src/lib/native/` and return ordinary `File` / coordinates / no-op failures.
+
+```text
+Quick Moment camera / gallery
+  -> native adapter or web file input
+  -> File/Blob preview
+  -> unchanged createMomentWithAttachments
+
+添加位置 tap
+  -> native Geolocation or navigator.geolocation
+  -> hosted /api/location/reverse on Android (baked HTTPS origin)
+  -> empty metadata on deny/fail; save continues
+
+Replica login on Android
+  -> POST /api/replica/auth/email/start without emailRedirectTo
+  -> numeric OTP + /verify
+  -> Bearer session; expiry pauses Replica only
+```
+
+Web `/api/cloud` still uses Cookie/CSRF and may send Magic Link via `emailRedirectTo`. `https://localhost` is not a Web CSRF origin.
+
+## Life Account + Cloud Data Roundtrip (2026-09-17)
+
+Current stage reuses Phase 16A Backup and Phase 16B.1 Replica. Dexie remains the working database. PostgreSQL Replica is an account-isolated copy, not a second primary store.
+
+```text
+login (test-password kele / wzj)
+  -> opaque Web cookie or Native Bearer
+  -> server-derived accountId
+  -> explicit library claim
+  -> same-transaction Dexie write + Replica outbox
+  -> ordered fail-open upload
+  -> user-triggered snapshot restore into life-restore-*
+  -> confirm switch + expectedCommitSeq writer promotion
+```
+
+- `CLOUD_AUTH_MODE=test-password` is an explicit, replaceable provider. Subjects `kele` and `wzj` map to stable internal UUIDs. Passwords exist only as server scrypt hashes. Future Auth replacement must not change Dexie, Replica or business models.
+- Server derives `accountId` from the verified session. Client-supplied account IDs are consistency assertions, never tenant selectors. kele cannot read, overwrite or restore wzj data, and vice versa.
+- Anonymous libraries stay unclaimed until explicit first upload. Relogin resumes the last explicitly opened library for that account and never silently activates a downloaded Replica restore.
+- Restore requires all seven entity arrays and every image. Missing or corrupt images abort the whole restore. The current library is unchanged until confirmation. No live multi-device merge.
+- Native document reloads after login/logout/library switch use `/account/index.html` because Capacitor HTML5 mode serves root `index.html` for extensionless paths. Web remains `/account`.
+- Phase 16B.2, SQLite, new AI and cloud-primary mode remain excluded.
 
 ## Test strategy
 

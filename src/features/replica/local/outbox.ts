@@ -25,20 +25,17 @@ export function replicaWrites(database: LifeDatabase, ...tables: Table[]): Table
 }
 
 export async function ensureReplicaState(database: LifeDatabase): Promise<ReplicaStateRow> {
-  const existing = await database.replicaState.get("current");
-  if (existing) return existing;
-  const row: ReplicaStateRow = {
-    id: "current",
-    writerId: createEntityId(),
-    epoch: 0,
-    accountId: null,
-    lastAckedMutationId: null,
-    lastCommitSeq: 0,
-    fenced: false,
-    backfillComplete: false,
-  };
-  await database.replicaState.add(row);
-  return row;
+  return database.transaction("rw", database.replicaState, async () => {
+    const existing = await database.replicaState.get("current");
+    if (existing) return existing;
+    const row: ReplicaStateRow = {
+      id: "current", writerId: createEntityId(), epoch: 0, accountId: null,
+      lastAckedMutationId: null, lastCommitSeq: 0, fenced: false, backfillComplete: false,
+      nextSequence: 1, lastSyncedAt: null, lastAttemptAt: null, lastError: null, pausedReason: null,
+    };
+    await database.replicaState.add(row);
+    return row;
+  });
 }
 
 async function keepAlive<T>(work: Promise<T>): Promise<T> {
@@ -62,6 +59,7 @@ export async function replicaAttachmentRecord(attachment: Attachment, database: 
   if (bytes) {
     return replicaRecord({
       ...metadata,
+      blobType: blob.type,
       sha256: await keepAlive(hashBytes(bytes)),
       byteLength: bytes.byteLength,
     });
@@ -70,6 +68,7 @@ export async function replicaAttachmentRecord(attachment: Attachment, database: 
   if (existing?.sha256) {
     return replicaRecord({
       ...metadata,
+      blobType: blob.type,
       sha256: existing.sha256,
       byteLength: existing.byteLength,
     });
@@ -97,7 +96,11 @@ async function upsertReplicaBlob(database: LifeDatabase, record: Record<string, 
 
 export async function enqueueReplicaMutation(database: LifeDatabase, ops: ReplicaOp[]): Promise<void> {
   if (ops.length === 0) return;
-  await ensureReplicaState(database);
+  await database.transaction("rw", replicaWrites(database), async () => {
+  const state = await ensureReplicaState(database);
+  const sequence = state.nextSequence ?? 1;
+  if (!Number.isSafeInteger(sequence) || sequence < 1 || sequence >= Number.MAX_SAFE_INTEGER) throw new Error("Replica sequence exhausted.");
+  await database.replicaState.update("current", { nextSequence: sequence + 1 });
   const createdAt = nowTimestamp();
   const payload = {
     mutationId: createEntityId(),
@@ -122,8 +125,10 @@ export async function enqueueReplicaMutation(database: LifeDatabase, ops: Replic
     attemptCount: 0,
     lastError: null,
     ackedCommitSeq: null,
+    sequence,
   };
   await database.replicaMutations.add(row);
+  });
 }
 
 export async function enqueueEntity(database: LifeDatabase, entity: ReplicaEntity, record: Record<string, unknown>): Promise<void> {
@@ -160,7 +165,7 @@ export async function ensureReplicaBackfill(database: LifeDatabase): Promise<voi
       if (covered.has(`${entity}:${row.id}`)) continue;
       covered.add(`${entity}:${row.id}`);
       if (entity === "attachment") {
-        pending.push({ entity, op: "upsert", id: row.id, record: await replicaAttachmentRecord(row as unknown as Attachment) });
+        pending.push({ entity, op: "upsert", id: row.id, record: await replicaAttachmentRecord(row as unknown as Attachment, database) });
       } else {
         pending.push({ entity, op: "upsert", id: row.id, record: replicaRecord(row) });
       }
@@ -168,51 +173,63 @@ export async function ensureReplicaBackfill(database: LifeDatabase): Promise<voi
     }
     await flush();
   }
-  await database.replicaState.put({ ...state, backfillComplete: true });
+  await database.replicaState.update("current", { backfillComplete: true });
 }
 
 export async function pendingReplicaCount(database: LifeDatabase): Promise<number> {
   return database.replicaMutations.where("status").equals("pending").count();
 }
 
-export async function listDueReplicaMutations(database: LifeDatabase, now = nowTimestamp()): Promise<ReplicaMutationRow[]> {
-  const rows = await database.replicaMutations.where("status").equals("pending").sortBy("createdAt");
-  return rows.filter((row) => row.nextRetryAt <= now);
+export function compareReplicaMutations(a: ReplicaMutationRow, b: ReplicaMutationRow): number {
+  if (a.sequence !== undefined && b.sequence !== undefined) return a.sequence - b.sequence;
+  // Legacy entries precede newly sequenced rows. Equal legacy timestamps have no
+  // recoverable causal order; the ID makes the fallback deterministic only.
+  if (a.sequence !== undefined) return 1;
+  if (b.sequence !== undefined) return -1;
+  return a.createdAt.localeCompare(b.createdAt) || a.mutationId.localeCompare(b.mutationId);
 }
 
-export async function markReplicaAcked(database: LifeDatabase, mutationId: string, commitSeq: number): Promise<void> {
-  const row = await database.replicaMutations.get(mutationId);
-  if (!row) return;
-  const state = await ensureReplicaState(database);
+export async function listDueReplicaMutations(database: LifeDatabase, now = nowTimestamp(), forceRetry = false): Promise<ReplicaMutationRow[]> {
+  const rows = (await database.replicaMutations.where("status").equals("pending").toArray()).sort(compareReplicaMutations);
+  const blocked = forceRetry ? -1 : rows.findIndex((row) => row.nextRetryAt > now);
+  return blocked < 0 ? rows : rows.slice(0, blocked);
+}
+
+export type ReplicaStateScope = Pick<ReplicaStateRow, "accountId" | "writerId" | "epoch">;
+export function matchesReplicaScope(state: ReplicaStateRow | undefined, scope: ReplicaStateScope): boolean {
+  return !!state && state.accountId === scope.accountId && state.writerId === scope.writerId && state.epoch === scope.epoch;
+}
+
+export async function markReplicaAcked(database: LifeDatabase, mutationId: string, commitSeq: number, scope?: ReplicaStateScope): Promise<void> {
   await database.transaction("rw", replicaWrites(database), async () => {
+    const row = await database.replicaMutations.get(mutationId);
+    const state = await ensureReplicaState(database);
+    if (!row || row.status !== "pending" || (scope && !matchesReplicaScope(state, scope))) return;
+    await database.replicaMutations.put({ ...row, status: "acked", ackedCommitSeq: commitSeq, lastError: null, nextRetryAt: row.createdAt });
+    await database.replicaState.update("current", {
+      lastAckedMutationId: mutationId, lastCommitSeq: Math.max(state.lastCommitSeq, commitSeq),
+      lastSyncedAt: nowTimestamp(), lastError: null, pausedReason: null,
+    });
+  });
+}
+
+export async function markReplicaRetry(database: LifeDatabase, mutationId: string, error: string, delayMs: number, scope?: ReplicaStateScope): Promise<void> {
+  await database.transaction("rw", replicaWrites(database), async () => {
+    const row = await database.replicaMutations.get(mutationId);
+    const state = await ensureReplicaState(database);
+    if (!row || row.status !== "pending" || (scope && !matchesReplicaScope(state, scope))) return;
     await database.replicaMutations.put({
-      ...row,
-      status: "acked",
-      ackedCommitSeq: commitSeq,
-      lastError: null,
-      nextRetryAt: row.createdAt,
+      ...row, attemptCount: row.attemptCount + 1, lastError: error,
+      nextRetryAt: new Date(Date.now() + delayMs).toISOString(),
     });
-    await database.replicaState.put({
-      ...state,
-      lastAckedMutationId: mutationId,
-      lastCommitSeq: commitSeq,
-    });
+    await database.replicaState.update("current", { lastError: error, pausedReason: error });
   });
 }
 
-export async function markReplicaRetry(database: LifeDatabase, mutationId: string, error: string, delayMs: number): Promise<void> {
-  const row = await database.replicaMutations.get(mutationId);
-  if (!row || row.status !== "pending") return;
-  const attemptCount = row.attemptCount + 1;
-  await database.replicaMutations.put({
-    ...row,
-    attemptCount,
-    lastError: error,
-    nextRetryAt: new Date(Date.now() + delayMs).toISOString(),
+export async function markReplicaFenced(database: LifeDatabase, scope?: ReplicaStateScope): Promise<void> {
+  await database.transaction("rw", database.replicaState, async () => {
+    const state = await ensureReplicaState(database);
+    if (scope && !matchesReplicaScope(state, scope)) return;
+    await database.replicaState.update("current", { fenced: true, lastError: "fenced", pausedReason: "fenced" });
   });
-}
-
-export async function markReplicaFenced(database: LifeDatabase): Promise<void> {
-  const state = await ensureReplicaState(database);
-  await database.replicaState.put({ ...state, fenced: true });
 }

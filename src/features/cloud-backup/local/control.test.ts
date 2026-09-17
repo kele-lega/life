@@ -36,3 +36,52 @@ it("refuses to activate a restore that has not passed verification", async () =>
   await expect(activateLibrary("incomplete", store)).rejects.toMatchObject({ code: "library_locked" });
   expect((await initializeControl(store)).library.id).toBe(library.id);
 });
+
+it("does not auto-select a downloaded Replica restore that was never confirmed", async () => {
+  const store = storage();
+  const { library } = await initializeControl(store);
+  const account = { id: "A", email: "a@example.test" };
+  await setLocalAccount(account, false, store);
+  await bindLocalLibrary(library.id, account.id, store);
+  await store.libraries.add({
+    id: "staged-restore",
+    databaseName: "life-restore-staged",
+    accountId: account.id,
+    createdAt: "2099-01-01T00:00:00.000Z",
+    restoredFrom: "replica:4",
+    ready: true,
+  });
+  const guest = await setLocalAccount(null, true, store);
+  expect(guest.id).not.toBe(library.id);
+  expect((await setLocalAccount(account, false, store)).id).toBe(library.id);
+  expect((await store.settings.get("context"))?.activeLibraryId).toBe(library.id);
+});
+
+it("resumes the last explicitly opened library instead of the newest restored copy", async () => {
+  const store = storage();
+  const { library: original } = await initializeControl(store);
+  const account = { id: "A", email: "a@example.test" };
+  await setLocalAccount(account, false, store);
+  await bindLocalLibrary(original.id, account.id, store);
+  const older = {
+    id: "restore-older",
+    databaseName: "life-restore-older",
+    accountId: account.id,
+    createdAt: "2026-09-17T01:00:00.000Z",
+    restoredFrom: "replica:1",
+    ready: true,
+  };
+  const newer = {
+    id: "restore-newer",
+    databaseName: "life-restore-newer",
+    accountId: account.id,
+    createdAt: "2026-09-17T02:00:00.000Z",
+    restoredFrom: "replica:2",
+    ready: true,
+  };
+  await store.libraries.bulkAdd([older, newer]);
+  expect((await activateLibrary(older.id, store)).id).toBe(older.id);
+  await setLocalAccount(null, true, store);
+  expect((await setLocalAccount(account, false, store)).id).toBe(older.id);
+  expect((await store.settings.get("context"))?.lastActiveByAccount).toMatchObject({ A: older.id });
+});

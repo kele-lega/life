@@ -34,4 +34,4 @@ The App loads the same client components and Dexie v6 repositories. Diary detail
 
 ## Follow-up
 
-Physical Android Studio install/run, iOS project, Camera/Photos plugins, and a native API host for Cloud/AI are later phases. Native IndexedDB is not shared with the browser origin.
+Phase 22 adds Camera/Photos/Location/Haptics adapters and native OTP. Physical Android Studio install/run for those checks is recorded in `docs/PHASE22_ANDROID_NATIVE_ESSENTIALS.md`. iOS Xcode remains later. Native IndexedDB is not shared with the browser origin.

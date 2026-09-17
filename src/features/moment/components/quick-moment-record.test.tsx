@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QuickMomentRecord } from "./quick-moment-record";
 
 const resolveLocationMock = vi.hoisted(() => vi.fn());
-
 const createMomentMock = vi.hoisted(() => vi.fn());
+const isNativeAppMock = vi.hoisted(() => vi.fn(() => false));
+const pickNativeImagesMock = vi.hoisted(() => vi.fn(async () => [] as File[]));
+const takeNativePhotoMock = vi.hoisted(() => vi.fn(async () => null as File | null));
 
 vi.mock("@/features/moment/repository/moment-repository", () => ({
   createMoment: createMomentMock,
@@ -17,11 +19,25 @@ vi.mock("../location/location-provider", () => ({
   resolveLocation: resolveLocationMock,
 }));
 
+vi.mock("@/lib/runtime/platform", () => ({
+  isNativeApp: () => isNativeAppMock(),
+}));
+
+vi.mock("@/lib/native/camera", () => ({
+  pickNativeImages: () => pickNativeImagesMock(),
+  takeNativePhoto: () => takeNativePhotoMock(),
+}));
+
 beforeEach(() => {
   cleanup();
   createMomentMock.mockReset();
   resolveLocationMock.mockReset();
   resolveLocationMock.mockResolvedValue({ city: null, placeName: null, latitude: null, longitude: null });
+  isNativeAppMock.mockReturnValue(false);
+  pickNativeImagesMock.mockReset();
+  takeNativePhotoMock.mockReset();
+  pickNativeImagesMock.mockResolvedValue([]);
+  takeNativePhotoMock.mockResolvedValue(null);
   vi.restoreAllMocks();
 });
 
@@ -336,5 +352,30 @@ describe("QuickMomentRecord", () => {
     await waitFor(() => expect(createMomentMock).toHaveBeenCalledTimes(1));
     expect(createMomentMock.mock.calls[0][0].location).toEqual({ city: null, placeName: null, latitude: null, longitude: null });
     expect(createMomentMock.mock.calls[0][0].attachments).toHaveLength(1);
+  });
+
+  it("uses the native camera adapter and still saves through the existing attachment flow", async () => {
+    const user = userEvent.setup();
+    isNativeAppMock.mockReturnValue(true);
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockImplementation(
+      (file) => `blob:${(file as File).name}`,
+    );
+    pickNativeImagesMock.mockResolvedValue([new File(["jpeg"], "gallery.jpg", { type: "image/jpeg" })]);
+    takeNativePhotoMock.mockResolvedValue(new File(["jpeg"], "shot.jpg", { type: "image/jpeg" }));
+    createMomentMock.mockResolvedValue({ id: "moment-1" });
+    render(<QuickMomentRecord />);
+    await user.click(screen.getByRole("button", { name: "写点什么" }));
+    await user.type(screen.getByRole("textbox", { name: "记录内容" }), "原生相机");
+    await user.click(screen.getByRole("button", { name: "添加图片" }));
+    await user.click(screen.getByRole("button", { name: "拍摄照片" }));
+    await screen.findByRole("img", { name: "gallery.jpg" });
+    await screen.findByRole("img", { name: "shot.jpg" });
+    expect(createObjectURL).toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(createMomentMock).toHaveBeenCalledTimes(1));
+    expect(createMomentMock.mock.calls[0][0].attachments.map((item: { fileName: string }) => item.fileName)).toEqual([
+      "gallery.jpg",
+      "shot.jpg",
+    ]);
   });
 });

@@ -2,7 +2,11 @@
 
 ## Current phase
 
-Phase 16B.1.5 Real Cloud + Android Acceptance is complete against the isolated test project and emulator `life-api36`: local-first Dexie v7 outbox, real Bearer replica drill, SHA-256 blob verify, writer fence, isolated restore, and Android push to production replica. Phase 16B.2 live pull / multi-device merge is not started. Dexie business tables remain v6-compatible; 16A Backup format stays `dexieVersion` 6. See `docs/PHASE16B1_IMPLEMENTATION_REPORT.md`.
+Life Account + Cloud Data Roundtrip is implemented and locally verified (2026-09-17): server-only test-password hashes for kele/wzj, stable internal account IDs, account-isolated Replica upload, explicit isolated-library restore, account UI and `docs/CLOUD_DEPLOYMENT_GUIDE.md`. Relogin resumes the last explicitly opened library and never auto-selects a staged Replica restore. Automated gates: typecheck, lint, 513 unit tests, 84 E2E, Web build, native static, Capacitor sync, Android `assembleDebug`. APK/native/public outputs contained no password, hash, database URL or object secret. Reuses Phase 16A Backup and Phase 16B.1 Replica; Phase 16B.2 remains excluded. No real two-account cloud/device acceptance, commit, push or production deploy was performed.
+
+Phase 22 Android Native Essentials code is implemented; full device acceptance remains incomplete: numeric replica OTP without Magic Link redirect, native camera/photos through a capability adapter into the existing Attachment flow, tap-only location with hosted reverse geocode, and save-success haptics. Local-first Dexie v7, Phase 16A Backup, Web Cookie/CSRF/CORS, and Durable Replica remain. Phase 16B.2 live pull / multi-device merge is not started. See `docs/PHASE22_ANDROID_NATIVE_ESSENTIALS.md`.
+
+Phase 16B.1.5 Real Cloud + Android Acceptance is complete against the isolated test project and emulator `life-api36`: local-first Dexie v7 outbox, real Bearer replica drill, SHA-256 blob verify, writer fence, isolated restore, and Android push to production replica. Dexie business tables remain v6-compatible; 16A Backup format stays `dexieVersion` 6. See `docs/PHASE16B1_IMPLEMENTATION_REPORT.md`.
 
 Phase 14.3 Life Intelligence Persistence is implemented in Dexie v6. The database now stores explicit `lifeExtractionJobs` and `lifeEventProposals`, and `lifeEvents` has a sparse unique Proposal provenance index. Migration performs no transform or backfill: existing original records, attachment bytes, tombstones, indexes, and ordinary manual LifeEvents remain unchanged, and no intelligence records are fabricated.
 

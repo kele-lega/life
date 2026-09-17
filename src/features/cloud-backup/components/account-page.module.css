@@ -23,6 +23,13 @@
 .count { font-variant-numeric: tabular-nums; }
 .download { color: var(--app-accent-ink); min-height: 44px; display: inline-flex; align-items: center; }
 .note { font-size: .8rem !important; }
+.sectionHeading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.syncState { color: var(--app-secondary); font-size: .8rem; }
+.summary { margin: 20px 0 0; font-size: .875rem; line-height: 1.7; font-variant-numeric: tabular-nums; }
+.summary > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--app-line); }
+.summary dt { color: var(--app-secondary); }
+.summary dd { margin: 0; overflow-wrap: anywhere; }
+.preview h3 { margin: 0 0 8px; font-size: .95rem; font-weight: 600; }
 @media (max-width: 600px) {
   .header { margin-bottom: 28px; }
   .section { padding: 24px 0; }

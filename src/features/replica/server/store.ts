@@ -67,14 +67,17 @@ export class ReplicaStore {
     });
   }
 
-  async promoteWriter(account: string, writerId: string, libraryId: string | null, installationId: string | null): Promise<ReplicaWriterInfo> {
+  async promoteWriter(account: string, writerId: string, libraryId: string | null, installationId: string | null, expectedCommitSeq?: number): Promise<ReplicaWriterInfo> {
     ensureReplica(isUuid(writerId), "invalid_request");
+    ensureReplica(expectedCommitSeq === undefined || (Number.isSafeInteger(expectedCommitSeq) && expectedCommitSeq >= 0), "invalid_request");
     return this.tenant(account, async (sql) => {
       await sql.query("SELECT id FROM life_cloud.accounts WHERE id=$1 FOR UPDATE", [account]);
       const state = await sql.query<{ writer_id: string; epoch: number; head_commit_seq: string }>(
         "SELECT writer_id, epoch, head_commit_seq FROM life_cloud.replica_state WHERE account_id=$1 FOR UPDATE",
         [account],
       );
+      // Compare while holding the same row lock used by applyMutation.
+      ensureReplica(expectedCommitSeq === undefined || expectedCommitSeq === Number(state.rows[0]?.head_commit_seq ?? 0), "snapshot_stale", "云端已更新，请重新下载后再切换。");
       if (!state.rows[0]) {
         await sql.query(
           "INSERT INTO life_cloud.replica_writers(id,account_id,library_id,installation_id,epoch) VALUES($1,$2,$3,$4,1)",
@@ -108,13 +111,16 @@ export class ReplicaStore {
     ensureReplica(typeof attachmentId === "string" && attachmentId.length > 0 && attachmentId.length <= 1024, "invalid_request");
     ensureReplica(isHash(sha256), "invalid_request");
     ensureReplica(Number.isSafeInteger(byteLength) && byteLength >= 0 && byteLength <= MAX_REPLICA_BLOB_BYTES, "invalid_request");
-    const objectKey = `${objectEnv}/replica/${account}/${attachmentId}/${randomUUID()}`;
+    const objectKey = `${objectEnv}/replica/${account}/${digest(attachmentId)}/${randomUUID()}`;
     return this.tenant(account, async (sql) => {
-      const verified = await sql.query<{ object_key: string }>(
-        "SELECT object_key FROM life_cloud.replica_objects WHERE account_id=$1 AND attachment_id=$2 AND sha256=$3 AND verified_at IS NOT NULL LIMIT 1",
+      const verified = await sql.query<{ object_key: string; byte_length: string }>(
+        "SELECT object_key, byte_length FROM life_cloud.replica_objects WHERE account_id=$1 AND attachment_id=$2 AND sha256=$3 AND verified_at IS NOT NULL LIMIT 1",
         [account, attachmentId, sha256],
       );
-      if (verified.rows[0]) return { objectKey: verified.rows[0].object_key, alreadyVerified: true as const };
+      if (verified.rows[0]) {
+        ensureReplica(Number(verified.rows[0].byte_length) === byteLength, "part_checksum");
+        return { objectKey: verified.rows[0].object_key, alreadyVerified: true as const };
+      }
       await sql.query(
         "INSERT INTO life_cloud.replica_objects(account_id,object_key,attachment_id,sha256,byte_length) VALUES($1,$2,$3,$4,$5)",
         [account, objectKey, attachmentId, sha256, byteLength],
@@ -159,12 +165,13 @@ export class ReplicaStore {
     });
   }
 
-  async applyMutation(account: string, writerId: string, epoch: number, mutationId: string, createdAt: string, ops: ReplicaOp[]): Promise<ReplicaReceipt> {
+  async applyMutation(account: string, writerId: string, epoch: number, mutationId: string, createdAt: string, ops: ReplicaOp[], submittedSha256: string): Promise<ReplicaReceipt> {
     ensureReplica(isUuid(writerId) && isUuid(mutationId), "invalid_request");
     ensureReplica(Number.isInteger(epoch) && epoch >= 1, "invalid_request");
     ensureReplica(typeof createdAt === "string" && Number.isFinite(Date.parse(createdAt)), "invalid_request");
     ensureReplica(Array.isArray(ops) && ops.length > 0 && ops.length <= 200, "invalid_request");
     const payloadSha256 = digest(mutationDigestInput({ mutationId, createdAt, ops }));
+    ensureReplica(isHash(submittedSha256) && submittedSha256 === payloadSha256, "payload_checksum", "上传内容校验失败，请重试。");
     return this.tenant(account, async (sql) => {
       const state = await sql.query<{ writer_id: string; epoch: number; head_commit_seq: string }>(
         "SELECT writer_id, epoch, head_commit_seq FROM life_cloud.replica_state WHERE account_id=$1 FOR UPDATE",
@@ -197,7 +204,7 @@ export class ReplicaStore {
   async snapshot(account: string) {
     return this.tenant(account, async (sql) => {
       const state = await sql.query<{ writer_id: string; epoch: number; head_commit_seq: string }>(
-        "SELECT writer_id, epoch, head_commit_seq FROM life_cloud.replica_state WHERE account_id=$1",
+        "SELECT writer_id, epoch, head_commit_seq FROM life_cloud.replica_state WHERE account_id=$1 FOR SHARE",
         [account],
       );
       ensureReplica(state.rows[0], "not_found");
@@ -216,7 +223,9 @@ export class ReplicaStore {
         records[entity] = rows.rows.map((row) => row.record);
       }
       const objects = await sql.query<{ attachment_id: string; sha256: string; byte_length: string; object_key: string }>(
-        "SELECT attachment_id, sha256, byte_length, object_key FROM life_cloud.replica_objects WHERE account_id=$1 AND verified_at IS NOT NULL ORDER BY attachment_id, sha256",
+        `SELECT o.attachment_id, o.sha256, o.byte_length, o.object_key FROM life_cloud.replica_objects o
+         JOIN life_cloud.replica_attachments a ON a.account_id=o.account_id AND a.id=o.attachment_id AND a.record->>'sha256'=o.sha256
+         WHERE o.account_id=$1 AND o.verified_at IS NOT NULL ORDER BY o.attachment_id, o.sha256`,
         [account],
       );
       return {
@@ -234,6 +243,32 @@ export class ReplicaStore {
     });
   }
 
+  async status(account: string) {
+    return this.tenant(account, async (sql) => {
+      // Protect the empty-account case against its first writer registration too.
+      await sql.query("SELECT id FROM life_cloud.accounts WHERE id=$1 FOR SHARE", [account]);
+      const state = await sql.query<{ writer_id: string; epoch: number; head_commit_seq: string }>(
+        "SELECT writer_id,epoch,head_commit_seq FROM life_cloud.replica_state WHERE account_id=$1 FOR SHARE", [account],
+      );
+      const counts = {} as Record<ReplicaEntity, number>;
+      for (const entity of Object.keys(REPLICA_SQL_TABLE) as ReplicaEntity[]) {
+        const count = await sql.query<{ count: string }>(`SELECT count(*)::text AS count FROM life_cloud.${REPLICA_SQL_TABLE[entity]} WHERE account_id=$1`, [account]);
+        counts[entity] = Number(count.rows[0].count);
+      }
+      const blobs = await sql.query<{ count: string; bytes: string }>(`SELECT count(*)::text AS count,COALESCE(sum(o.byte_length),0)::text AS bytes
+        FROM life_cloud.replica_objects o JOIN life_cloud.replica_attachments a
+          ON a.account_id=o.account_id AND a.id=o.attachment_id AND a.record->>'sha256'=o.sha256
+        WHERE o.account_id=$1 AND o.verified_at IS NOT NULL`, [account]);
+      const last = await sql.query<{ created_at: Date }>("SELECT created_at FROM life_cloud.replica_mutations WHERE account_id=$1 ORDER BY commit_seq DESC LIMIT 1", [account]);
+      return {
+        counts, commitSeq: Number(state.rows[0]?.head_commit_seq ?? 0),
+        lastSyncedAt: last.rows[0] ? new Date(last.rows[0].created_at).toISOString() : null,
+        writerId: state.rows[0]?.writer_id ?? null, epoch: Number(state.rows[0]?.epoch ?? 0),
+        blobCount: Number(blobs.rows[0].count), blobBytes: Number(blobs.rows[0].bytes),
+      };
+    });
+  }
+
   private async applyOp(sql: SqlConnection, account: string, op: ReplicaOp): Promise<void> {
     ensureReplica(isReplicaEntity(op.entity) && op.op === "upsert", "invalid_request");
     ensureReplica(typeof op.id === "string" && op.id.length > 0 && op.id.length <= 1024, "invalid_request");
@@ -243,7 +278,7 @@ export class ReplicaStore {
     const existing = await sql.query<{ record: Record<string, unknown> }>(`SELECT record FROM life_cloud.${table} WHERE account_id=$1 AND id=$2`, [account, op.id]);
     const current = existing.rows[0]?.record ?? null;
     this.assertInvariants(op, current);
-    if (op.entity === "attachment") await this.assertVerifiedBlob(sql, account, op, current);
+    if (op.entity === "attachment") await this.assertVerifiedBlob(sql, account, op);
     const updatedAt = typeof op.record.updatedAt === "string" ? op.record.updatedAt : new Date().toISOString();
     const encoded = encodeJson(op.record);
     if (op.entity === "lifeExtractionJob" || op.entity === "lifeEventProposal") {
@@ -276,14 +311,16 @@ export class ReplicaStore {
     }
   }
 
-  private async assertVerifiedBlob(sql: SqlConnection, account: string, op: ReplicaOp, current: Record<string, unknown> | null) {
+  private async assertVerifiedBlob(sql: SqlConnection, account: string, op: ReplicaOp) {
     const sha256 = op.record.sha256;
-    ensureReplica(isHash(sha256), "invalid_request");
-    if (current && current.sha256 === sha256) return;
-    const verified = await sql.query(
-      "SELECT object_key FROM life_cloud.replica_objects WHERE account_id=$1 AND attachment_id=$2 AND sha256=$3 AND verified_at IS NOT NULL LIMIT 1",
+    ensureReplica(isHash(sha256) && Number.isSafeInteger(op.record.byteLength) && Number(op.record.byteLength) >= 0 && Number(op.record.byteLength) <= MAX_REPLICA_BLOB_BYTES, "invalid_request");
+    // `size` is original metadata and may differ in historical records; byteLength is the verified transport length.
+    ensureReplica(op.record.blobType === undefined || typeof op.record.blobType === "string", "invalid_request");
+    const verified = await sql.query<{ byte_length: string }>(
+      "SELECT byte_length FROM life_cloud.replica_objects WHERE account_id=$1 AND attachment_id=$2 AND sha256=$3 AND verified_at IS NOT NULL LIMIT 1",
       [account, op.id, sha256],
     );
     ensureReplica(verified.rows[0], "blob_pending", "\u9644\u4ef6\u5c1a\u672a\u5b8c\u6210 SHA-256 \u6821\u9a8c\u3002");
+    ensureReplica(Number(verified.rows[0].byte_length) === op.record.byteLength, "part_checksum");
   }
 }

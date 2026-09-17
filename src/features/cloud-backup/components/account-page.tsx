@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { db } from "@/lib/db/client";
+import { db, LifeDatabase } from "@/lib/db/client";
 import { BackupError, LIMITS, TABLE_NAMES, type BackupArchive } from "../shared/format";
 import { captureArchive, packArchive, restoreArchive, unpackArchive, verifyArchive } from "../local/archive";
 import { activateLibrary, bindLocalLibrary, control, ensureCapacity, exclusiveLibrary, finishTransfer, initializeControl, registerRestoredLibrary, reloadLibrary, setLocalAccount, type LocalContext, type LocalLibrary, type Transfer } from "../local/control";
@@ -10,7 +10,8 @@ import { cloudApi, type CloudAccount, type CloudBackup } from "../client/api";
 import { downloadBackup, runCloudBackup } from "../client/backup";
 import { ReplicaAccountSection } from "@/features/replica/components/replica-account-section";
 import { ReplicaError } from "@/features/replica/shared/protocol";
-import { clearReplicaLogin, loadReplicaAccount, startReplicaLogin, verifyReplicaLogin } from "@/features/replica/client/account";
+import { activateRestoredReplica } from "@/features/replica/local/restore";
+import { clearReplicaLogin, loadReplicaAccount, passwordReplicaLogin, replicaUserTransport, retryReplicaLogout, startReplicaLogin, verifyReplicaLogin } from "@/features/replica/client/account";
 import { replicaApiOrigin } from "@/features/replica/client/transport";
 import { isNativeApp } from "@/lib/runtime/platform";
 import styles from "./account-page.module.css";
@@ -28,6 +29,8 @@ export function AccountPage() {
   const [latestBackup, setLatestBackup] = useState<string | null>(null);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -53,17 +56,14 @@ export function AccountPage() {
       try {
         const replica = await loadReplicaAccount();
         if (!mounted.current) return;
-        setCloud({ configured: replica.configured, account: replica.account });
+        setCloud({ configured: replica.configured, account: replica.account, authMode: replica.authMode });
         setBackups([]); setBackupCursor(null); setLatestBackup(null);
       } catch {
         if (mounted.current) setCloud({ configured: replicaApiOrigin() !== null, account: null });
       }
       return;
     }
-    if (current.context.logoutPending) {
-      await cloudApi("auth/logout", {});
-      await control.settings.update("context", { logoutPending: false });
-    }
+    if (current.context.logoutPending) await retryReplicaLogout();
     const account = await cloudApi<CloudAccount>("account");
     if (!mounted.current) return;
     setCloud(account);
@@ -95,13 +95,32 @@ export function AccountPage() {
   }
   const report = (message: string) => { if (mounted.current) setStatus(message); };
   const account = local?.context.account;
+  const passwordMode = cloud?.authMode === "test-password" || !!account?.username;
+  const accountName = account?.username || account?.email;
   const sessionReady = !!account && cloud?.account?.id === account.id;
   const lastKnownBackup = latestBackup ?? transfers.filter((item) => item.state === "complete").sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""))[0]?.manifest.capturedAt;
+
+  const openLibrary = async (library: LocalLibrary): Promise<void> => {
+    if (library.restoredFrom?.startsWith("replica:")) {
+      const commitSeq = Number(library.restoredFrom.slice("replica:".length));
+      const database = new LifeDatabase(library.databaseName);
+      try {
+        await database.open();
+        const state = await database.replicaState.get("current");
+        if (!state || !Number.isSafeInteger(commitSeq) || commitSeq < 0) throw new ReplicaError("restore_target_mismatch");
+        const client = await replicaUserTransport();
+        if (!client || client.accountId !== account?.id) throw new ReplicaError("unauthorized", "请重新登录后切换。");
+        await activateRestoredReplica({ library, writerId: state.writerId, commitSeq }, client);
+        return;
+      } finally { database.close(); }
+    }
+    reloadLibrary(await activateLibrary(library.id));
+  };
 
   return <main className={`ui-page ${styles.page}`}>
     <nav className="ui-page-nav" aria-label="账户页面导航"><Link href="/">返回记录</Link></nav>
     <header className={styles.header}><h1>账户与备份</h1><p>记录始终保存在本机。为珍贵的生活，留一份可以带走的副本。</p></header>
-    <div className={styles.status} role="status" aria-live="polite">{busy && !status ? "正在处理…" : status}</div>
+    <div className={styles.status} role="status" aria-label="操作状态" aria-live="polite">{busy && !status ? "正在处理…" : status}</div>
     {error && <p role="alert">{error}</p>}
 
     <section className={styles.section} aria-labelledby="export-title">
@@ -138,9 +157,22 @@ export function AccountPage() {
       </div>}
     </section>
 
-    <section className={styles.section} aria-labelledby="account-title"><h2 id="account-title">{account ? "我的账户" : "邮箱登录"}</h2>
-      {account && <p>{account.email}<br />{sessionReady ? "云会话可用" : "云会话暂不可用，本机记录仍可使用"}</p>}
-      {!sessionReady && <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void run(async () => {
+    <section className={styles.section} aria-labelledby="account-title"><h2 id="account-title">{account ? "我的账户" : passwordMode ? "登录 Life" : "邮箱登录"}</h2>
+      {account && <p><strong>{accountName}</strong><br />{sessionReady ? "云会话可用" : "云会话暂不可用，本机记录仍可使用"}</p>}
+      {passwordMode && <p className={styles.note}>测试阶段账号 · 仅开放 kele 与 wzj。登录不影响离线记录。</p>}
+      {!sessionReady && passwordMode && <form className={styles.form} onSubmit={(event) => {
+        event.preventDefault();
+        void run(() => exclusiveLibrary(async () => {
+          const result = await passwordReplicaLogin(username, password);
+          setPassword("");
+          reloadLibrary(await setLocalAccount(result));
+        }));
+      }}>
+        <label htmlFor="life-username">用户名</label><input id="life-username" className={styles.input} autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={32} required value={username} disabled={busy} onChange={(event) => setUsername(event.target.value)} />
+        <label htmlFor="life-password">密码</label><input id="life-password" className={styles.input} type="password" autoComplete="current-password" maxLength={256} required value={password} disabled={busy} onChange={(event) => setPassword(event.target.value)} />
+        <div className={styles.actions}><button className={styles.primary} disabled={busy || cloud?.configured === false}>登录</button></div>
+      </form>}
+      {!sessionReady && !passwordMode && <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void run(async () => {
         if (!sent) { if (native) await startReplicaLogin(email); else await cloudApi("auth/email/start", { email }); setSent(true); report("验证码已请求，请查看邮箱。"); }
         else await exclusiveLibrary(async () => {
           const result = native
@@ -157,20 +189,16 @@ export function AccountPage() {
       {cloud?.configured === false && <p>云服务尚未配置，完整导出和本地恢复可直接使用。</p>}
       {account && <div className={styles.actions}><button className={styles.secondary} disabled={busy} onClick={() => void run(() => exclusiveLibrary(async () => {
         let pending = false;
-        try {
-          if (native) await clearReplicaLogin();
-          else await cloudApi("auth/logout", {});
-        } catch { pending = true; }
-        if (native) await clearReplicaLogin();
+        try { await clearReplicaLogin(); } catch { pending = true; }
         reloadLibrary(await setLocalAccount(null, pending));
       }))}>退出登录并保留本机库</button><button className={styles.secondary} disabled={busy} onClick={() => void run(refreshCloud)}>刷新云状态</button></div>}
     </section>
 
-    <ReplicaAccountSection sessionReady={sessionReady} busy={busy} run={run} report={report} />
+    <ReplicaAccountSection account={account ?? null} sessionReady={sessionReady} busy={busy} run={run} report={report} />
     {!native && <section className={styles.section} aria-labelledby="cloud-title"><h2 id="cloud-title">云备份</h2>
       <p>仅在点击时备份。完整快照包含文字、原图、位置和审核历史；采用传输与云存储加密，第一版不是端到端加密。</p>
       {sessionReady && local && local.library.accountId === null && <>
-        <p>此生活库尚未绑定。绑定到 {account!.email} 后可以手动备份；绑定本身不上传记录。</p>
+        <p>此生活库尚未绑定。绑定到 {accountName} 后可以手动备份；绑定本身不上传记录。</p>
         <button className={styles.secondary} disabled={busy} onClick={() => void run(() => exclusiveLibrary(async () => {
           await cloudApi("libraries/bind", { libraryId: local.library.id, installationId: local.context.installationId }, account!.id);
           await bindLocalLibrary(local.library.id, account!.id); reloadLibrary(local.library);
@@ -199,7 +227,7 @@ export function AccountPage() {
 
     {libraries.length > 1 && <section className={styles.section}><h2>本机保留的生活库</h2><p>每次恢复保留独立副本。打开另一库不会合并或删除当前记录。</p><ul className={styles.list}>{libraries.map((library) => <li key={library.id} className={styles.item}>
       <div><p>{library.id === local?.library.id ? "当前生活库" : library.capturedAt ? `${date(library.capturedAt)} 的恢复库` : "本机生活库"}</p><small>{library.accountId ? "已归属当前账户" : "尚未绑定账户"} · 建立于 {date(library.createdAt)}</small></div>
-      {library.id !== local?.library.id && <button className={styles.secondary} disabled={busy} onClick={() => void run(() => exclusiveLibrary(async () => reloadLibrary(await activateLibrary(library.id))))}>打开此库</button>}
+      {library.id !== local?.library.id && <button className={styles.secondary} disabled={busy} onClick={() => void run(() => openLibrary(library))}>打开此库</button>}
     </li>)}</ul></section>}
   </main>;
 }

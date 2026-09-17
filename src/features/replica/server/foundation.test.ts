@@ -179,6 +179,7 @@ describe("Phase 16B.1 replica API", () => {
       body: JSON.stringify({ email: "native-otp@example.test" }),
     }));
     expect(started.status).toBe(200);
+    expect(auth.start).toHaveBeenCalledWith("native-otp@example.test", { emailRedirectTo: false });
     const verified = await handler(new Request(`${config.origin}/api/replica/auth/email/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -3,6 +3,14 @@ import { BackupError, decodeJson, encodeJson, ensure, validateManifest, type Bac
 import type { Account } from "../local/control";
 import type { CloudBackup } from "../client/api";
 import type { SqlConnection, SqlDatabase } from "./sql";
+import { TEST_AUTH_PROVIDER } from "./auth";
+import { isTestUsername } from "./password";
+
+export type CloudAccount = Account & { username?: string };
+interface AccountRow { id: string; email: string; auth_provider: string; auth_subject: string; status?: string }
+function publicAccount(row: AccountRow): CloudAccount {
+  return { id: row.id, email: row.email, ...(row.auth_provider === TEST_AUTH_PROVIDER && isTestUsername(row.auth_subject) ? { username: row.auth_subject } : {}) };
+}
 
 export interface StoredBackup { id: string; account_id: string; library_id: string; manifest_bytes: Uint8Array; manifest_sha256: string; status: CloudBackup["status"]; total_bytes: string; captured_at: Date; completed_at: Date | null; error_code: string | null; manifest_object_version: string | null }
 export interface StoredPart { path: string; part_index: number; object_key: string; byte_length: number; sha256: string; object_version: string | null; verified: boolean }
@@ -20,27 +28,30 @@ export class CloudStore {
       window_start=CASE WHEN life_cloud.auth_limits.window_start < now()-($2 * interval '1 second') THEN now() ELSE life_cloud.auth_limits.window_start END RETURNING attempts`, [key, seconds]);
     if (result.rows[0].attempts > maximum) throw new BackupError("rate_limit", "请求较多，请稍后再试。");
   }
-  async createSession(subject: string, email: string, tokenHash: string): Promise<Account> {
+  private async account(sql: SqlConnection, subject: string, email: string, provider: string): Promise<CloudAccount> {
+    const result = await sql.query<AccountRow>(`INSERT INTO life_cloud.accounts(id,auth_provider,auth_subject,email) VALUES($1,$2,$3,$4)
+      ON CONFLICT(auth_provider,auth_subject) DO UPDATE SET email=EXCLUDED.email RETURNING id,email,status,auth_provider,auth_subject`, [randomUUID(), provider, subject, email]);
+    const account = result.rows[0];
+    if (account.status !== "active") throw new BackupError("unauthorized", "账户暂不可用。");
+    return publicAccount(account);
+  }
+  async createSession(subject: string, email: string, tokenHash: string, provider = "supabase", expiresAt?: Date): Promise<CloudAccount> {
     return this.sql.transaction(async (sql) => {
-      const result = await sql.query<{ id: string; email: string; status: string }>(`INSERT INTO life_cloud.accounts(id,auth_provider,auth_subject,email) VALUES($1,'supabase',$2,$3)
-        ON CONFLICT(auth_provider,auth_subject) DO UPDATE SET email=EXCLUDED.email RETURNING id,email,status`, [randomUUID(), subject, email]);
-      const account = result.rows[0];
-      if (account.status !== "active") throw new BackupError("unauthorized", "账户暂不可用。");
-      await sql.query("INSERT INTO life_cloud.sessions(id,account_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '30 days')", [randomUUID(), account.id, tokenHash]);
-      return { id: account.id, email: account.email };
+      const account = await this.account(sql, subject, email, provider);
+      await sql.query("INSERT INTO life_cloud.sessions(id,account_id,token_hash,expires_at) VALUES($1,$2,$3,COALESCE($4::timestamptz,now()+interval '30 days'))", [randomUUID(), account.id, tokenHash, expiresAt ?? null]);
+      return account;
     });
   }
-  async ensureAccount(subject: string, email: string): Promise<Account> {
-    const result = await this.sql.query<{ id: string; email: string; status: string }>(`INSERT INTO life_cloud.accounts(id,auth_provider,auth_subject,email) VALUES($1,'supabase',$2,$3)
-      ON CONFLICT(auth_provider,auth_subject) DO UPDATE SET email=EXCLUDED.email RETURNING id,email,status`, [randomUUID(), subject, email]);
-    const account = result.rows[0];
-    if (account.status !== "active") throw new BackupError("unauthorized");
-    return { id: account.id, email: account.email };
+  async ensureAccount(subject: string, email: string, provider = "supabase"): Promise<CloudAccount> {
+    return this.account(this.sql, subject, email, provider);
   }
-  async session(tokenHash: string): Promise<Account | null> {
-    const result = await this.sql.query<Account>(`SELECT a.id,a.email FROM life_cloud.sessions s JOIN life_cloud.accounts a ON a.id=s.account_id
-      WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND a.status='active'`, [tokenHash]);
-    return result.rows[0] ?? null;
+  async session(tokenHash: string, provider = "supabase"): Promise<CloudAccount | null> {
+    const result = await this.sql.query<AccountRow>(`SELECT a.id,a.email,a.auth_provider,a.auth_subject FROM life_cloud.sessions s JOIN life_cloud.accounts a ON a.id=s.account_id
+      WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND a.status='active' AND a.auth_provider=$2`, [tokenHash, provider]);
+    const account = result.rows[0];
+    // Test mode never admits pre-existing provider users or other test subjects.
+    if (!account || (provider === TEST_AUTH_PROVIDER && !isTestUsername(account.auth_subject))) return null;
+    return publicAccount(account);
   }
   async revoke(tokenHash: string) { await this.sql.query("UPDATE life_cloud.sessions SET revoked_at=now() WHERE token_hash=$1 AND revoked_at IS NULL", [tokenHash]); }
   async bind(account: string, library: string, installation: string) {

@@ -1,4 +1,4 @@
-import { isNativeApp } from "@/lib/runtime/platform";
+import { hostedApiOrigin, isNativeApp } from "@/lib/runtime/platform";
 import { replicaBlobPart, ReplicaError } from "../shared/protocol";
 
 export interface ReplicaTransport {
@@ -8,18 +8,7 @@ export interface ReplicaTransport {
 }
 
 export function replicaApiOrigin(): string | null {
-  if (isNativeApp()) {
-    const origin = process.env.NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN?.trim();
-    if (!origin) return null;
-    try {
-      const url = new URL(origin);
-      if (url.origin !== origin || url.protocol !== "https:") return null;
-      return url.origin;
-    } catch {
-      return null;
-    }
-  }
-  return "";
+  return hostedApiOrigin();
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -35,6 +24,7 @@ export function createReplicaTransport(options: {
   accountId?: string | null;
   accessToken?: string | null;
   native?: boolean;
+  assertCurrent?: () => Promise<void>;
 } = {}): ReplicaTransport {
   const origin = options.origin === undefined ? replicaApiOrigin() : options.origin;
   const native = options.native ?? isNativeApp();
@@ -44,6 +34,7 @@ export function createReplicaTransport(options: {
       const url = `${origin}/api/replica/${path}`;
       if (native) {
         const { CapacitorHttp } = await import("@capacitor/core");
+        await options.assertCurrent?.();
         const response = await CapacitorHttp.request({
           url,
           method: body === undefined ? "GET" : "POST",
@@ -63,6 +54,7 @@ export function createReplicaTransport(options: {
         }
         return result as T;
       }
+      await options.assertCurrent?.();
       let response: Response;
       try {
         response = await fetch(url, {
@@ -87,6 +79,7 @@ export function createReplicaTransport(options: {
     async put(url, headers, bytes) {
       if (native) {
         const { CapacitorHttp } = await import("@capacitor/core");
+        await options.assertCurrent?.();
         const response = await CapacitorHttp.request({
           url,
           method: "PUT",
@@ -99,6 +92,7 @@ export function createReplicaTransport(options: {
         if (response.status < 200 || response.status >= 300) throw new ReplicaError("upload_interrupted", "\u9644\u4ef6\u4e0a\u4f20\u672a\u5b8c\u6210\uff0c\u672c\u673a\u56fe\u7247\u5df2\u4fdd\u7559\u3002");
         return;
       }
+      await options.assertCurrent?.();
       let response: Response;
       try {
         response = await fetch(url, { method: "PUT", headers, body: new Blob([replicaBlobPart(bytes)]), credentials: "omit", redirect: "error", signal: AbortSignal.timeout(120_000) });
@@ -110,6 +104,7 @@ export function createReplicaTransport(options: {
     async download(url) {
       if (native) {
         const { CapacitorHttp } = await import("@capacitor/core");
+        await options.assertCurrent?.();
         const response = await CapacitorHttp.request({
           url,
           method: "GET",
@@ -128,6 +123,7 @@ export function createReplicaTransport(options: {
         if (data instanceof ArrayBuffer) return new Uint8Array(data);
         throw new ReplicaError("download_interrupted", "\u9644\u4ef6\u4e0b\u8f7d\u672a\u5b8c\u6210\uff0c\u672c\u673a\u5df2\u6709\u8bb0\u5f55\u4ecd\u53ef\u4f7f\u7528\u3002");
       }
+      await options.assertCurrent?.();
       let response: Response;
       try {
         response = await fetch(url, { credentials: "omit", redirect: "error", signal: AbortSignal.timeout(120_000) });

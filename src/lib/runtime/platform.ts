@@ -16,3 +16,20 @@ function capacitorBridge(): CapacitorBridge | undefined {
 export function isNativeApp(): boolean {
   return capacitorBridge()?.isNativePlatform?.() === true;
 }
+
+/**
+ * Hosted Next.js origin for native HTTP. Web uses same-origin (`""`).
+ * Never treat `https://localhost` as this origin.
+ */
+export function hostedApiOrigin(): string | null {
+  if (!isNativeApp()) return "";
+  const origin = process.env.NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN?.trim();
+  if (!origin) return null;
+  try {
+    const url = new URL(origin);
+    if (url.origin !== origin || url.protocol !== "https:") return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}

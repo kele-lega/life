@@ -1,4 +1,5 @@
 import type { LocationMetadata } from "@/features/moment/model/types";
+import { isNativeApp } from "@/lib/runtime/platform";
 
 export interface Coordinates {
   latitude: number;
@@ -14,21 +15,29 @@ export interface LocationProvider {
 }
 
 const defaultReverseGeocoder: ReverseGeocoder = {
-  async getCity({ latitude, longitude }): Promise<string | null> {
+  async getCity(coordinates): Promise<string | null> {
+    if (isNativeApp()) {
+      const { getNativeCity } = await import("@/lib/native/location");
+      return getNativeCity(coordinates);
+    }
     const response = await fetch(
-      `/api/location/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`,
+      `/api/location/reverse?latitude=${encodeURIComponent(coordinates.latitude)}&longitude=${encodeURIComponent(coordinates.longitude)}`,
       { headers: { Accept: "application/json" } },
     );
     if (!response.ok) throw new Error("Reverse geocoding failed.");
     const data: unknown = await response.json();
     if (!data || typeof data !== "object" || !("city" in data)) return null;
-      const city = data.city;
+    const city = data.city;
     return typeof city === "string" && city.length > 0 ? city : null;
   },
 };
 
 const defaultLocationProvider: LocationProvider = {
-  getCurrentPosition(): Promise<Coordinates> {
+  async getCurrentPosition(): Promise<Coordinates> {
+    if (isNativeApp()) {
+      const { getNativeCoordinates } = await import("@/lib/native/location");
+      return getNativeCoordinates();
+    }
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error("Geolocation is not supported."));

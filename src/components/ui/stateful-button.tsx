@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { confirmSaveSuccess } from "@/lib/native/haptics";
 import { motionDistance, motionDuration, motionEase, saveFeedbackMs } from "./motion";
 
 /** false means validation/save failed; a callback completes presentation after feedback. */
@@ -59,6 +60,7 @@ export function StatefulButton({ label, loadingLabel = "保存中…", disabled 
       return;
     }
     setPhase("done");
+    void confirmSaveSuccess();
     const finish = result;
     timeout.current = setTimeout(() => {
       timeout.current = null;

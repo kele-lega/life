@@ -1,5 +1,23 @@
 # Architecture Decision Records
 
+## ADR-042: Test-password accounts isolate Replica without a second cloud architecture
+
+- **Status:** Accepted (2026-09-17 explicit Life Account + Cloud Data Roundtrip).
+- **Auth:** `CLOUD_AUTH_MODE=test-password` is a temporary, labelled provider (`life-test-password`) for subjects `kele` and `wzj` only. Server stores salted scrypt hashes or receives initialization secrets from the server environment/stdin. No password literal lives in the client, APK or public frontend. Each username maps to a stable internal UUID `accountId` through existing `(auth_provider, auth_subject)` uniqueness. Future formal Auth must keep that UUID and must not change Dexie, Replica or business entity models.
+- **Session:** Web continues to use the opaque HttpOnly/Secure/SameSite cookie and existing CSRF/CORS origin allowlist. Native receives a random 64-character lowercase hexadecimal opaque token, not a JWT. Invalid Bearer credentials never fall back to ambient cookies. Sessions are resolved against the currently active provider. Logout revokes the server session. Session expiry pauses Replica only; local recording remains available.
+- **Tenant isolation:** The server derives `accountId` from the authenticated session. Client-supplied account IDs are consistency assertions, never tenant selectors. Moment, MomentAppend, Diary, Attachment, LifeEvent, LifeExtractionJob, LifeEventProposal, mutation logs, writers, sessions and objects are account-scoped. Cross-account object access is rejected.
+- **Local-first upload:** Business save and outbox enqueue commit atomically in Dexie. Save succeeds without waiting for cloud acknowledgement. Upload is asynchronous and ordered. Network or session failure cannot affect local save. First cloud ownership requires an explicit claim. Relogin resumes the last explicitly opened library and never silently switches to a downloaded-but-unconfirmed Replica restore.
+- **Restore:** User-triggered snapshot restore writes a new `life-restore-*` library. All seven entity arrays and every image must verify. The current library remains active until confirmation. Activation promotes with `expectedCommitSeq` before fencing. No live multi-device merge and no Phase 16B.2 conflict engine.
+- **Limits:** No SQLite, no cloud-primary working database, no new AI, no `https://localhost` Web origin allowlist, and no weakening of Cookie/CSRF/CORS.
+
+## ADR-041: Android native capabilities stay behind adapters; Web CSRF is unchanged
+
+- **Status:** Accepted (2026-09-16 explicit Phase 22 implementation).
+- **Auth:** Replica `auth/email/start` omits `emailRedirectTo` so the hosted mailer can send a numeric OTP for in-app verify. `/api/cloud` start still passes the Web origin for Magic Link. Native keeps Bearer; Web keeps Cookie/CSRF. `https://localhost` is not added to the Web origin allowlist. Expired Replica tokens pause push only; local records stay writable.
+- **Camera / Photos:** Pages call `src/lib/native/camera.ts`, not Capacitor plugins. Captures become `File`/`Blob` and enter the existing Attachment flow. Diary stays image-free. Dexie schema and Attachment semantics are unchanged.
+- **Location / Haptics:** Location remains a user tap. Native GPS uses `@capacitor/geolocation` once; reverse geocode uses the baked `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN`. Deny/fail returns empty metadata and never blocks save. Haptics fire only after StatefulButton reports a real save.
+- **Limits:** No background location, Push Notification, SQLite, new AI, or Phase 16B.2 live pull.
+
 ## ADR-040: Durable cloud replica is a single-writer outbox, not a second working database
 
 - **Status:** Accepted (2026-09-15 explicit Phase 16B.1 implementation).

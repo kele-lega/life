@@ -1,5 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
+const isNativeApp = vi.hoisted(() => vi.fn(() => false));
+const getNativeCoordinates = vi.hoisted(() => vi.fn());
+const getNativeCity = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/runtime/platform", () => ({
+  isNativeApp: () => isNativeApp(),
+}));
+
+vi.mock("@/lib/native/location", () => ({
+  getNativeCoordinates: () => getNativeCoordinates(),
+  getNativeCity: (coordinates: unknown) => getNativeCity(coordinates),
+}));
+
 import { resolveLocation } from "./location-provider";
 
 describe("resolveLocation", () => {
@@ -24,5 +37,15 @@ describe("resolveLocation", () => {
       { getCity: vi.fn().mockRejectedValue(new Error("offline")) },
     );
     expect(location).toEqual({ ...coordinates, city: null, placeName: null });
+  });
+
+  it("uses the native adapter on Capacitor and still fails open on deny", async () => {
+    isNativeApp.mockReturnValue(true);
+    getNativeCoordinates.mockResolvedValue(coordinates);
+    getNativeCity.mockResolvedValue("上海");
+    await expect(resolveLocation()).resolves.toEqual({ ...coordinates, city: "上海", placeName: null });
+
+    getNativeCoordinates.mockRejectedValueOnce(new Error("permission denied"));
+    await expect(resolveLocation()).resolves.toEqual({ city: null, placeName: null, latitude: null, longitude: null });
   });
 });

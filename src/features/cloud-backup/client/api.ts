@@ -6,7 +6,7 @@ export interface CloudBackup {
   status: "uploading" | "verifying" | "complete" | "failed";
   totalBytes: number; error: string | null; verifiedParts: number; totalParts: number;
 }
-export interface CloudAccount { configured: boolean; account: Account | null }
+export interface CloudAccount { configured: boolean; account: Account | null; authMode?: "supabase" | "test-password" }
 export async function cloudApi<T>(path: string, body?: unknown, expectedAccount?: string): Promise<T> {
   let response: Response;
   try {

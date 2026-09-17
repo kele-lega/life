@@ -27,11 +27,27 @@ async function readLibrary(page: Page, name = "life") {
   }, name);
 }
 
+const emptyReplicaStatus = {
+  counts: { moment: 0, momentAppend: 0, attachment: 0, diary: 0, lifeEvent: 0, lifeExtractionJob: 0, lifeEventProposal: 0 },
+  commitSeq: 0, lastSyncedAt: null, writerId: null, epoch: 0, blobCount: 0, blobBytes: 0,
+};
+
+async function mockReplicaAccount(context: BrowserContext, account: () => { id: string; email: string } | null, onLogout?: () => void) {
+  await context.route("**/api/replica/**", async (route) => {
+    const path = new URL(route.request().url()).pathname.replace("/api/replica/", "");
+    if (path === "account") return route.fulfill({ json: { configured: true, account: account(), authMode: "supabase" } });
+    if (path === "auth/logout") { onLogout?.(); return route.fulfill({ json: { ok: true } }); }
+    if (path === "status") return route.fulfill({ json: emptyReplicaStatus });
+    return route.fulfill({ json: { ok: true } });
+  });
+}
+
 async function mockAccounts(context: BrowserContext) {
   let account: { id: string; email: string } | null = null;
+  await mockReplicaAccount(context, () => account, () => { account = null; });
   await context.route("**/api/cloud/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path.endsWith("/account")) return route.fulfill({ json: { configured: true, account } });
+    if (path.endsWith("/account")) return route.fulfill({ json: { configured: true, account, authMode: "supabase" } });
     if (path.endsWith("/backups")) return route.fulfill({ json: { backups: [] } });
     if (path.endsWith("/verify")) {
       const email = route.request().postDataJSON().email;
@@ -130,7 +146,8 @@ test("account switching preserves the first account library and isolates new ano
   await page.goto("/account"); await page.getByRole("button", { name: "退出登录并保留本机库" }).click();
   await expect(page.getByRole("heading", { name: "邮箱登录", exact: true })).toBeVisible();
   await login(page, "a@example.test");
-  await page.getByRole("button", { name: "打开此库", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "本机保留的生活库" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "打开此库", exact: true })).toHaveCount(1);
   await page.getByRole("link", { name: "返回记录", exact: true }).click();
   await expect(page.getByRole("article").filter({ hasText: "属于账户 A 的记录" })).toBeVisible();
 });
@@ -166,6 +183,7 @@ test("cloud retry uses the original frozen snapshot and reports a verified compl
     parts.set(key, route.request().postDataBuffer()!);
     return route.fulfill({ status: 200, headers: { "access-control-allow-origin": "*" } });
   });
+  await mockReplicaAccount(context, () => account, () => { account = null; });
   await context.route("**/api/cloud/**", async (route) => {
     const path = new URL(route.request().url()).pathname.replace("/api/cloud/", "");
     const body = route.request().method() === "POST" ? route.request().postDataJSON() : {};
@@ -194,7 +212,7 @@ test("cloud retry uses the original frozen snapshot and reports a verified compl
   await createMoment(page, "备份之后的新记录");
   await page.goto("/account");
   await page.getByRole("button", { name: "重试备份", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText("已完成备份");
+  await expect(page.getByRole("status", { name: "操作状态" })).toContainText("已完成备份", { timeout: 15_000 });
   expect(createdIds.size).toBe(1);
   const momentBytes = [...parts.entries()].find(([key]) => key.includes("records/moments/"))![1];
   expect(momentBytes.toString()).toContain("备份捕获时的原文");

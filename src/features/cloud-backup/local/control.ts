@@ -1,11 +1,20 @@
 import Dexie, { type Table } from "dexie";
 import { LIBRARY_BOOT_KEY } from "@/lib/db/bootstrap";
 import { db, LifeDatabase } from "@/lib/db/client";
+import { isNativeApp } from "@/lib/runtime/platform";
 import { BackupError, type BackupArchive, type BackupManifest } from "../shared/format";
 
-export interface Account { id: string; email: string }
+export interface Account { id: string; email: string; username?: string }
 export interface LocalLibrary { id: string; databaseName: string; accountId: string | null; createdAt: string; capturedAt?: string; restoredFrom?: string; ready: boolean }
-export interface LocalContext { key: "context"; activeLibraryId: string; installationId: string; account: Account | null; logoutPending: boolean }
+export interface LocalContext {
+  key: "context";
+  activeLibraryId: string;
+  installationId: string;
+  account: Account | null;
+  logoutPending: boolean;
+  /** Last library the account explicitly opened. Optional; no Dexie version change. */
+  lastActiveByAccount?: Record<string, string>;
+}
 export interface Transfer { id: string; libraryId: string; accountId: string; manifest: BackupManifest; state: "ready" | "uploading" | "verifying" | "complete" | "failed"; error?: string; completedAt?: string }
 
 export class ControlDatabase extends Dexie {
@@ -57,24 +66,52 @@ export async function registerReplicaRestoredLibrary(databaseName: string, accou
   return library;
 }
 
+function rememberAccountLibrary(context: LocalContext, accountId: string | undefined, libraryId: string): LocalContext {
+  if (!accountId) return context;
+  return { ...context, lastActiveByAccount: { ...context.lastActiveByAccount, [accountId]: libraryId } };
+}
+
+function isStagedReplicaRestore(library: LocalLibrary): boolean {
+  return !!library.restoredFrom?.startsWith("replica:");
+}
+
 export async function activateLibrary(id: string, storage = control): Promise<LocalLibrary> {
   return storage.transaction("rw", storage.settings, storage.libraries, async () => {
     const context = await storage.settings.get("context");
     const library = await storage.libraries.get(id);
     if (!context || !library?.ready || (library.accountId !== null && library.accountId !== context.account?.id)) throw new BackupError("library_locked", "无法打开其他账户的生活库。");
-    await storage.settings.put({ ...context, activeLibraryId: id });
+    await storage.settings.put({ ...rememberAccountLibrary(context, context.account?.id, id), activeLibraryId: id });
     return library;
   });
 }
 
 export async function setLocalAccount(account: Account | null, logoutPending = false, storage = control): Promise<LocalLibrary> {
   return storage.transaction("rw", storage.settings, storage.libraries, async () => {
-    const context = (await storage.settings.get("context"))!;
+    let context = (await storage.settings.get("context"))!;
     let library = (await storage.libraries.get(context.activeLibraryId))!;
+    // Logout must remember the current owned library before selecting a guest.
+    if (context.account?.id && library.accountId === context.account.id) {
+      context = rememberAccountLibrary(context, context.account.id, library.id);
+    }
+    if (account && library.accountId !== account.id) {
+      // Resume the last explicitly opened library. Never auto-select a downloaded
+      // Replica restore that the user has not confirmed switching into.
+      const lastId = context.lastActiveByAccount?.[account.id];
+      const last = lastId ? await storage.libraries.get(lastId) : undefined;
+      if (last?.ready && last.accountId === account.id) {
+        library = last;
+      } else {
+        const owned = (await storage.libraries.where("accountId").equals(account.id).toArray())
+          .filter((candidate) => candidate.ready && !isStagedReplicaRestore(candidate))
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
+        if (owned[0]) library = owned[0];
+      }
+    }
     if (library.accountId !== null && library.accountId !== account?.id) {
       library = { id: crypto.randomUUID(), databaseName: `life-local-${crypto.randomUUID()}`, accountId: null, createdAt: new Date().toISOString(), ready: true };
       await storage.libraries.add(library);
     }
+    if (account && library.accountId === account.id) context = rememberAccountLibrary(context, account.id, library.id);
     await storage.settings.put({ ...context, account, logoutPending, activeLibraryId: library.id });
     return library;
   });
@@ -165,8 +202,8 @@ export function reloadLibrary(library: LocalLibrary) {
   localStorage.setItem(LIBRARY_BOOT_KEY, library.databaseName);
   db.close();
   // A document reload is required: client routing would retain the old database instance.
-  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-  window.location.assign("/account");
+  // Capacitor's HTML5 fallback serves the root index for extensionless paths.
+  window.location.assign(isNativeApp() ? "/account/index.html" : "/account");
 }
 
 export async function ensureCapacity(bytes: number) {

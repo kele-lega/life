@@ -13,6 +13,8 @@ export interface ReplicaMutationRow {
   attemptCount: number;
   lastError: string | null;
   ackedCommitSeq: number | null;
+  /** Transactional local order; absent only on pre-roundtrip sidecar rows. */
+  sequence?: number;
 }
 
 export interface ReplicaStateRow {
@@ -24,6 +26,11 @@ export interface ReplicaStateRow {
   lastCommitSeq: number;
   fenced: boolean;
   backfillComplete: boolean;
+  nextSequence?: number;
+  lastSyncedAt?: string | null;
+  lastAttemptAt?: string | null;
+  lastError?: string | null;
+  pausedReason?: string | null;
 }
 
 export interface ReplicaBlobRow {

@@ -10,6 +10,9 @@ import { RecordImage } from "@/components/ui/record-image";
 import type { LocationMetadata, Moment } from "@/features/moment/model/types";
 import { createMomentWithAttachments } from "@/features/moment/repository/moment-repository";
 
+import { pickNativeImages, takeNativePhoto } from "@/lib/native/camera";
+import { isNativeApp } from "@/lib/runtime/platform";
+
 import { resolveLocation } from "../location/location-provider";
 
 interface QuickMomentRecordProps {
@@ -124,23 +127,39 @@ export function QuickMomentRecord({ onSaved }: QuickMomentRecordProps) {
     locationRequestRef.current += 1;
   }
 
-  function chooseImages(): void {
-    fileInputRef.current?.click();
-  }
-
-  function takePhoto(): void {
-    cameraInputRef.current?.click();
-  }
-
-  function handleImagesSelected(event: React.ChangeEvent<HTMLInputElement>): void {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
+  function addPendingImages(files: File[]): void {
     const images = files.filter((file) => file.type.startsWith("image/"));
     const rejectedCount = files.length - images.length;
     if (rejectedCount > 0) setError("只有图片文件可以添加。");
     if (images.length === 0) return;
     const next = images.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }));
     setPendingImages((current) => [...current, ...next]);
+  }
+
+  function chooseImages(): void {
+    if (isNativeApp()) {
+      void pickNativeImages().then((files) => {
+        if (files.length > 0) addPendingImages(files);
+      });
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
+  function takePhoto(): void {
+    if (isNativeApp()) {
+      void takeNativePhoto().then((file) => {
+        if (file) addPendingImages([file]);
+      });
+      return;
+    }
+    cameraInputRef.current?.click();
+  }
+
+  function handleImagesSelected(event: React.ChangeEvent<HTMLInputElement>): void {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    addPendingImages(files);
   }
 
   function removeImage(previewUrl: string): void {

@@ -7,13 +7,15 @@ import { db } from "@/lib/db/client";
 import type { ReplicaTransport } from "../client/transport";
 import { ReplicaError } from "../shared/protocol";
 import { ensureReplicaState, pendingReplicaCount } from "./outbox";
-import { pushReplica, resetReplicaPushLock } from "./push";
+import { pushReplica, resetReplicaPushLock, getReplicaSyncStatus, withReplicaPushLock } from "./push";
 
 async function reset() {
   resetReplicaPushLock();
   if (db.isOpen()) db.close();
   await db.delete();
   await db.open();
+  await ensureReplicaState(db);
+  await db.replicaState.update("current", { accountId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
 }
 
 function client(transport: Pick<ReplicaTransport, "request"> & Partial<ReplicaTransport>): () => Promise<{ accountId: string; transport: ReplicaTransport }> {
@@ -94,6 +96,59 @@ describe("replica push retry and fencing", () => {
     expect((await ensureReplicaState(db)).fenced).toBe(true);
     expect((await db.moments.get("m1"))?.originalText).toBe("keep");
     expect(await pendingReplicaCount(db)).toBe(1);
+  });
+
+  it("stops at the first failed after-image and reconnect retry preserves order and status", async () => {
+    await createMoment({ id: "first", originalText: "first" });
+    await createMoment({ id: "second", originalText: "second" });
+    await db.replicaState.update("current", { epoch: 1 });
+    const sent: string[] = [];
+    let offline = true;
+    const request = vi.fn(async (_path: string, body: { mutationId: string; ops: { id: string }[] }) => {
+      sent.push(body.ops[0].id);
+      if (offline) throw new ReplicaError("network");
+      return { mutationId: body.mutationId, commitSeq: sent.length, epoch: 1 };
+    });
+    const factory = client({ request: request as ReplicaTransport["request"] });
+    await pushReplica(db, factory);
+    expect(sent).toEqual(["first"]);
+    expect(await getReplicaSyncStatus(db)).toMatchObject({ pending: 2, syncing: false, lastError: "network", lastSyncedAt: null, localCounts: { moments: 2 } });
+    await db.close(); await db.open();
+    await pushReplica(db, factory);
+    expect(sent).toEqual(["first"]);
+    offline = false;
+    await pushReplica(db, factory, { forceRetry: true });
+    expect(sent).toEqual(["first", "first", "second"]);
+    expect(await getReplicaSyncStatus(db)).toMatchObject({ pending: 0, syncing: false, lastError: null, lastSyncedAt: expect.any(String), lastAttemptAt: expect.any(String) });
+  });
+
+  it("never acknowledges a delayed receipt after state ownership changes", async () => {
+    await createMoment({ id: "owned", originalText: "account A" });
+    await db.replicaState.update("current", { epoch: 1 });
+    const request = vi.fn(async (_path: string, body: { mutationId: string }) => {
+      await db.replicaState.update("current", { accountId: "B" });
+      return { mutationId: body.mutationId, commitSeq: 1, epoch: 1 };
+    });
+    await pushReplica(db, client({ request: request as ReplicaTransport["request"] }));
+    expect(await pendingReplicaCount(db)).toBe(1);
+    expect((await db.replicaMutations.toArray())[0]).toMatchObject({ status: "pending", attemptCount: 0 });
+    expect((await db.replicaState.get("current"))?.accountId).toBe("B");
+  });
+
+  it("serializes workers for one database through a Web Lock", async () => {
+    const locks = vi.fn(async (_name: string, _options: unknown, work: () => Promise<unknown>) => work());
+    vi.stubGlobal("navigator", { locks: { request: locks } });
+    let release!: () => void;
+    const order: number[] = [];
+    const first = withReplicaPushLock(db, async () => { order.push(1); await new Promise<void>((resolve) => { release = resolve; }); order.push(2); });
+    await vi.waitFor(() => expect(order).toEqual([1]));
+    const second = withReplicaPushLock(db, async () => { order.push(3); });
+    expect(order).toEqual([1]);
+    release();
+    await Promise.all([first, second]);
+    expect(order).toEqual([1, 2, 3]);
+    expect(locks.mock.calls.map(([name]) => name)).toEqual([`life-replica-push:${db.name}`, `life-replica-push:${db.name}`]);
+    vi.unstubAllGlobals();
   });
 
   it("uploads an attachment blob before acking the mutation", async () => {

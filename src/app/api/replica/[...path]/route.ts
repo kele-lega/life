@@ -1,5 +1,5 @@
 import "server-only";
-import { cloudConfigured } from "@/features/cloud-backup/server/config";
+import { cloudAuthMode, cloudConfigured } from "@/features/cloud-backup/server/config";
 import { checkedCloudRuntime } from "@/features/cloud-backup/server/runtime";
 import { BackupError } from "@/features/cloud-backup/shared/format";
 import { createReplicaHandler } from "@/features/replica/server/handler";
@@ -11,6 +11,11 @@ export const maxDuration = 60;
 
 async function handle(request: Request) {
   if (!cloudConfigured()) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/api/replica/account") {
+      let authMode = null;
+      try { authMode = cloudAuthMode(); } catch { /* Invalid configuration is reported without secret details. */ }
+      return Response.json({ configured: false, authMode, account: null }, { headers: { "Cache-Control": "no-store, private" } });
+    }
     return Response.json({ code: "cloud_unconfigured", message: "\u4e91\u670d\u52a1\u5c1a\u672a\u914d\u7f6e\u3002\u672c\u673a\u8bb0\u5f55\u4ecd\u53ef\u4f7f\u7528\u3002" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
   try {

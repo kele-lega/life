@@ -91,6 +91,12 @@ describe("PostgreSQL foundation + HTTP boundaries", () => {
     try { await expect(assertApplicationRole(database)).rejects.toMatchObject({ code: "unsafe_database_role" }); }
     finally { await pg.exec("SET ROLE life_cloud_app"); }
   });
+  it("keeps the web Magic Link redirect when starting cloud OTP", async () => {
+    expect((await request("auth/email/start", { email: "web-otp@example.test" })).status).toBe(200);
+    expect(auth.start).toHaveBeenCalledWith("web-otp@example.test");
+    expect(auth.start.mock.calls.at(-1)).toHaveLength(1);
+  });
+
   it("issues opaque HttpOnly Secure sessions and rejects unauthenticated/cross-origin requests", async () => {
     const logged = await request("auth/email/verify", { email: "third@example.test", token: "123456" });
     expect(logged.headers.get("set-cookie")).toContain("HttpOnly; SameSite=Lax");

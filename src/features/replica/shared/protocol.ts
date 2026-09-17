@@ -60,6 +60,16 @@ export interface ReplicaReceipt {
   epoch: number;
 }
 
+export interface ReplicaCloudStatus {
+  counts: Record<ReplicaEntity, number>;
+  commitSeq: number;
+  lastSyncedAt: string | null;
+  writerId: string | null;
+  epoch: number;
+  blobCount: number;
+  blobBytes: number;
+}
+
 export class ReplicaError extends Error {
   constructor(public readonly code: string, message = "\u4e91\u7aef\u526f\u672c\u6682\u4e0d\u53ef\u7528\u3002\u672c\u673a\u8bb0\u5f55\u5df2\u4fdd\u7559\u3002") {
     super(message);

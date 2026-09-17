@@ -1,7 +1,9 @@
 # 自建云服务器部署
 
 这份说明把现有 Next.js Web/PWA 部署到自己的 Linux 云主机。  
-Android APK 是本地静态壳，不把用户记录上传到这台服务器。
+Android APK 是本地静态壳，不通过 `server.url` 套现网；若已烘焙 `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN`，Replica 经明确 HTTPS API 上传，本机 Dexie 仍是工作库。
+
+当前测试账号、按账号隔离的云副本、显式恢复与完整部署步骤见 `docs/CLOUD_DEPLOYMENT_GUIDE.md`。本文件保留通用主机、nginx 与最小运行步骤。
 
 仓库：https://github.com/kele-lega/life.git
 
@@ -10,12 +12,13 @@ Android APK 是本地静态壳，不把用户记录上传到这台服务器。
 - 网页应用（记录、日记、时间线、日历、搜索、生活地图、账户页）
 - 可选：同源 AI 提取 `/api/*`
 - 可选：邮箱 OTP 与手动云备份 `/api/cloud/*`
+- 可选：测试密码登录、按账号隔离的 Replica 上传与显式完整恢复 `/api/replica/*`（见 `CLOUD_DEPLOYMENT_GUIDE.md`）
 
 不提供：
 
-- 双向同步
-- 把 IndexedDB 里的随笔/日记自动搬到服务器数据库
+- Phase 16B.2 多设备实时冲突合并或云端主库
 - 生产 Android 通过 `server.url` 套现网
+- 把 IndexedDB 工作库替换成 PostgreSQL
 
 记录默认仍在用户设备的 IndexedDB。换域名不会带走旧数据。部署代码不等于迁移个人记录。
 
@@ -72,7 +75,7 @@ AI_ALLOWED_ORIGIN=https://life.example.com
 
 `AI_ALLOWED_ORIGIN` 必须与浏览器地址栏源完全一致。
 
-若启用账户 OTP、手动云备份或 16B.1 可靠云副本，再填写 Cloud Foundation 变量，并按 `docs/PHASE16A_CLOUD_OPERATIONS.md` 完成 Supabase / PostgreSQL / Storage。其中：
+若启用账户 OTP、手动云备份或可靠云副本，再填写 Cloud Foundation 变量。测试密码往返部署以 `docs/CLOUD_DEPLOYMENT_GUIDE.md` 为准；Supabase OTP 模式仍可参考 `docs/PHASE16A_CLOUD_OPERATIONS.md`。其中：
 
 ```bash
 CLOUD_APP_ORIGIN=https://life.example.com
@@ -80,7 +83,7 @@ CLOUD_OBJECT_ENV=prod
 NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life.example.com
 ```
 
-`CLOUD_APP_ORIGIN` 必须是精确 Origin：HTTPS、无路径、无尾斜杠。`NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN` 只给 Android APK 在 `native:web` 时烘焙；Web/PWA 走同源 `/api/replica`，不要把 `https://localhost` 加入 CORS/CSRF 白名单。`npm run cloud:migrate` 现包含 `004-replica.sql`。绑定账户不会自动改写本机记录；断网或 Session 过期不得阻止本地保存。Replica 是增量可靠副本，不能替代 16A 手动不可变备份。
+`CLOUD_APP_ORIGIN` 必须是精确 Origin：HTTPS、无路径、无尾斜杠。`NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN` 只给 Android APK 在 `native:web` 时烘焙；Web/PWA 走同源 `/api/replica`，不要把 `https://localhost` 加入 CORS/CSRF 白名单。`npm run cloud:migrate` 现包含 `004-replica.sql`。绑定账户不会自动改写本机记录；登录、断网或 Session 过期不得阻止本地保存。Replica 是按账号隔离的增量可靠副本加显式隔离恢复，不能替代 16A 手动不可变备份，也不是双向实时同步。
 
 ## 5. 构建并试运行
 
@@ -185,7 +188,7 @@ sudo systemctl restart life
 | 本机 IndexedDB | 否 | 当前浏览器 / Android WebView | 日常记录，local-first 主库 |
 | 导出 `.life.zip` | 否 | 用户下载的文件 | 换设备、备份 |
 | 手动云备份 | 是（邮箱 OTP） | PostgreSQL 目录 + 私有对象存储 | 不可变完整快照 |
-| 双向同步 | 未实现 | — | 不要自建 |
+| 按账号隔离的 Replica | 是（测试密码或邮箱 OTP） | PostgreSQL Replica + 私有对象存储 | 本机先保存，再增量上传；显式完整恢复到独立库。不是多设备实时合并 |
 
 正确搬家顺序：本机记录 → 导出 zip 或手动云备份 → 新设备恢复到**独立生活库** → 确认后再打开恢复库。原库不会被覆盖。
 

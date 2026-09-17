@@ -1,5 +1,32 @@
 # V1 Tasks
 
+## Life Account + Cloud Data Roundtrip (2026-09-17)
+
+- [x] Server-only test credentials for kele/wzj; stable account identities and revocable sessions.
+- [x] Account-isolated seven-entity Replica and private blobs; preserve Web Cookie/CSRF.
+- [x] Local-first durable upload, reconnect/retry, persisted sync status and safe account/library switching.
+- [x] Explicit verified cloud restore into an isolated library; confirm before switching; preserve originals and images.
+- [x] Account UI: login/logout, local/cloud counts, pending, last sync, upload, restore and errors.
+- [x] Isolation, auth, offline/restart, idempotency, tombstone and full seven-entity/blob roundtrip coverage.
+- [x] All existing quality gates, native static tests and Android build.
+- [x] Executable `CLOUD_DEPLOYMENT_GUIDE.md`; pause after this stage.
+
+Automated gates on 2026-09-17: typecheck, lint `--max-warnings=0`, 63 files / 513 unit tests, 84/84 Chromium E2E, `npm run build`, `npm run test:native-static`, `npx cap sync android`, JDK 21 `assembleDebug`. APK/native/public outputs contained no password, hash, database URL or object secret. Relogin resumes the last explicitly opened library and never auto-selects a staged Replica restore. Pause here; do not start Phase 16B.2.
+
+No Phase 16B.2 live pull/conflict merge, native capability expansion, SQLite, new AI, or cloud primary store. Keep Phase 16A archive semantics and business repository contracts.
+
+## Phase 22 - Android Native Essentials (2026-09-16)
+
+Turn Android from a runnable Life client into the primary daily recording device. Phase 16B.2 live pull / multi-device merge remains excluded.
+
+- [x] 22A Native Auth: replica `auth/email/start` omits `emailRedirectTo` so the provider can send a numeric OTP; App-in verify writes the existing Replica Bearer session. Session expiry pauses Replica only.
+- [x] 22B Camera + Photos: Capacitor Camera adapter; Quick Moment still writes File/Blob through `createMomentWithAttachments`. Dexie schema and Attachment semantics unchanged.
+- [x] 22C Location + Haptics: location only on explicit tap; native reverse geocode uses the baked HTTPS origin; deny/fail does not block save; success haptic only after StatefulButton save.
+
+Keep: local-first Dexie v7, repository contract, Durable Replica, Phase 16A Backup, Web Cookie/CSRF/CORS. Do not add `https://localhost` to the Web origin allowlist. Do not start Phase 16B.2.
+
+**Done when:** existing quality gates pass and Android device checks for OTP, camera/photos, tap-only location, and save haptic are recorded in `docs/PHASE22_ANDROID_NATIVE_ESSENTIALS.md`.
+
 ## Phase 16B.1.5 - Real Cloud + Android Acceptance (2026-09-15)
 
 - [x] Commit and push Phase 16B.1 (`f8e78925`).

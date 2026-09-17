@@ -28,9 +28,9 @@ npm run dev
 
 打开 <http://localhost:3000>。
 
-## Android App（Phase 21）
+## Android App（Phase 21 / 22）
 
-永久 application/bundle ID：`app.kelelega.life`。生产 APK 使用本地静态资源，禁止 `server.url` 套现网。
+永久 application/bundle ID：`app.kelelega.life`。生产 APK 使用本地静态资源，禁止 `server.url` 套现网。Phase 22 在 App 内用数字 OTP 登录云副本，并通过适配器使用相机、相册、点按定位和保存触感；Web Cookie/CSRF 不变。
 
 ```powershell
 npm run native:web

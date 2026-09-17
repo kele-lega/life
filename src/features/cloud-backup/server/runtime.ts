@@ -4,7 +4,7 @@ import { postgresDatabase } from "./sql";
 import { CloudStore } from "./store";
 import { s3Objects } from "./objects";
 import { BackupService } from "./service";
-import { supabaseEmailAuth } from "./auth";
+import { cloudAuth } from "./auth";
 import { assertApplicationRole } from "./role";
 import { ReplicaStore } from "@/features/replica/server/store";
 import { ReplicaService } from "@/features/replica/server/service";
@@ -17,7 +17,7 @@ function createRuntime(config: CloudConfig) {
   const objects = s3Objects(config);
   const replicaStore = new ReplicaStore(sql);
   return {
-    config, store, service: new BackupService(store, objects), auth: supabaseEmailAuth(config),
+    config, store, service: new BackupService(store, objects), auth: cloudAuth(config),
     replicaStore, replicaService: new ReplicaService(replicaStore, objects, config),
   };
 }

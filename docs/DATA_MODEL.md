@@ -4,13 +4,13 @@
 
 Live Dexie `verno` is 7. The seven business tables and every v6 index remain unchanged. v7 only adds infrastructure stores in the same database:
 
-- `replicaMutations`: durable outbox keyed by `mutationId`, indexed by `status, nextRetryAt, createdAt`.
-- `replicaState`: single row `current` for writerId, epoch, fence and backfill.
+- `replicaMutations`: durable outbox keyed by `mutationId`, indexed by `status, nextRetryAt, createdAt`. Optional unindexed `sequence` preserves local enqueue order without a Dexie version change; absent only on pre-roundtrip sidecar rows.
+- `replicaState`: single row `current` for writerId, epoch, fence and backfill. Optional unindexed fields `nextSequence`, `lastSyncedAt`, `lastAttemptAt`, `lastError` and `pausedReason` record truthful sync status across restart. `accountId` is the authenticated owner after an explicit claim.
 - `replicaBlobs`: attachment upload progress keyed by `attachmentId`.
 
-Business rows never gain sync fields. Attachment outbox payloads store metadata plus `sha256`/`byteLength` and never clone the Blob. Phase 16A portable archives still declare `dexieVersion: 6` and capture only the seven business tables.
+Business rows never gain sync fields. Attachment outbox payloads store metadata plus `sha256`/`byteLength` and never clone the Blob. Snapshot transport may carry optional `blobType` so restore can reconstruct the original `Blob.type`; the stored Attachment model still uses `mimeType` plus the Blob. Phase 16A portable archives still declare `dexieVersion: 6` and capture only the seven business tables.
 
-PostgreSQL replica tables (`replica_*`) are a single-writer copy with an immutable mutation log. They are not the working store and are isolated from `backups` / `backup_files` / `backup_parts`.
+PostgreSQL replica tables (`replica_*`) are a single-writer copy with an immutable mutation log. They are not the working store and are isolated from `backups` / `backup_files` / `backup_parts`. Test-password accounts reuse `accounts` uniqueness on `(auth_provider, auth_subject)` with provider `life-test-password` and subjects `kele` / `wzj`; the internal UUID `accountId` is the tenant key for every replica row and object prefix. `life-control` context may store optional `lastActiveByAccount` so relogin resumes the last explicitly opened library without a control-schema version change.
 
 
 ## Phase 16A Cloud Foundation (v6 unchanged)

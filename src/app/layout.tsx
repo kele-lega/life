@@ -28,9 +28,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <PwaRegister />
         <NativeRuntime />
-        <ReplicaRuntime />
         <a className="skip-link" href="#main-content">跳到正文</a>
-        <AppShell><LibraryBoundary>{children}</LibraryBoundary></AppShell>
+        <AppShell><LibraryBoundary><ReplicaRuntime />{children}</LibraryBoundary></AppShell>
       </body>
     </html>
   );

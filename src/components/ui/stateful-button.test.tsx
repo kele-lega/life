@@ -2,9 +2,18 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const confirmSaveSuccess = vi.hoisted(() => vi.fn(async () => {}));
+
+vi.mock("@/lib/native/haptics", () => ({
+  confirmSaveSuccess: () => confirmSaveSuccess(),
+}));
+
 import { StatefulButton, type StatefulButtonResult } from "./stateful-button";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => {
+  vi.useFakeTimers();
+  confirmSaveSuccess.mockClear();
+});
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -28,6 +37,7 @@ describe("StatefulButton", () => {
 
     await act(async () => { resolve(finish); });
     expect(button).toHaveAttribute("data-phase", "done");
+    expect(confirmSaveSuccess).toHaveBeenCalledOnce();
     expect(button).toHaveAccessibleName("已保存");
     expect(screen.getByRole("status")).toHaveTextContent("已保存");
     expect(button.querySelector("path")).toHaveAttribute("d", "M 3 8.5 L 6.5 12 L 13 4.5");
@@ -51,6 +61,7 @@ describe("StatefulButton", () => {
     await act(async () => { fireEvent.click(button); });
     expect(button).toHaveAttribute("data-phase", "idle");
     expect(button).toBeEnabled();
+    expect(confirmSaveSuccess).not.toHaveBeenCalled();
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
     if (failure === "rejection") expect(screen.getByRole("alert")).toHaveTextContent("保存失败，请重试。");
     await act(async () => { fireEvent.click(button); });
