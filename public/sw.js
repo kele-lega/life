@@ -1,4 +1,4 @@
-const CACHE_VERSION = "life-pwa-v1";
+const CACHE_VERSION = "life-pwa-v2";
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const ASSET_CACHE = `${CACHE_VERSION}-assets`;
 const APP_ROUTES = ["/", "/diary", "/diary/new", "/timeline", "/calendar", "/search", "/life", "/account"];

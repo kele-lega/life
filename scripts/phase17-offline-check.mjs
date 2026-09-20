@@ -7,7 +7,7 @@ await page.waitForFunction(async () => {
   if (!("serviceWorker" in navigator)) return false;
   await navigator.serviceWorker.ready;
   if (!navigator.serviceWorker.controller) return false;
-  const pages = await caches.open("life-pwa-v1-pages");
+  const pages = await caches.open("life-pwa-v2-pages");
   return (await pages.keys()).some((request) => new URL(request.url).pathname === "/");
 }, null, { timeout: 30000 });
 await context.setOffline(true);

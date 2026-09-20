@@ -9,7 +9,7 @@ async function waitForOfflineShell(page: Page) {
     if (!("serviceWorker" in navigator)) return false;
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller) return false;
-    const cache = await caches.open("life-pwa-v1-pages");
+    const cache = await caches.open("life-pwa-v2-pages");
     const keys = await cache.keys();
     return ["/", "/diary", "/diary/new", "/timeline", "/calendar", "/search", "/life"]
       .every((path) => keys.some((key) => new URL(key.url).pathname === path));
