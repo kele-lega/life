@@ -7,6 +7,7 @@ test-results/
 .netlify/
 .env*
 !.env.example
+*.apk
 playwright-report/
 design/ios-refresh/production-results/
 .scratch/

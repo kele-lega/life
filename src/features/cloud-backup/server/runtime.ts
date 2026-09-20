@@ -3,8 +3,9 @@ import { cloudConfig, type CloudConfig } from "./config";
 import { postgresDatabase } from "./sql";
 import { CloudStore } from "./store";
 import { s3Objects } from "./objects";
+import { localObjects } from "./local-objects";
 import { BackupService } from "./service";
-import { supabaseEmailAuth } from "./auth";
+import { createCloudAuth } from "./auth";
 import { assertApplicationRole } from "./role";
 import { ReplicaStore } from "@/features/replica/server/store";
 import { ReplicaService } from "@/features/replica/server/service";
@@ -14,10 +15,10 @@ let workerRuntime: ReturnType<typeof createRuntime> | undefined;
 function createRuntime(config: CloudConfig) {
   const sql = postgresDatabase(config.databaseUrl);
   const store = new CloudStore(sql);
-  const objects = s3Objects(config);
+  const objects = config.objectDir && config.objectSigningKey ? localObjects(config) : s3Objects(config);
   const replicaStore = new ReplicaStore(sql);
   return {
-    config, store, service: new BackupService(store, objects), auth: supabaseEmailAuth(config),
+    config, store, service: new BackupService(store, objects), auth: createCloudAuth(config),
     replicaStore, replicaService: new ReplicaService(replicaStore, objects, config),
   };
 }

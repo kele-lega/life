@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "incremental": false },
-  "include": ["scripts/cloud-*.ts", "netlify/functions/*.mts"],
+  "include": ["scripts/cloud-*.ts"],
   "exclude": ["node_modules"]
 }

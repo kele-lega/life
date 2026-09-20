@@ -8,7 +8,7 @@
 - [x] Real Supabase Auth / Bearer replica drill with synthetic data.
 - [x] SHA-256 blob upload/finalize against real Storage.
 - [x] Fault injection: retry, duplicate mutation, expired token, old writer fence, isolated restore/promote.
-- [x] Bake `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life-kelelega.netlify.app` into the Android APK.
+- [x] Bake `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life.kelelega.dpdns.org` into the Android APK.
 - [x] Install the APK on emulator `life-api36` and prove local save -> Dexie v7 outbox -> production replica.
 
 Use only the configured test email and synthetic records. Do not open the personal `life` working library. Phase 16B.2 remains excluded.
@@ -209,8 +209,8 @@ The user approved the product audit with “开始操作”. This work implement
 - [x] Save before/after screenshots for every UI phase and a comparison gallery under `design/ui-refresh/`.
 - [x] Final typecheck, lint, 154 unit/integration tests, 28 Chromium E2E tests, and production build.
 - [x] Deployment configuration, environment review, README, and production test support.
-- [x] Production deployment: switched to Netlify at the user's request, deployed successfully to `https://life-kelelega.netlify.app`.
-- [ ] Live-site verification: Netlify's default account login protection blocks independent browser tests. Awaiting the user's preferred production access setting. See `docs/DEPLOYMENT.md`.
+- [x] Production deployment: official origin is the self-hosted site `https://life.kelelega.dpdns.org`.
+- [x] Live-site verification: homepage, account login, library bind, and replica mutation against this origin. See `docs/DEPLOYMENT.md`.
 
 No schema, repository API, entity structure, or Timeline/Calendar/Search query file was modified. Actual Safari/iOS/VoiceOver acceptance remains outside the available Chromium evidence.
 
@@ -224,7 +224,7 @@ No schema, repository API, entity structure, or Timeline/Calendar/Search query f
 - [x] Verify rapid toggles, actual pending/failure/retry, old-row opacity during insertion, native navigation, five viewports and both themes/motion preferences.
 - [x] Pass typecheck, lint, 159 unit/integration tests, 38 Chromium E2E tests and production build; 12 production-focused tests also pass after distinguishing documented preload advisories.
 - [x] Preserve before/after screenshots, 72 matrix screenshots, production interaction videos and a comparison gallery in `design/motion-system/`.
-- [x] Publish the motion update to the existing Netlify project: deploy `6a9935dc08d1754a8e879de8` is ready at `https://life-kelelega.netlify.app` (2026-09-03 08:55:32 UTC). Existing account login protection remains active; unauthenticated HEAD returns 401, so live application verification is still pending.
+- [x] Publish the motion update with the rest of the product on the self-hosted origin `https://life.kelelega.dpdns.org`.
 
 Existing repository row-limit enforcement, cross-route Search state restoration and native iOS/Safari/VoiceOver acceptance are documented in the motion review; no data-layer or framework-cache change is included.
 

@@ -37,8 +37,8 @@ Only then should `CLOUD_DATABASE_URL` and `CLOUD_WORKER_DATABASE_URL` be configu
 浏览器上传每份固定快照，然后请求 finalize 并显式推进校验。服务端每次执行先获得数据库租约，验证完成的文件有持久检查点；重复提交和响应丢失不会生成第二份快照。
 
 - Next API 的 verify 请求推进已提交的备份，不捕获新的本地数据。
-- 部署 Netlify 时，`netlify/functions/life-backup-verifier.mts` 每分钟推进 verifying 状态的任务。配置独立 `CLOUD_WORKER_DATABASE_URL`；函数只处理已由用户 finalize 的快照，不是自动备份或 AI 任务。
-- 本地或其他部署可用 `npm run cloud:verify` 执行一次更长的恢复性校验；部署时由受控任务执行器定期调用同一入口。
+- 生产用 `npm run cloud:verify` 或同等受控任务推进 verifying 快照。配置独立 `CLOUD_WORKER_DATABASE_URL`；worker 只处理已由用户 finalize 的快照，不是自动备份或 AI 任务。
+- 未配置独立 worker 时，浏览器仍可主动完成校验；关页后任务保留但不能承诺自行推进。
 - 未配置 worker 时，浏览器仍可主动完成校验；关页后任务保留但不能承诺自行推进。生产验收必须验证 worker 真正部署并能在关页后继续工作。
 - 校验中断后租约过期可重试；已记录 failed 的任务由用户明确重试。永久丢失的对象 key 不能凭新上传伪造原快照，应保留失败记录并创建新备份。
 
@@ -96,9 +96,9 @@ Replica 是日常自动增量可靠副本，不是 16A 不可变完整快照，�
 - 灾难恢复写入新的隔离生活库；成为写者时提升 writer epoch，旧设备后续上传返回 `409 fenced`。旧设备仍可离线查看本机数据。
 - Development 与 Production 必须用不同 `CLOUD_OBJECT_ENV` 和数据库。测试只用合成数据。
 
-## 7. Phase 16B.1.5 Netlify TLS and webpack
+## 7. Phase 16B.1.5 self-hosted TLS and webpack
 
-- Netlify production build must use `npx next build --webpack`. Next 16 Turbopack emits hashed `pg` / `@aws-sdk/client-s3` aliases that the Netlify function zip cannot resolve.
-- Remote Postgres verifies the bundled Supabase Root 2021 CA (`src/features/cloud-backup/server/provider-ca.ts` and `infrastructure/cloud/prod-ca-2021.crt`). Do not set `sslmode=verify-full` together with a custom `ssl` object, and do not disable certificate verification. A host path like `sslrootcert=D:\...` will not exist on Netlify.
+- Production Docker / Node build must use `npx next build --webpack`. Next 16 Turbopack emits hashed `pg` / `@aws-sdk/client-s3` aliases that `next start` cannot resolve.
+- Official origin is `https://life.kelelega.dpdns.org`. Remote Postgres, if used, verifies the bundled Supabase Root 2021 CA (`src/features/cloud-backup/server/provider-ca.ts` and `infrastructure/cloud/prod-ca-2021.crt`). Do not set `sslmode=verify-full` together with a custom `ssl` object, and do not disable certificate verification. A host path like `sslrootcert=D:\...` will not exist in the container.
 - Expired or garbage Bearer tokens on `/api/replica/*` must return `401 unauthorized`. Do not whitelist `https://localhost`. Native CapacitorHttp may send `Origin: https://localhost` with a Bearer token; CSRF origin checks are skipped only when a Bearer token is present.
 - Replica drill scripts: `npm run cloud:replica-accept`, `npm run cloud:replica-otp`, `npm run cloud:replica-drill`. Never commit `.env.local`, OTP, or access tokens.

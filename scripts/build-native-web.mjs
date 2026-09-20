@@ -148,13 +148,21 @@ async function excludeTree() {
   }
 }
 
+const OFFICIAL_CLOUD_ORIGIN = "https://life.kelelega.dpdns.org";
+
 async function runNextBuild() {
+  const origin = process.env.NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN?.trim() || OFFICIAL_CLOUD_ORIGIN;
+  const parsed = new URL(origin);
+  if (parsed.origin !== origin || parsed.protocol !== "https:") {
+    throw new Error("NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN must be an exact HTTPS origin.");
+  }
   const result = await spawnCommand(
     [path.join(repo, "node_modules/next/dist/bin/next"), "build"],
     {
       LIFE_NATIVE: "1",
       NEXT_PUBLIC_LIFE_NATIVE: "1",
       NEXT_PUBLIC_LIFE_VISUALIZATION_DEMO: "0",
+      NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN: parsed.origin,
     },
     true,
   );

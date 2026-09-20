@@ -9,7 +9,7 @@ Android APK 是本地静态壳，不把用户记录上传到这台服务器。
 
 - 网页应用（记录、日记、时间线、日历、搜索、生活地图、账户页）
 - 可选：同源 AI 提取 `/api/*`
-- 可选：邮箱 OTP 与手动云备份 `/api/cloud/*`
+- 可选：账号登录、手动云备份 `/api/cloud/*`、可靠云副本 `/api/replica/*`
 
 不提供：
 
@@ -22,7 +22,7 @@ Android APK 是本地静态壳，不把用户记录上传到这台服务器。
 ## 1. 主机要求
 
 - Ubuntu 22.04 / 24.04（或其他 systemd Linux）
-- 公网 IP 与已解析的 HTTPS 域名，例如 `https://life.example.com`
+- 公网 IP 与已解析的 HTTPS 域名：`https://life.kelelega.dpdns.org`
 - Node.js **24.x**（>= 24.15）
 - nginx
 - 防火墙放行 80/443
@@ -67,17 +67,17 @@ AI_PROVIDER=openai
 AI_API_KEY=...
 AI_MODEL=gpt-5.6-terra
 AI_BASE_URL=https://api.openai.com/v1
-AI_ALLOWED_ORIGIN=https://life.example.com
+AI_ALLOWED_ORIGIN=https://life.kelelega.dpdns.org
 ```
 
 `AI_ALLOWED_ORIGIN` 必须与浏览器地址栏源完全一致。
 
-若启用账户 OTP、手动云备份或 16B.1 可靠云副本，再填写 Cloud Foundation 变量，并按 `docs/PHASE16A_CLOUD_OPERATIONS.md` 完成 Supabase / PostgreSQL / Storage。其中：
+若启用账户登录、手动云备份或 16B.1 可靠云副本，再填写 Cloud Foundation 变量。本机部署可用用户名密码（`CLOUD_ACCOUNTS`）与本地对象目录，不必使用邮箱 OTP。其中：
 
 ```bash
-CLOUD_APP_ORIGIN=https://life.example.com
+CLOUD_APP_ORIGIN=https://life.kelelega.dpdns.org
 CLOUD_OBJECT_ENV=prod
-NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life.example.com
+NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life.kelelega.dpdns.org
 ```
 
 `CLOUD_APP_ORIGIN` 必须是精确 Origin：HTTPS、无路径、无尾斜杠。`NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN` 只给 Android APK 在 `native:web` 时烘焙；Web/PWA 走同源 `/api/replica`，不要把 `https://localhost` 加入 CORS/CSRF 白名单。`npm run cloud:migrate` 现包含 `004-replica.sql`。绑定账户不会自动改写本机记录；断网或 Session 过期不得阻止本地保存。Replica 是增量可靠副本，不能替代 16A 手动不可变备份。
@@ -131,16 +131,16 @@ sudo systemctl status life
 ```nginx
 server {
     listen 80;
-    server_name life.example.com;
+    server_name life.kelelega.dpdns.org;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name life.example.com;
+    server_name life.kelelega.dpdns.org;
 
-    ssl_certificate     /etc/letsencrypt/live/life.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/life.example.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/life.kelelega.dpdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/life.kelelega.dpdns.org/privkey.pem;
 
     client_max_body_size 32m;
 
@@ -161,7 +161,7 @@ sudo ln -s /etc/nginx/sites-available/life /etc/nginx/sites-enabled/life
 sudo nginx -t
 sudo systemctl reload nginx
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d life.example.com
+sudo certbot --nginx -d life.kelelega.dpdns.org
 ```
 
 证书申请前可先只开 80，再让 certbot 写入 SSL。
@@ -215,11 +215,11 @@ cd android
 
 ## 11. 上线检查
 
-1. `https://life.example.com` 能打开首页并保存一条随笔。
+1. `https://life.kelelega.dpdns.org` 能打开首页并保存一条随笔。
 2. 刷新后原文仍在。
 3. `/account` 能导出 `.life.zip`。
 4. 未配置云服务时，账户页提示云不可用，本地导出/恢复仍可用。
 5. 未配置 AI 时，保存记录成功，整理失败不得导致保存失败。
 6. 不要放宽现有 CORS、CSRF、Cookie 边界。
 
-当前 Netlify 状态仍见 [部署状态](DEPLOYMENT.md)。Cloud Foundation 操作见 [PHASE16A_CLOUD_OPERATIONS.md](PHASE16A_CLOUD_OPERATIONS.md)。
+当前正式站状态见 [部署状态](DEPLOYMENT.md)。Cloud Foundation 操作见 [PHASE16A_CLOUD_OPERATIONS.md](PHASE16A_CLOUD_OPERATIONS.md)。

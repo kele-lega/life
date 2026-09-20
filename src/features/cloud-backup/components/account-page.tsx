@@ -10,7 +10,7 @@ import { cloudApi, type CloudAccount, type CloudBackup } from "../client/api";
 import { downloadBackup, runCloudBackup } from "../client/backup";
 import { ReplicaAccountSection } from "@/features/replica/components/replica-account-section";
 import { ReplicaError } from "@/features/replica/shared/protocol";
-import { clearReplicaLogin, loadReplicaAccount, startReplicaLogin, verifyReplicaLogin } from "@/features/replica/client/account";
+import { clearReplicaLogin, loadReplicaAccount, loginReplicaPassword } from "@/features/replica/client/account";
 import { replicaApiOrigin } from "@/features/replica/client/transport";
 import { isNativeApp } from "@/lib/runtime/platform";
 import styles from "./account-page.module.css";
@@ -27,9 +27,8 @@ export function AccountPage() {
   const [backupCursor, setBackupCursor] = useState<string | null>(null);
   const [latestBackup, setLatestBackup] = useState<string | null>(null);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [sent, setSent] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -138,21 +137,19 @@ export function AccountPage() {
       </div>}
     </section>
 
-    <section className={styles.section} aria-labelledby="account-title"><h2 id="account-title">{account ? "我的账户" : "邮箱登录"}</h2>
+    <section className={styles.section} aria-labelledby="account-title"><h2 id="account-title">{account ? "我的账户" : "账号登录"}</h2>
       {account && <p>{account.email}<br />{sessionReady ? "云会话可用" : "云会话暂不可用，本机记录仍可使用"}</p>}
       {!sessionReady && <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void run(async () => {
-        if (!sent) { if (native) await startReplicaLogin(email); else await cloudApi("auth/email/start", { email }); setSent(true); report("验证码已请求，请查看邮箱。"); }
-        else await exclusiveLibrary(async () => {
+        await exclusiveLibrary(async () => {
           const result = native
-            ? { account: await verifyReplicaLogin(email, otp) }
-            : await cloudApi<{ account: NonNullable<typeof account> }>("auth/email/verify", { email, token: otp });
+            ? { account: await loginReplicaPassword(username, password) }
+            : await cloudApi<{ account: NonNullable<typeof account> }>("auth/password", { username, password });
           reloadLibrary(await setLocalAccount(result.account));
         });
       }); }}>
-        <label htmlFor="life-email">邮箱地址</label><input id="life-email" className={styles.input} type="email" autoComplete="email" required value={email} disabled={busy || sent} onChange={(event) => setEmail(event.target.value)} />
-        {sent && <><label htmlFor="life-otp">邮件验证码</label><input id="life-otp" className={styles.input} inputMode="numeric" autoComplete="one-time-code" required pattern="[0-9]{6,10}" value={otp} onChange={(event) => setOtp(event.target.value)} /></>}
-        <div className={styles.actions}><button className={styles.secondary} disabled={busy || (native ? replicaApiOrigin() === null : cloud?.configured === false)}>{sent ? "验证并登录" : "发送验证码"}</button>
-        {sent && <button type="button" className={styles.secondary} disabled={busy} onClick={() => { setSent(false); setOtp(""); }}>重新发送 / 更换邮箱</button>}</div>
+        <label htmlFor="life-username">账号</label><input id="life-username" className={styles.input} type="text" autoComplete="username" required minLength={3} maxLength={32} value={username} disabled={busy} onChange={(event) => setUsername(event.target.value)} />
+        <label htmlFor="life-password">密码</label><input id="life-password" className={styles.input} type="password" autoComplete="current-password" required minLength={8} maxLength={128} value={password} disabled={busy} onChange={(event) => setPassword(event.target.value)} />
+        <div className={styles.actions}><button className={styles.secondary} disabled={busy || (native ? replicaApiOrigin() === null : cloud?.configured === false)}>登录</button></div>
       </form>}
       {cloud?.configured === false && <p>云服务尚未配置，完整导出和本地恢复可直接使用。</p>}
       {account && <div className={styles.actions}><button className={styles.secondary} disabled={busy} onClick={() => void run(() => exclusiveLibrary(async () => {

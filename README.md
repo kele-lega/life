@@ -2,9 +2,9 @@
 
 一个以“打开、记录、保存、离开”为核心的私人生活记录系统。当前已完成随笔、图片、追加、日记、时间线、日历和普通关键词搜索，以及对应的 UI 品质改造。
 
-数据保存在当前浏览器或 Android App 的 IndexedDB。Moment 原文提交后不可编辑，补充内容通过追加保存；日记可以编辑。网页可部署到自建服务器；邮箱 OTP 只用于可选的手动云备份，不是双向同步。
+数据保存在当前浏览器或 Android App 的 IndexedDB。Moment 原文提交后不可编辑，补充内容通过追加保存；日记可以编辑。网页部署在自建服务器；账号密码用于可选的云副本和手动备份，不是双向同步。
 
-正式网址：[Life](https://life-kelelega.netlify.app)。Netlify 状态见 [部署状态](docs/DEPLOYMENT.md)；自建云主机见 [云服务器部署](docs/SERVER_DEPLOYMENT.md)。
+正式网址：[Life](https://life.kelelega.dpdns.org)。部署状态见 [部署状态](docs/DEPLOYMENT.md)；自建主机步骤见 [云服务器部署](docs/SERVER_DEPLOYMENT.md)。
 
 ## 技术栈
 
@@ -73,7 +73,7 @@ android/          Capacitor Android 工程（不含 APK 与 SDK 路径）
 
 ## 环境变量
 
-核心记录功能没有必填环境变量。可选 AI 提取与 Cloud Foundation 的密钥只放服务端 `.env.local`，模板见 `.env.example`。任何私钥都不得使用 `NEXT_PUBLIC_` 前缀。`.env*`（模板除外）、`.vercel/`、`.netlify/` 和 APK 构建产物已被 Git 忽略。
+核心记录功能没有必填环境变量。可选 AI 提取与 Cloud Foundation 的密钥只放服务端 `.env.local`，模板见 `.env.example`。任何私钥都不得使用 `NEXT_PUBLIC_` 前缀。`.env*`（模板除外）和 APK 构建产物已被 Git 忽略。
 
 城市定位使用现有的同源 `/api/location/reverse` 路由，向 Nominatim 做尽力查询。它依赖浏览器定位权限和外部服务可用性；拒绝定位、断网或查询失败都不应阻塞本地保存。
 
@@ -99,44 +99,13 @@ Remove-Item Env:PLAYWRIGHT_BASE_URL
 
 未设置 PLAYWRIGHT_BASE_URL 时，Playwright 会自动启动 3100 端口的开发服务器。测试使用本机 Chrome 和独立浏览器上下文，不读写日常浏览器中的记录。没有 Chrome 时先安装 Chrome，或调整 Playwright channel 后使用其附带的 Chromium。
 
-## Netlify 生产部署
+## 生产部署
 
-按用户要求，生产托管已从 Vercel 改为 Netlify。`netlify.toml` 配置 `npm run build`、`.next` 发布目录和 Node 24。Netlify 自动识别 Next.js 并提供 OpenNext 适配器，保留 App Router、动态 Diary 路由和 `/api/location/reverse` 服务端接口。不能把 `.next` 当作普通静态目录拖拽上传，也不使用静态导出。
-
-首次部署：
-
-```powershell
-npm install --global netlify-cli
-netlify login
-netlify sites:create
-netlify deploy --prod
-```
-
-登录自己的 Netlify 账户，创建并关联 Life 项目；如果已有对应项目，使用 `netlify link` 关联它。`deploy --prod` 会执行构建、适配并发布。不要添加 `--no-build` 来跳过首次 Netlify 适配。`.netlify/` 只保存本地关联和构建资料，已加入 Git 忽略。
-
-Windows 本地发布前先停止该项目的 `next dev` 和 `next start`：适配器需要临时移动 `.next`，运行中的服务器可能占用目录。若使用 `npx netlify-cli` 遇到 npm 的 `EALLOWSCRIPTS` 参数错误，改为上面的直接 CLI 调用；不需要关闭 npm 安全设置。
-
-也可以在 Netlify 导入 GitHub 仓库，项目根目录选择仓库根目录，使用相同的构建和发布配置。核心功能没有必填环境变量。构建使用 Node 24，函数运行时应为 Node 24；新建项目默认采用该版本。实际部署需要验证适配结果和线上页面。
-
-官方说明：[Next.js 支持](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/)、[CLI 发布](https://cli.netlify.com/commands/deploy/)、[Node 24 默认运行时](https://www.netlify.com/changelog/2026-07-07-nodejs-24-default-new-sites/)。
-
-## Vercel 备用配置
-
-仓库根目录已有 `vercel.json`：Next.js preset，`npm ci` 安装，`npm run build` 构建，默认 Next.js 输出；保留 Node Route Handler，不能改成静态导出。`.vercelignore` 排除审计截图、设计资料、测试产物、环境文件及 Agent 本地资料。
-
-如将来主动选择 Vercel，可以使用保留的配置：
-
-```powershell
-npx vercel login
-npx vercel link
-npx vercel deploy --prod
-```
-
-登录后选择自己的 Vercel scope，关联已有 Life 项目或创建该项目。项目根目录使用仓库根目录，Node 版本选择 24.x。核心功能无需添加环境变量。也可以在 Vercel 导入该 GitHub 仓库，并采用同样的构建设置。官方说明：[项目配置](https://vercel.com/docs/project-configuration)、[Node 版本](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)、[CLI 部署](https://vercel.com/docs/cli/deploy)。
+正式站是自建主机 [https://life.kelelega.dpdns.org](https://life.kelelega.dpdns.org)。Web 需要 Node 运行时（`/api` 与动态 `/diary/[id]`），不能用纯静态托管发布 `.next`。构建使用 Node 24，生产镜像执行 `npx next build --webpack`。步骤见 [云服务器部署](docs/SERVER_DEPLOYMENT.md)，当前状态见 [部署状态](docs/DEPLOYMENT.md)。
 
 ## 部署后验收
 
-部署 URL 和验证结果记录在 [部署状态](docs/DEPLOYMENT.md)，以该文件的实际状态为准。尚未获得成功 URL 时不能认为已经上线。
+部署 URL 和验证结果记录在 [部署状态](docs/DEPLOYMENT.md)，以该文件的实际状态为准。
 
 部署后用新的测试浏览器检查：
 

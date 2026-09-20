@@ -25,7 +25,7 @@
 | 云客户端 | `src/features/cloud-backup/client/backup.ts`、`client/api.ts` |
 | 服务端边界 | `src/app/api/cloud/[...path]/route.ts`、`src/features/cloud-backup/server/` |
 | PostgreSQL 迁移 | `infrastructure/cloud/001-foundation.sql` 至 `003-immutable-snapshots.sql` |
-| 运维入口 | `scripts/cloud-migrate.ts`、`cloud-worker.ts`、`cloud-drill.ts`、`netlify/functions/life-backup-verifier.mts` |
+| 运维入口 | `scripts/cloud-migrate.ts`、`cloud-worker.ts`、`cloud-drill.ts` |
 | 自动化验证 | `src/features/cloud-backup/**/*.test.ts`、`e2e/cloud-foundation.spec.ts` |
 | 配置与协议文档 | `.env.example`、`docs/PHASE16A_CLOUD_OPERATIONS.md`、`docs/PHASE16A_ARCHIVE_FORMAT.md` |
 

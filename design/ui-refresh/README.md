@@ -31,7 +31,7 @@
 - `src/features/diary/components/`：列表、详情和写作。
 - `src/features/calendar/components/`、`src/features/search/components/`：日历和搜索。
 - `e2e/ui-quality.spec.ts`：目标宽度、明暗主题、点击区域、键盘和 200% 字体回流。
-- `netlify.toml`、根 README：当前部署配置与说明；Vercel 配置保留为备用。
+- 根 README 与 `docs/DEPLOYMENT.md`：当前正式站为 https://life.kelelega.dpdns.org。
 
 未修改 Dexie schema、repository API、实体结构、Timeline/Calendar/Search 查询模块，未提供编辑 Moment 原文的入口。
 

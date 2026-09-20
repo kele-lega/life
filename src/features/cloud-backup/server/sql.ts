@@ -17,7 +17,7 @@ function remoteTls(address: URL) {
 export function postgresDatabase(connectionString: string): SqlDatabase {
   // Remote connections verify the provider CA. Never disable certificate verification.
   const address = new URL(connectionString);
-  const local = ["localhost", "127.0.0.1", "[::1]"].includes(address.hostname);
+  const local = ["localhost", "127.0.0.1", "[::1]", "postgres", "life-postgres"].includes(address.hostname);
   const ssl = local ? undefined : remoteTls(address);
   const pool = new Pool({ connectionString: address.toString(), ssl, max: 3, connectionTimeoutMillis: 10_000, idleTimeoutMillis: 20_000, statement_timeout: 30_000 });
   pool.on("error", () => { /* Request boundaries expose non-content error codes. */ });

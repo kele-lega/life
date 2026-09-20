@@ -1,0 +1,6 @@
+# 本地调试：直接 `docker compose up -d` 会映射 3101
+# 生产反代：`docker compose -f docker-compose.yml up -d`，不映射宿主机端口
+services:
+  app:
+    ports:
+      - "3101:3000"

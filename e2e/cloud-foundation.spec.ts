@@ -33,20 +33,20 @@ async function mockAccounts(context: BrowserContext) {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/account")) return route.fulfill({ json: { configured: true, account } });
     if (path.endsWith("/backups")) return route.fulfill({ json: { backups: [] } });
-    if (path.endsWith("/verify")) {
-      const email = route.request().postDataJSON().email;
-      account = { id: email.startsWith("a") ? "00000000-0000-4000-8000-00000000000a" : "00000000-0000-4000-8000-00000000000b", email };
+    if (path.endsWith("/password") || path.endsWith("/verify")) {
+      const body = route.request().postDataJSON();
+      const name = body.username ?? body.email;
+      account = { id: String(name).startsWith("a") ? "00000000-0000-4000-8000-00000000000a" : "00000000-0000-4000-8000-00000000000b", email: name };
       return route.fulfill({ json: { account } });
     }
     if (path.endsWith("/logout")) account = null;
     return route.fulfill({ json: { ok: true } });
   });
 }
-async function login(page: Page, email: string) {
-  await page.getByLabel("邮箱地址").fill(email);
-  await page.getByRole("button", { name: "发送验证码", exact: true }).click();
-  await page.getByLabel("邮件验证码").fill("123456");
-  await page.getByRole("button", { name: "验证并登录", exact: true }).click();
+async function login(page: Page, username: string) {
+  await page.getByLabel("账号").fill(username);
+  await page.getByLabel("密码").fill("password1");
+  await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("heading", { name: "我的账户", exact: true })).toBeVisible();
 }
 
@@ -121,14 +121,14 @@ test("account switching preserves the first account library and isolates new ano
   await page.getByRole("button", { name: "将本机生活库绑定到此账户" }).click();
   await expect(page.getByRole("button", { name: "备份现在", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "退出登录并保留本机库" }).click();
-  await expect(page.getByRole("heading", { name: "邮箱登录", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "账号登录", exact: true })).toBeVisible();
   await login(page, "b@example.test");
   await page.getByRole("link", { name: "返回记录", exact: true }).click();
   await expect(page.getByText("属于账户 A 的记录", { exact: true })).toHaveCount(0);
   await expect(page.getByText("还没有留下片段。", { exact: true })).toBeVisible();
   expect((await readLibrary(page)).moments).toHaveLength(1);
   await page.goto("/account"); await page.getByRole("button", { name: "退出登录并保留本机库" }).click();
-  await expect(page.getByRole("heading", { name: "邮箱登录", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "账号登录", exact: true })).toBeVisible();
   await login(page, "a@example.test");
   await page.getByRole("button", { name: "打开此库", exact: true }).first().click();
   await page.getByRole("link", { name: "返回记录", exact: true }).click();
@@ -141,10 +141,9 @@ test("another tab prevents account switching rather than discarding an open draf
   const second = await context.newPage(); await second.goto("/");
   await second.getByRole("button", { name: "写点什么", exact: true }).click();
   await second.getByRole("textbox", { name: "记录内容", exact: true }).fill("另一标签页尚未保存");
-  await page.getByLabel("邮箱地址").fill("a@example.test");
-  await page.getByRole("button", { name: "发送验证码", exact: true }).click();
-  await page.getByLabel("邮件验证码").fill("123456");
-  await page.getByRole("button", { name: "验证并登录", exact: true }).click();
+  await page.getByLabel("账号").fill("a@example.test");
+  await page.getByLabel("密码").fill("password1");
+  await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("关闭其他 Life 标签页");
   await expect(second.getByRole("textbox", { name: "记录内容", exact: true })).toHaveValue("另一标签页尚未保存");
   await second.close();
@@ -170,7 +169,10 @@ test("cloud retry uses the original frozen snapshot and reports a verified compl
     const path = new URL(route.request().url()).pathname.replace("/api/cloud/", "");
     const body = route.request().method() === "POST" ? route.request().postDataJSON() : {};
     if (path === "account") return route.fulfill({ json: { configured: true, account } });
-    if (path === "auth/email/start" || path === "libraries/bind") return route.fulfill({ json: { ok: true } });
+    if (path === "auth/email/start" || path === "auth/password" || path === "libraries/bind") {
+      if (path === "auth/password") { account = { id: "00000000-0000-4000-8000-00000000000a", email: body.username ?? body.email }; return route.fulfill({ json: { account } }); }
+      return route.fulfill({ json: { ok: true } });
+    }
     if (path === "auth/email/verify") { account = { id: "00000000-0000-4000-8000-00000000000a", email: body.email }; return route.fulfill({ json: { account } }); }
     if (path === "backups" && route.request().method() === "POST") {
       createdIds.add(body.id); saved ??= { id: body.id, manifest: body.manifest, status: "uploading" };

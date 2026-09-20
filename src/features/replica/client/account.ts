@@ -75,6 +75,25 @@ export async function verifyReplicaLogin(email: string, token: string): Promise<
   return result.account;
 }
 
+export async function loginReplicaPassword(username: string, password: string): Promise<ReplicaRemoteAccount> {
+  const origin = replicaApiOrigin();
+  if (!origin) throw new ReplicaError("cloud_unconfigured", "云副本主机未配置。本机记录仍可使用。");
+  const result = await createReplicaTransport({ origin, native: true }).request<{
+    account: ReplicaRemoteAccount;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: number;
+  }>("auth/password", { username, password });
+  await writeReplicaSession({
+    accountId: result.account.id,
+    email: result.account.email,
+    accessToken: result.accessToken ?? "",
+    refreshToken: result.refreshToken ?? "",
+    expiresAt: result.expiresAt,
+  });
+  return result.account;
+}
+
 export async function clearReplicaLogin(): Promise<void> {
   await writeReplicaSession(null);
 }

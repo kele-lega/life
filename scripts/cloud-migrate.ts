@@ -7,7 +7,7 @@ async function main() {
   const url = process.env.CLOUD_MIGRATION_DATABASE_URL;
   if (!url) throw new Error("migration_unconfigured");
   const address = new URL(url);
-  if (!["localhost", "127.0.0.1"].includes(address.hostname)) address.searchParams.set("sslmode", "verify-full");
+  if (!["localhost", "127.0.0.1", "postgres", "life-postgres"].includes(address.hostname)) address.searchParams.set("sslmode", "verify-full");
   const pool = new Pool({ connectionString: address.toString(), max: 1 });
   try {
     for (const file of ["001-foundation.sql", "002-roles.sql", "003-immutable-snapshots.sql", "004-replica.sql"]) {

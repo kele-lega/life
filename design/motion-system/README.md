@@ -53,11 +53,11 @@
 | `npm run test:e2e` | 38 项通过，开发环境约 3.7 分钟 |
 | `npm run build` | 通过，Next.js 16.3.3 生产构建；9 个静态生成任务完成 |
 | 生产构建关键复测 | 动效与三类保存按钮共 12 项通过；9 项首轮通过，3 项调整提示分类后重跑通过（19.5s） |
-| Netlify 发布 | 构建、适配、上传成功；平台状态 ready，2026-09-03 08:55:32 UTC 发布 |
+| 正式站发布 | 自建主机 https://life.kelelega.dpdns.org |
 
 生产复核使用 `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3101`。首次有 3 项因 Chrome 对 Next Link 的目标页面 CSS 预加载提示而失败，功能断言通过。已核对这些资源属于 Diary、Timeline、Calendar、Search 的预取样式，并在测试中精确记录为提示；资源加载错误、脚本异常、hydration、React key 和状态更新警告仍导致失败。开发环境同样精确排除 Motion 在 reduced motion 下主动输出的说明，不把它当成应用错误。
 
-最新部署：[Life](https://life-kelelega.netlify.app)，[平台详情](https://app.netlify.com/projects/life-kelelega/deploys/6a9935dc08d1754a8e879de8)。原有账户登录保护生效，未登录请求返回 401；不宣称已通过线上功能验收。
+最新部署：[Life](https://life.kelelega.dpdns.org)。正式站为自建主机，无平台登录墙。
 
 ## 复现
 

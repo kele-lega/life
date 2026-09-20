@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { LifeDatabase } from "@/lib/db/client";
 import { captureArchive, restoreArchive } from "../local/archive";
-import { encodeJson, PART_BYTES, type BackupArchive } from "../shared/format";
+import { BackupError, encodeJson, PART_BYTES, type BackupArchive } from "../shared/format";
 import { seedBackupFixture } from "../test/fixture";
 import { createCloudHandler } from "./handler";
 import { CloudStore, digest, manifestOf } from "./store";
@@ -44,6 +44,7 @@ const auth = {
   verify: vi.fn(async (email: string, token: string) => { if (token !== "123456") throw new Error("synthetic provider error containing private tokens"); return { subject: email, email, accessToken: "synthetic-access-token-".padEnd(128, "x"), refreshToken: "synthetic-refresh-token-".padEnd(64, "y"), expiresAt: 2_000_000_000 }; }),
   verifyAccessToken: vi.fn(async (accessToken: string) => { if (accessToken !== "synthetic-access-token-".padEnd(128, "x")) throw new Error("synthetic provider error"); return { subject: "access-subject", email: "access@example.test" }; }),
   refresh: vi.fn(async (refreshToken: string) => { if (!refreshToken.startsWith("synthetic-refresh-token-")) throw new Error("synthetic provider error"); return { subject: "access-subject", email: "access@example.test", accessToken: "synthetic-access-token-".padEnd(128, "x"), refreshToken, expiresAt: 2_000_000_000 }; }),
+  loginPassword: vi.fn(async (username: string, password: string) => { if (password !== "password1") throw new BackupError("otp_invalid", "账号或密码不正确。"); return { subject: username, email: username }; }),
 };
 const handler = createCloudHandler({ config, store, service, auth });
 let archive: BackupArchive;
@@ -99,6 +100,14 @@ describe("PostgreSQL foundation + HTTP boundaries", () => {
     expect((await request("backups")).status).toBe(401);
     expect((await request("libraries/bind", { libraryId, installationId: crypto.randomUUID() }, cookieA, accountA.id, "https://attacker.invalid")).status).toBe(403);
     expect((await request("backups", undefined, cookieA, accountB.id)).status).toBe(403);
+  });
+  it("logs in with username and password without sending email", async () => {
+    const response = await request("auth/password", { username: "kele", password: "password1" });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly; SameSite=Lax");
+    expect((await response.json()).account.email).toBe("kele");
+    expect(auth.loginPassword).toHaveBeenCalledWith("kele", "password1");
+    expect((await request("auth/password", { username: "kele", password: "wrong-password" })).status).toBe(400);
   });
   it("exchanges a provider magic-link token for the same opaque Life session", async () => {
     const response = await request("auth/email/callback", { email: "access@example.test", accessToken: "synthetic-access-token-".padEnd(128, "x") });

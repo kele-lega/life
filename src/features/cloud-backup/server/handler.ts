@@ -42,6 +42,18 @@ export function createCloudHandler({ config, store, service, auth }: HandlerDepe
         if (token) await store.revoke(digest(token));
         return json({ ok: true }, 200, { "Set-Cookie": sessionCookie(config, "", true) });
       }
+      if (path === "auth/password" && method === "POST") {
+        ensure(typeof auth.loginPassword === "function", "otp_unavailable");
+        const username = typeof body.username === "string" ? body.username.trim() : "";
+        const password = typeof body.password === "string" ? body.password : "";
+        await store.limit(`password:${digest(username.toLowerCase())}`, 10, 3600);
+        await store.limit("global:auth/password", 200, 60);
+        const verified = await auth.loginPassword(username, password);
+        const nextToken = randomBytes(32).toString("hex");
+        const account = await store.createSession(verified.subject, verified.email, digest(nextToken));
+        if (token) await store.revoke(digest(token));
+        return json({ account }, 200, { "Set-Cookie": sessionCookie(config, nextToken) });
+      }
       if (["auth/email/start", "auth/email/verify", "auth/email/callback"].includes(path) && method === "POST") {
         const isCallback = path.endsWith("callback");
         const email = isCallback ? "" : (() => {

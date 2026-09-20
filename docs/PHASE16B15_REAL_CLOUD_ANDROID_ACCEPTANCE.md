@@ -9,7 +9,7 @@ This phase proves the 16B.1 replica stack against real test infrastructure and t
 APK: `android/app/build/outputs/apk/debug/app-debug.apk`  
 Package: `app.kelelega.life`  
 WebView origin: `https://localhost` (no production `server.url`)  
-Baked API origin: `https://life-kelelega.netlify.app`
+Baked API origin: `https://life.kelelega.dpdns.org`
 
 Stamp `synthetic-16b15-1789492746761`. Local/offline runtime: 26/26 checks passed, including Dexie v7 (`version=70`), outbox sidecar, native diary `/diary/open/?id=`, Force Stop persistence, Android back, keyboard/`visualViewport`, and `.life.zip`.
 
@@ -19,7 +19,7 @@ Camera / Photos / Location / Haptics were not used.
 
 Web Cookie / CORS / CSRF is unchanged. `https://localhost` is not on the Web allowlist.
 
-| Check | Local `http://127.0.0.1:3100` | Production `https://life-kelelega.netlify.app` |
+| Check | Local `http://127.0.0.1:3100` | Production `https://life.kelelega.dpdns.org` |
 | --- | --- | --- |
 | `GET /api/replica/account` no auth | 200 `{configured:true,account:null}` | 200 `{configured:true,account:null}` |
 | `POST /api/replica/mutations` `Origin: https://localhost` no Bearer | 403 `origin_rejected` | 403 `origin_rejected` |
@@ -66,11 +66,9 @@ After injecting `life-replica-session-v1` into the emulator WebView (token not l
 
 Android talks to the baked HTTPS origin over Bearer. Web CSRF/Cookie boundaries were not changed.
 
-## Netlify
+## Self-hosted production
 
-`netlify.toml` build command is `npx next build --webpack`. Next 16 Turbopack hashed `pg` / `@aws-sdk/client-s3` aliases are not resolvable in the Netlify function zip. `CLOUD_APP_ORIGIN` on Netlify is `https://life-kelelega.netlify.app`. `CLOUD_OBJECT_ENV=dev` for this test project.
-
-Production deploy `6aa99014a14b701a41789301` now serves the webpack server bundle, 401 Bearer mapping, and magic-link callback. Valid test Bearer snapshot after deploy: 19 synthetic moments, 11 verified objects.
+Production origin is `https://life.kelelega.dpdns.org`. The Docker image builds with `npx next build --webpack` because Next 16 Turbopack hashed `pg` / `@aws-sdk/client-s3` aliases cannot be resolved at `next start`. `CLOUD_APP_ORIGIN` must match that origin. Web replica uses same-origin `/api/replica`; Android bakes `NEXT_PUBLIC_LIFE_CLOUD_API_ORIGIN=https://life.kelelega.dpdns.org`.
 
 ## Phase 16A Backup
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import { BackupError, object as assertObject } from "@/features/cloud-backup/shared/format";
 import type { EmailAuth } from "@/features/cloud-backup/server/auth";
 import type { CloudConfig } from "@/features/cloud-backup/server/config";
@@ -99,7 +100,7 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
       const native = origin === "https://localhost";
       const bearer = readBearer(request);
       if (method === "POST" && !bearer) {
-        const nativeAuth = ["auth/email/start", "auth/email/verify", "auth/email/callback", "auth/refresh"].includes(path);
+        const nativeAuth = ["auth/password", "auth/email/start", "auth/email/verify", "auth/email/callback", "auth/refresh"].includes(path);
         if (native || (!origin && nativeAuth && !readCookieToken(request, config))) {
           ensureReplica(nativeAuth, "origin_rejected");
         } else {
@@ -108,6 +109,22 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
       }
       const body = method === "POST" ? await readBody(request) : {};
 
+      if (path === "auth/password" && method === "POST") {
+        ensureReplica(typeof auth.loginPassword === "function", "otp_unavailable");
+        const username = typeof body.username === "string" ? body.username.trim() : "";
+        const password = typeof body.password === "string" ? body.password : "";
+        await accounts.limit(`replica-password:${digest(username.toLowerCase())}`, 10, 3600);
+        await accounts.limit("replica-global:auth/password", 200, 60);
+        const verified = await auth.loginPassword(username, password);
+        const nextToken = randomBytes(32).toString("hex");
+        const account = await accounts.createSession(verified.subject, verified.email, digest(nextToken));
+        return json({
+          account,
+          accessToken: nextToken,
+          refreshToken: verified.refreshToken ?? nextToken,
+          expiresAt: verified.expiresAt ?? Math.floor(Date.now() / 1000) + 30 * 86400,
+        });
+      }
       if (["auth/email/start", "auth/email/verify", "auth/email/callback"].includes(path) && method === "POST") {
         const isCallback = path.endsWith("callback");
         const email = isCallback ? "" : (() => {
@@ -152,6 +169,10 @@ export function createReplicaHandler({ config, accounts, store, service, auth }:
       const cookieToken = bearer ? null : readCookieToken(request, config);
       const account = bearer
         ? await (async () => {
+          if (/^[a-f0-9]{64}$/.test(bearer)) {
+            const session = await accounts.session(digest(bearer));
+            if (session) return session;
+          }
           try {
             const identity = await auth.verifyAccessToken(bearer);
             return accounts.ensureAccount(identity.subject, identity.email);

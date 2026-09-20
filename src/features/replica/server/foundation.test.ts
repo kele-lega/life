@@ -53,6 +53,10 @@ const auth = {
     return { subject: "native@example.test", email: "native@example.test" };
   }),
   refresh: vi.fn(async () => ({ subject: "native@example.test", email: "native@example.test", accessToken, refreshToken: "synthetic-refresh-token-".padEnd(64, "y") })),
+  loginPassword: vi.fn(async (username: string, password: string) => {
+    if (password !== "password1") throw new Error("synthetic provider error");
+    return { subject: username, email: username, accessToken, refreshToken: "synthetic-refresh-token-".padEnd(64, "y"), expiresAt: 2_000_000_000 };
+  }),
 };
 const handler = createReplicaHandler({ config, accounts, store, service, auth });
 const cloudHandler = createCloudHandler({ config, store: accounts, service: { upload() { throw new Error("unused"); } } as never, auth });
@@ -170,6 +174,16 @@ describe("Phase 16B.1 replica API", () => {
       ops: [],
     }, { Origin: "https://localhost", Authorization: `Bearer ${"x".repeat(40)}`, "X-Life-Account": accountId });
     expect(mutated.status).toBe(401);
+  });
+
+  it("accepts native username and password login with no Origin header", async () => {
+    const logged = await handler(new Request(`${config.origin}/api/replica/auth/password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: "kele", password: "password1" }),
+    }));
+    expect(logged.status).toBe(200);
+    expect((await logged.json()).accessToken).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("accepts native OTP auth with no Origin header because CapacitorHttp is not a browser", async () => {
